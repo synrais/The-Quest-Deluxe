@@ -190,6 +190,35 @@ tones and delays, in the same order, with the same `rand()` draws.
   the hero moves 20 tiles east, and `teleporter2()` plays where they land. On other levels only the
   rings play.
 
+## Saving and loading
+
+The original keeps **one save file per game**: `data\saveNN.dat`, NN = 01..20. Quest II uses the same
+files, so saves from the original load in Quest II and the other way round (`quest2/savefile.py`;
+`tools/re/verify_saves.py` checks it against the exe's own `save()` and `load2()`).
+
+- **New game (`newgame()`):** after story 0, `newsave()` takes the first slot with no file and reserves
+  it with a file holding `-1` (plain text). A reserved slot is reused by the next new game. With all 20
+  taken: "Error: you have too many save files! You need to delete at least one to play." It reserves
+  the slot even if Esc leaves the story. After creation and story 1 the game saves itself silently.
+- **Home / v:** "Want to save? (Y)es (N)o", unless monsters are about (`cantsave()`). Yes plays a
+  chime and shows "Saving. . .". **Insert / l:** "Want to load? (Y)es (N)o" reloads the game's own
+  slot. **Esc:** "Want to quit? (Y)es (N)o" goes back to the title without saving.
+- **Load Game (`loadscreen()`):** "Available Games" lists slots 1, 2, 3... with class and level, and
+  **stops at the first missing or reserved slot**, so games after a gap are not listed. Up/Down click,
+  Enter loads without asking.
+- **Death:** `death()` calls `load()`, so "Want to load?" reloads the last save.
+- **Level 7:** one conversation asks "Want to save?" by itself.
+- **The file:** numbers as text, encoded like the level files (byte + 0x51, except space, CR and LF).
+  It holds the header `level class`, the 10,000 map squares (the current screen as it was on arrival),
+  the 100 live squares of the current screen, `X Y ax ay`, the hero (`mlife life mmana mana bstr bintl
+  bdex bacc rep exper`), the inventory (`bkey rkey ykey coins rose red purple blue yellow white cyan
+  black`), 100 creature records, the bag and book cells, spells, the automap (each value followed by a
+  blank line), the F-keys (two blank lines each), skills, `mons ems killer armboost powboost Shield level
+  mission1`, `invisible poisoned mission2 fShield`, and `p1 p2 p3`. The derived stats (dex, acc, intl,
+  str, def, atk, power, warm, marm) are rebuilt on load. `save()` hands `fprintf` five numbers for
+  four `%d`s, so `st.saveslot` is never written. `code()` writes the last newline twice, so every
+  save ends with a blank line. The full layout is at the top of `quest2/savefile.py`.
+
 ## How levels and events work
 
 `newmap()` increments `st.level` and writes `'0' + level` into `data\l00000.dat`. So **only

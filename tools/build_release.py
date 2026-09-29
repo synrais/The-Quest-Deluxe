@@ -37,13 +37,15 @@ Keys (as in the original):
   1-8             drink a potion                        Space/Tab  shoot / choose a target
   s               spell book                            F1-F9      cast a bound spell
   i               inventory                             c          character sheet
-  k               killer switch                         v / l      save / load
-  Esc             menu
+  k               killer switch                         v / Home   save
+  l / Insert      load                                  Esc        quit to the title
 
 Sound: PC-speaker tones like the original. To turn them off, create sound.txt in this folder
 containing 0.
 
-Saves go in the saves folder here. The game reads the original's data from TheQuest.zip and data/.
+Saves are the original's own files, data\\save01.dat to save20.dat, so saves from the original
+The Quest load here too (copy them into the data folder). The game reads the original's data
+from TheQuest.zip and data/.
 {extra}"""
 
 

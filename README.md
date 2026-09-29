@@ -9,8 +9,9 @@ The Quest II — a faithful remake of The Quest for Windows and Linux
   Notes:    docs/REVERSE_ENGINEERING.md     how the original works, and its quirks
   Tools:    tools/re/                       disassembler, lifter, and an emulator that runs the
                                             original code to check the remake against it
+  Saves:    data/save01.dat .. save20.dat, the original's own format (its saves load here too)
   Sound:    PC-speaker tones like the original; put 0 in sound.txt (game folder) to turn them off
-  Tests:    tests/test_phase3.py, tests/test_anims.py
+  Tests:    tests/test_phase3.py, tests/test_anims.py, tests/test_saves.py
 
 The Quest — Level Editor
 Reads/writes L00001.dat – L00007.dat map files and SAVE*.dat save files.

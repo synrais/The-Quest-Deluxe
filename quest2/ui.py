@@ -183,7 +183,7 @@ class TitleScreen(Overlay):
             if self.i == 0:
                 g.new_game()
             elif self.i == 1:
-                g.load_menu(back=lambda: setattr(g, 'overlay', TitleScreen()))
+                g.overlay = LoadScreen(g)
             elif self.i == 2:
                 g.overlay = Credits(lambda: setattr(g, 'overlay', TitleScreen()))
             else:
@@ -228,6 +228,56 @@ class TitleScreen(Overlay):
                 g.outtextxy(480, 150 + 40 * k, right[k])
         scr.blit(self._bg, (0, 0))
         _title_cursor(bgi_on(r, scr), self.i)
+
+
+class LoadScreen(Overlay):
+    """loadscreen(): 'Available Games', the saves 1, 2, ... up to the first empty or reserved slot,
+    each with the hero's class and level. Up/Down move the yellow cross (with a click), Enter loads,
+    Esc goes back to the title."""
+    covers_map = True
+    CLASSES = {1: 'Knight', 2: 'Mage', 3: 'Rogue', 4: 'Monk'}
+
+    def __init__(self, g: 'Game'):
+        self.games = g.slots.listing()
+        self.i = 1
+
+    def key(self, g, ev):
+        if ev.key == pygame.K_UP and self.i > 1:
+            self.i -= 1
+            g.tones((400, 50), (300, 50))
+        elif ev.key == pygame.K_DOWN and self.i < len(self.games):
+            self.i += 1
+            g.tones((400, 50), (300, 50))
+        elif ev.key in CONFIRM and self.games:
+            self.close(g)
+            g.tones((500, 50), (600, 50))
+            g.status.level = 0                        # no 'Want to load?' from here
+            g.status.saveslot = self.games[self.i - 1][0]
+            g.load_game()
+        elif ev.key == pygame.K_ESCAPE:
+            g.overlay = TitleScreen()
+
+    def draw(self, r, scr):
+        g = bgi_on(r, scr)
+        g.setfillstyle(1, 0)
+        g.bar(0, 0, 640, 500)
+        g.setcolor(15)
+        g.settextstyle(4, 0, 4)
+        g.outtextxy(180, 0, 'Available Games')
+        g.setcolor(9)
+        g.settextstyle(6, 0, 2)
+        for n, level, htype in self.games:
+            y = n * 20 + 30
+            g.outtextxy(140, y, f'{n:2d}.')
+            g.outtextxy(180, y, self.CLASSES.get(htype, ''))
+            g.outtextxy(240, y, 'Level')
+            g.outtextxy(295, y, f'{level:<2d}' if level < 10 else str(level))
+        g.setlinestyle(0, 0, 3)
+        g.setcolor(14)
+        y = self.i * 20 + 3
+        g.line(129, y + 38, 129, y + 50)
+        g.line(123, y + 44, 135, y + 44)
+        g.setlinestyle(0, 0, 1)
 
 
 class Credits(Overlay):
@@ -319,17 +369,19 @@ class YesNo(Overlay):
     def __init__(self, question: str, on_yes, on_no=None):
         self.q, self.on_yes, self.on_no = question, on_yes, on_no
 
+    """The original's '... (Y)es (N)o' questions in the message strip: only Y and N answer."""
+
     def key(self, g, ev):
-        if ev.key in (pygame.K_y,) + CONFIRM:
+        if ev.key == pygame.K_y:
             self.close(g)
             self.on_yes()
-        elif ev.key in (pygame.K_n, pygame.K_ESCAPE):
+        elif ev.key == pygame.K_n:
             self.close(g)
             if self.on_no:
                 self.on_no()
 
     def draw(self, r, scr):
-        bottom(r, scr, [(self.q + '  (Y/N)', 15)])
+        bottom(r, scr, [(self.q, 15)])
 
 
 class Menu(Overlay):
@@ -536,9 +588,10 @@ class FaultSelect(Choice):
 class Cursor(Overlay):
     """Moves a highlight over the current screen; used for spell targets and ranged targets."""
 
-    def __init__(self, g: 'Game', x: int, y: int, title: str, on_pick, allowed=None, can_pick=None):
+    def __init__(self, g: 'Game', x: int, y: int, title: str, on_pick, allowed=None, can_pick=None,
+                 on_cancel=None):
         self.x, self.y, self.title = x, y, title
-        self.on_pick, self.allowed, self.can_pick = on_pick, allowed, can_pick
+        self.on_pick, self.allowed, self.can_pick, self.on_cancel = on_pick, allowed, can_pick, on_cancel
         g.cursor = (x, y)
 
     def key(self, g, ev):
@@ -556,6 +609,8 @@ class Cursor(Overlay):
         elif ev.key == pygame.K_ESCAPE:
             self.close(g)
             g.cursor = None
+            if self.on_cancel:
+                self.on_cancel()
 
     def draw(self, r, scr):
         bottom(r, scr, [(self.title, 14), ('Arrows move, Enter selects, Esc cancels', 7)])

@@ -1012,3 +1012,15 @@ def class_change(h, t):
         h.asound(f)
         yield 300
     h.nosound()
+
+
+def strip_text(h, text):
+    """A white line in the message strip ('Saving. . .', 'Loading. . .')."""
+    g = h.g
+    g.setfillstyle(1, 0)
+    g.setcolor(15)
+    g.bar(0, 410, 640, 500)
+    g.settextstyle(7, 0, 2)
+    g.outtextxy(9, 413, text)
+    return
+    yield

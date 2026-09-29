@@ -50,6 +50,7 @@ matching `.asm` file.
 | `emu.py` | Loads the exe into the Unicorn x86 emulator and calls any game function. BGI calls are intercepted and drawn with `quest2/bgi.py`. `draw_tile(floor=…, wall=…, mon=…, item=…, deco=…, gold=…)` runs `clean2()` on one map square. |
 | `sprite_check.py` | Compares every PNG in `sprites/` with what the game draws. It writes `out/sprites/report.txt`, plus an image (original, PNG, diff) for each sprite that differs. |
 | `verify_anims.py` | Runs every animation, jingle and hero drawing in `quest2/anim.py` next to the original (`aflame()`, `ahit()`, `guy2()`, `song_key()` ...) with many arguments and the same `rand()` seed, and checks that both make exactly the same BGI calls, tones and delays. |
+| `verify_saves.py` | Runs the exe's own `save()` and `load2()` on random game states next to `quest2/savefile.py`: the saved text must match character for character, and the loaded values must match. Also round-trips `data/SAVE01.DAT`. |
 
 ```bash
 pip install unicorn

@@ -232,9 +232,9 @@ class Combat:
         p, items = self.p, self.g.items
         wep, ammo = p.item(SLOT_WEAPON), p.item(SLOT_OFFHAND)
         if items.tell(wep, IT_KIND) != KIND_RANGED:
-            return 'You have no ranged weapon.'
+            return 'noweapon'
         if not rules.ammo_ok(wep, ammo):
-            return 'noarrows' if ammo == 0 else "That ammunition doesn't fit."
+            return 'noarrows' if ammo == 0 else 'badammo'
         return None
 
     def shoot(self, e: Enemy):

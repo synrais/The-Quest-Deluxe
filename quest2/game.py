@@ -7,7 +7,7 @@ Keys (as in the original):
   s                 spell book       F1-F9      cast bound spell
   i                 inventory        c          character sheet
   k                 killer switch    v / Home   save      l / Insert  load
-  Esc               menu
+  Esc               quit to the title (asks first)
 """
 from __future__ import annotations
 
@@ -17,10 +17,12 @@ from dataclasses import asdict
 
 import pygame
 
-from .formats import GameData, Square, MAP_SIZE
+from .formats import GameData, Square, MAP_SIZE, DATA_DIR
 from .state import (Status, Player, Hero, Inventory, Skills, new_player, POTION_FIELDS, BACKPACK, KNIGHT,
                     SLOT_WEAPON, SLOT_OFFHAND, IT_REQ_STR, IT_REQ_INT, IT_KIND, IT_STR, IT_INT, Enemy)
-from .world import World, screen_of
+from .world import World, screen_of, room_origin
+from .savefile import SaveData, Slots
+from . import savefile
 from . import rules
 from .rules import SP_RANGE, SP_INT
 from .combat import Combat
@@ -34,7 +36,6 @@ from . import ui
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CONTENT = os.path.join(os.path.dirname(__file__), 'content')
-SAVE_DIR = os.path.join(ROOT, 'saves')
 
 DIRS = {pygame.K_LEFT: (-1, 0), pygame.K_RIGHT: (1, 0), pygame.K_UP: (0, -1), pygame.K_DOWN: (0, 1),
         pygame.K_KP4: (-1, 0), pygame.K_KP6: (1, 0), pygame.K_KP8: (0, -1), pygame.K_KP2: (0, 1)}
@@ -86,6 +87,7 @@ class Game:
         with open(os.path.join(CONTENT, 'monsters.json')) as fh:
             self.rewards = {int(k): v for k, v in json.load(fh).items() if not k.startswith('_')}
         self.renderer = Renderer(window, self.data.src)
+        self.slots = Slots(DATA_DIR)                 # data\\save01.dat .. save20.dat, as in the original
         # scripted runs (tests, the dummy video driver) play animations instantly and silently
         self.fast = os.environ.get('SDL_VIDEODRIVER') == 'dummy'
         self.speaker = Speaker(enabled=not self.fast and sound_setting(self.data.src))
@@ -172,17 +174,30 @@ class Game:
 
     # ── setup ─────────────────────────────────────────────────────────────────
     def new_game(self):
-        """newgame(): story 0 (Esc leaves), then creation()."""
-        self.show_story(0, lambda: setattr(self, 'overlay', ui.ClassSelect()),
-                        esc=lambda: setattr(self, 'overlay', ui.TitleScreen()))
+        """newgame(): story 0, then newsave() takes the first free save slot (even when Esc leaves
+        the story, as in the original), then creation()."""
+        def reserve(then):
+            self.status = Status(saveslot=self.slots.new())
+            if not self.status.saveslot:
+                self.overlay = ui.Notice('Error: you have too many save files! You need to delete at least '
+                                         'one to play.', 15, lambda: setattr(self, 'overlay', ui.TitleScreen()))
+                return
+            then()
+        self.show_story(0, lambda: reserve(lambda: setattr(self, 'overlay', ui.ClassSelect())),
+                        esc=lambda: reserve(lambda: setattr(self, 'overlay', ui.TitleScreen())))
 
     def start_new(self, cls: int, skill: int = 0, fault: int = 0):
         """The end of creation() and newgame(): build the hero, then newmap() shows story 1."""
         self.player = new_player(cls, skill, fault)
-        self.status = Status(Shield=0, fShield=0, powboost=-1, armboost=-1)
+        self.status = Status(Shield=0, fShield=0, powboost=-1, armboost=-1, saveslot=self.status.saveslot)
         self.status.p1, self.status.p2, self.status.p3 = rules.jumble()
         rules.status_update(self.player, self.status, self.items)
-        self.show_story(1, lambda: self.goto_level(self.start_level), header=self.story_header())
+
+        def begin():
+            self.goto_level(self.start_level)
+            if self.status.saveslot:
+                self.save_game(ask=False)             # newgame(): save(0, ...) before play starts
+        self.show_story(1, begin, header=self.story_header())
 
     def story_header(self) -> list[str]:
         """story(1): who the hero became, in the original's order."""
@@ -208,7 +223,6 @@ class Game:
         rules.status_update(self.player, self.status, self.items)
         self.count_hostiles()
         self.target = None
-        self.log(f'Level {level}.')
         self.events.on_level_start()
         self.events.run('level_start')
 
@@ -272,13 +286,11 @@ class Game:
             if self.events.ask('killer_allowed'):
                 self.status.killer ^= 1
         elif k in (pygame.K_v, pygame.K_HOME):
-            self.save_menu()
+            self.save_key()
         elif k in (pygame.K_l, pygame.K_INSERT):
-            self.load_menu()
+            self.load_game()
         elif k == pygame.K_ESCAPE:
-            self.overlay = ui.Menu('The Quest II', [('Resume', lambda: None), ('Save game', self.save_menu),
-                                                     ('Load game', self.load_menu), ('Quit', self.quit)],
-                                   cancel=lambda: None)
+            self.quit_prompt()
         if acted:
             self.end_turn()
         self.events.run('after_action', 'space' if k == pygame.K_SPACE else 'key')
@@ -332,7 +344,7 @@ class Game:
         self.events.on_step(p.X, p.Y)
         if q.item == 1000:
             if self.events.meta(w.level, 'ASK_TO_LEAVE', True):
-                self.overlay = ui.YesNo('Want to travel further?', self.next_level)
+                self.overlay = ui.YesNo('Want to travel further? (Y)es (N)o', self.next_level)
             else:
                 self.next_level()
         elif q.item == 999:
@@ -361,10 +373,10 @@ class Game:
         self.tones((500, 50), (600, 50), (500, 50))
         self.renderer.wait_talk(self, text, fast=self.fast)
 
-    def autosave(self, slot: int):
-        """The original saves the game itself at a few story points."""
-        if self.world.grid:
-            self.save(slot)
+    def autosave(self, ask: int):
+        """A story point where the original calls save() itself (ask = 1: 'Want to save?')."""
+        if self.world.grid and self.status.saveslot:
+            self.save_game(ask=bool(ask))
 
     # ── items ─────────────────────────────────────────────────────────────────
     def pick_up(self) -> bool:
@@ -563,9 +575,7 @@ class Game:
     # ── magic ─────────────────────────────────────────────────────────────────
     def begin_cast(self, spell: int):
         self.messages = []
-        why = self.magic.can_cast(spell)
-        if why:
-            self.log(why)
+        if self.magic.can_cast(spell):              # unknown, too little mana or INT: the key does nothing
             return
         p = self.player
         if self.magic.fizzles(spell):                 # dcast(), then a low beep; the spell is lost
@@ -585,7 +595,8 @@ class Game:
             self.end_turn()
         self.overlay = ui.Cursor(self, p.X, p.Y, f'Cast {rules.SPELL_NAMES[spell]}: choose a target',
                                  picked, allowed=lambda x, y: self.magic.in_range(spell, x, y),
-                                 can_pick=lambda x, y: self.magic.valid_target(spell, x, y))
+                                 can_pick=lambda x, y: self.magic.valid_target(spell, x, y),
+                                 on_cancel=self.end_turn)       # Esc: nothing cast, but the turn is used
 
     def learn_spell(self, s: int):
         p = self.player
@@ -594,7 +605,6 @@ class Game:
             free = next((i for i, v in enumerate(p.book) if not v), None)
             if free is not None:
                 p.book[free] = s
-        self.log(f'You begin memorising {rules.SPELL_NAMES[s]}.')
 
     # ── ranged ────────────────────────────────────────────────────────────────
     def ranged(self, choose: bool) -> bool:
@@ -603,13 +613,16 @@ class Game:
             self.play('noarrows2')                    # a ranged weapon with nothing in the off-hand
             return False
         if why:
-            self.log(why)
-            return False
+            # main2(): nothing is shot, but Space still uses the turn (so does Tab with a ranged
+            # weapon); only Tab without a ranged weapon is free
+            return not choose or why == 'badammo'
         p = self.player
         if self.target and (self.target not in self.world.enemies or
                             (abs(self.target.x - p.X) < 2 and abs(self.target.y - p.Y) < 2)):
             self.target = None
         cands = self.combat.ranged_candidates()
+        if choose and not cands:
+            return True                               # target() is only reached with someone in range
         if choose:
             start = self.target or (cands[0] if cands else None)
             sx, sy = (start.x, start.y) if start else (p.X, p.Y)
@@ -624,12 +637,12 @@ class Game:
                 self.messages = []
                 self.combat.shoot(self.world.enemy_at(x, y))
                 self.end_turn()
-            self.overlay = ui.Cursor(self, sx, sy, 'Choose a target', picked, can_pick=ok)
+            self.overlay = ui.Cursor(self, sx, sy, 'Choose a target', picked, can_pick=ok,
+                                     on_cancel=self.end_turn)   # target() cancelled: the turn is used
             return False
         e = self.target if self.target in cands else (cands[0] if cands else None)
         if not e:
-            self.log('Nothing to shoot at.')
-            return False
+            return True                               # nothing in range: the turn passes anyway
         self.combat.shoot(e)
         return True
 
@@ -672,7 +685,7 @@ class Game:
         def no():
             self.play('death_wipe', redraw=False)
             self.overlay = ui.TitleScreen()
-        self.overlay = ui.YesNo('Want to load?', lambda: self.load_menu(back=no), no)
+        self.load_game(on_no=no)
 
     def upkeep(self):
         """Top of the main2() loop after a turn: faults, poison, spell timers, boosts."""
@@ -735,84 +748,123 @@ class Game:
         if cands:
             self.overlay = ui.LearnSpell(cands, lambda: None)
 
-    # ── saving ────────────────────────────────────────────────────────────────
+    # ── saving: the original's data\\saveNN.dat, one slot per game ──────────────
     def can_save(self) -> bool:
         return not (self.status.ems > 0 and any(e.type > 0 and e.type != 22 for e in self.world.enemies))
 
-    def save_menu(self):
+    def save_key(self):
+        """Home / v in main2(): save() with its question, or cantsave() with monsters about."""
         if not self.world.grid:
             return
         if not self.can_save():
             self.play('cantsave')
             return
-        self.overlay = ui.Menu('Save game', [(self.slot_label(n), lambda n=n: self.save(n)) for n in range(1, 6)],
-                               'Enter saves to the slot, Esc cancels', cancel=lambda: None)
+        self.save_game(ask=True)
 
-    def load_menu(self, back=None):
-        self.overlay = ui.Menu('Load game', [(self.slot_label(n), lambda n=n: self.load(n)) for n in range(1, 6)],
-                               'Enter loads the slot, Esc cancels', cancel=back or (lambda: None))
+    def save_game(self, ask: bool = False):
+        """save(type): type 1 asks 'Want to save? (Y)es (N)o'; type 0 (after creation) saves silently."""
+        def write():
+            if ask:
+                self.tones((500, 50), (600, 50))
+                self.play('strip_text', 'Saving. . .')
+            self.slots.write(self.status.saveslot, self.to_save())
+        if ask:
+            self.overlay = ui.YesNo('Want to save? (Y)es (N)o', write)
+        else:
+            write()
 
-    def slot_path(self, n: int) -> str:
-        return os.path.join(SAVE_DIR, f'slot{n}.json')
+    def load_game(self, on_no=None):
+        """load(): in a game it asks 'Want to load? (Y)es (N)o' (from the title's list it doesn't),
+        then load2() reads the game's own slot."""
+        def read():
+            if self.status.level:
+                self.play('strip_text', 'Loading. . .')
+            d = self.slots.read(self.status.saveslot)
+            if d is None:
+                return
+            self.tones((500, 50), (600, 50))
+            self.from_save(d, self.status.saveslot)
+            self.play('death_wipe', redraw=False)          # load2() ends by closing the screen
+        if self.status.level:
+            self.overlay = ui.YesNo('Want to load? (Y)es (N)o', read, on_no)
+        else:
+            read()
 
-    def slot_label(self, n: int) -> str:
-        path = self.slot_path(n)
-        if not os.path.exists(path):
-            return f'Slot {n}: empty'
-        try:
-            with open(path) as fh:
-                d = json.load(fh)
-            return f"Slot {n}: level {d['level']}, {d['summary']}"
-        except (OSError, ValueError, KeyError):
-            return f'Slot {n}: (unreadable)'
+    def quit_prompt(self):
+        """Esc: quit() asks 'Want to quit? (Y)es (N)o'; Yes returns to the title (without saving)."""
+        def yes():
+            self.tones((500, 50), (600, 50))
+            self.play('death_wipe', redraw=False)
+            self.world.grid = []
+            self.overlay = ui.TitleScreen()
+        self.overlay = ui.YesNo('Want to quit? (Y)es (N)o', yes)
 
-    def save(self, n: int):
-        os.makedirs(SAVE_DIR, exist_ok=True)
-        p, w = self.player, self.world
-        from .state import CLASS_NAMES
-        d = {
-            'version': 1, 'level': w.level,
-            'summary': f'{CLASS_NAMES[p.hero.type]} level {p.hero.level}',
-            'hero': asdict(p.hero), 'inv': asdict(p.inv), 'skill': asdict(p.skill), 'status': asdict(self.status),
-            'bag': [[x, y, v] for (x, y), v in p.bag.items() if v],
-            'spells': p.spells, 'book': p.book, 'fkey': p.fkey, 'X': p.X, 'Y': p.Y,
-            'visited': sorted(w.visited),
-            'grid': [[q.floor, q.wall, q.mon, q.item, q.gold, q.deco]
-                     for x in range(1, MAP_SIZE + 1) for q in w.grid[x][1:MAP_SIZE + 1]],
-            'events': self.events.save_state(),
-        }
-        with open(self.slot_path(n), 'w') as fh:
-            json.dump(d, fh)
-        self.log(f'Game saved to slot {n}.')
-
-    def load(self, n: int):
-        path = self.slot_path(n)
-        if not os.path.exists(path):
-            self.log('That slot is empty.')
-            return
-        with open(path) as fh:
-            d = json.load(fh)
-        p = Player(hero=Hero(**d['hero']), inv=Inventory(**d['inv']), skill=Skills(**d['skill']))
-        p.bag = {(x, y): v for x, y, v in d['bag']}
-        p.spells, p.book, p.fkey, p.X, p.Y = d['spells'], d['book'], d['fkey'], d['X'], d['Y']
-        self.player = p
-        self.status = Status(**d['status'])
-        w = self.world
-        w.level = d['level']
-        w.grid = [[Square() for _ in range(MAP_SIZE + 2)] for _ in range(MAP_SIZE + 2)]
-        cells = iter(d['grid'])
+    def to_save(self) -> SaveData:
+        """The game in save() terms: the current screen as map[] has it (as it was on arrival) and
+        as room[] has it (live), creatures in screen coordinates."""
+        p, st, w = self.player, self.status, self.world
+        ox, oy = w.origin
+        d = SaveData(hero=asdict(p.hero), inv=asdict(p.inv), skill=asdict(p.skill), st=asdict(st))
+        d.X, d.Y = p.X, p.Y
+        d.ax, d.ay = self.on_screen(p.X, p.Y)
+        shadow = self.events.shadow
         for x in range(1, MAP_SIZE + 1):
             for y in range(1, MAP_SIZE + 1):
-                f, wa, m, i, g, de = next(cells)
-                w.grid[x][y] = Square(f, wa, m, i, g, de)
-        w.visited = {tuple(v) for v in d['visited']}
-        w.enter_room(p, self.status)
-        self.events.on_enter_room()
-        self.events.load_state(d.get('events', {}))
-        self.count_hostiles()
+                q = w.grid[x][y]
+                if w.in_room(x, y) and (x, y) in shadow:
+                    v = shadow[(x, y)]
+                    d.map[(x, y)] = (v['floor'], v['wall'], v['item'], v['mon'], v['gold'], v['deco'])
+                else:
+                    d.map[(x, y)] = (q.floor, q.wall, q.item, q.mon, q.gold, q.deco)
+        for i in range(1, 11):
+            for ii in range(1, 11):
+                q = w.grid[ox + i - 1][oy + ii - 1]
+                d.room[(i, ii)] = (q.floor, q.wall, q.item, q.mon, q.gold, q.deco)
+        d.enemies = [{f: getattr(e, f) for f in savefile.ENEMY} for e in w.enemies]
+        for e in d.enemies:
+            e['x'], e['y'] = e['x'] - ox + 1, e['y'] - oy + 1
+        d.bag = {c: p.bag.get(c, 0) for c in savefile.BAG_CELLS}
+        d.book = {(13, 2 + k): p.book[k] for k in range(10)}
+        d.book.update({(16, 2 + k): p.book[10 + k] for k in range(10)})
+        d.spells = list(p.spells)
+        d.carta = {(sx + 1, sy + 1): 1 for sx, sy in w.visited}
+        d.fkey = list(p.fkey)
+        return d
+
+    def from_save(self, d: SaveData, slot: int):
+        """load2() into the game: map[] (with the current screen as it was on arrival), then room[]
+        (the screen as it is), the creatures as they were, and everything else."""
+        p = Player(hero=Hero(**{f: d.hero.get(f, getattr(Hero, f)) for f in Hero.__dataclass_fields__}),
+                   inv=Inventory(**d.inv), skill=Skills(**d.skill))
+        p.bag = {c: v for c, v in d.bag.items() if v}
+        p.book = [d.book.get((13, 2 + k), 0) for k in range(10)] + [d.book.get((16, 2 + k), 0) for k in range(10)]
+        p.spells, p.fkey = list(d.spells), list(d.fkey)
+        p.X, p.Y = d.X, d.Y
+        self.player = p
+        self.status = Status(**{f: d.st.get(f, 0) for f in Status.__dataclass_fields__})
+        self.status.saveslot = slot
+        w = self.world
+        w.level = self.status.level
+        w.grid = [[Square() for _ in range(MAP_SIZE + 2)] for _ in range(MAP_SIZE + 2)]
+        for (x, y), (fl, wa, it, mo, go, de) in d.map.items():
+            if w.in_map(x, y):
+                w.grid[x][y] = Square(fl, wa, mo, it, go, de)
+        w.visited = {(i - 1, ii - 1) for (i, ii), v in d.carta.items() if v}
+        w.origin = room_origin(p.X, p.Y)
+        self.events.snapshot()                          # map[] holds the arrival values
+        ox, oy = w.origin
+        for (i, ii), (fl, wa, it, mo, go, de) in d.room.items():
+            if 1 <= i <= 10 and 1 <= ii <= 10:
+                w.grid[ox + i - 1][oy + ii - 1] = Square(fl, wa, mo, it, go, de)
+        w.enemies = []
+        for e in d.enemies[:max(0, self.status.mons)]:
+            e = dict(e)
+            e['x'], e['y'] = e['x'] + ox - 1, e['y'] + oy - 1
+            w.enemies.append(Enemy(**e))
+        self.target = None
         rules.status_update(p, self.status, self.items)
         self.overlay = None
-        self.messages = [f'Game loaded from slot {n}.']
+        self.messages = []
 
     # ── loop ──────────────────────────────────────────────────────────────────
     def run(self):

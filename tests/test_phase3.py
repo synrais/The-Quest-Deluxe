@@ -119,10 +119,15 @@ shot(g, 't_levelup.png')
 key(g, pygame.K_RETURN)
 print('level', g.player.hero.level, 'exp', g.player.hero.exper, 'str', g.player.hero.bstr, 'overlay', type(g.overlay).__name__)
 
-# 6. save / load
+# 6. save / load (the original's save file, in a temporary folder)
+import tempfile
+from quest2.savefile import Slots
 g.overlay = None
-g.save(5)
+g.slots = Slots(tempfile.mkdtemp())
+g.status.saveslot = g.slots.new()
+g.save_game()
 x0 = g.player.X
 g.player.X += 1
-g.load(5)
-print('save/load pos restored', g.player.X == x0, g.messages)
+g.load_game()
+key(g, pygame.K_y)
+print('save/load pos restored', g.player.X == x0, 'slot', g.status.saveslot)
