@@ -162,8 +162,6 @@ def jumble() -> tuple[int, int, int]:
             return a, b, c
 
 
-CLASS_GROWTH = {1: (7, 3), 2: (1, 5), 3: (4, 4), 4: (3, 3)}   # (max life, max mana) per level
-INNATE_SKILL = {1: 'amb', 2: 'mem', 3: 'mar', 4: 'sch'}
 
 
 def apply_stat_point(h, which: int) -> None:
@@ -179,12 +177,12 @@ def apply_stat_point(h, which: int) -> None:
         h.bacc += 1
 
 
-def level_up_auto(p, st) -> list[int]:
+def level_up_auto(p, st, pack) -> list[int]:
     """First half of levelup(): level, exp target, class growth and the automatic points."""
     h = p.hero
     h.level += 1
     h.exper = 300 if h.level == 2 else h.level * 200
-    l, m = CLASS_GROWTH.get(h.type, (0, 0))
+    l, m = pack.classes.get(h.type, {}).get('growth', (0, 0))
     h.mlife += l
     h.mmana += m
     gained = []
@@ -201,9 +199,12 @@ def choices_this_level(p) -> int:
     return 2 if p.skill.sch == 1 and p.hero.level % 2 == 0 else 1
 
 
-def reclassify(p) -> int | None:
-    """End of levelup(): the class follows the stats; innate skills swap. Returns the new class if it changed."""
+def reclassify(p, pack) -> int | None:
+    """End of levelup(): the class follows the stats; innate skills swap. Returns the new class if it
+    changed. Quest I's rule, between its four classes; a pack turns it off with "reclass": false."""
     h, sk = p.hero, p.skill
+    if not pack.quest.get('reclass'):
+        return None
     if h.bdex + h.bacc > h.bstr + h.bintl:
         new = 3
     else:
@@ -214,7 +215,7 @@ def reclassify(p) -> int | None:
             new = 2
     if new == h.type:
         return None
-    gain, lose = INNATE_SKILL[new], INNATE_SKILL[h.type]
+    gain, lose = pack.classes[new]['skill'], pack.classes[h.type]['skill']
     if getattr(sk, gain) == 0:
         setattr(sk, gain, 1)
         setattr(sk, lose, 0)

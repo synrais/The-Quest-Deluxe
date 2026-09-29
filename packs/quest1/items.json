@@ -1,6 +1,7 @@
 {"_comment": "Items: id, name, price (prices.dat) and the Items.dat columns: requirements, attack, defence, weapon/magic armour, stat bonuses, power, weapon kind (0 normal, 1 double strike, 2 parry, 3 magic, 4 ranged, 5 two-handed, 6 two-handed parry), type, and the fields in docs/QUEST_PACKS.md (ammo, count, fires, quest, bag_name, ...). Pictures: sprites/items/<id>.png on the map, sprites/bag/<id>.png in the bag and shops.",
  "items": [
  {"id": 0, "name": "", "req_str": 0, "req_int": 0, "atk": 0, "def": 0, "warm": 0, "marm": 0, "str": 0, "int": 0, "power": 0, "kind": 0, "dex": 0, "acc": 0},
+ {"id": -5, "name": "", "type": "treasure"},
  {"id": 1, "name": "Minor Health Potion", "price": 15, "type": "potion", "potion": 1, "bag_name": "Potion"},
  {"id": 2, "name": "Full Health Potion", "price": 25, "type": "potion", "potion": 2, "bag_name": "Potion"},
  {"id": 3, "name": "Minor Mana Potion", "price": 15, "type": "potion", "potion": 3, "bag_name": "Potion"},
@@ -62,6 +63,7 @@
  {"id": 304, "name": "Bashing Shield", "price": 220, "req_str": 35, "req_int": 0, "atk": 10, "def": 10, "warm": 0, "marm": 0, "str": 0, "int": 0, "power": 0, "kind": 0, "dex": 0, "acc": 0, "type": "shield", "bag_name": "Bashing Shield"},
  {"id": 305, "name": "Tower Shield", "price": 300, "req_str": 45, "req_int": 0, "atk": 0, "def": 20, "warm": 0, "marm": 0, "str": 0, "int": 0, "power": 0, "kind": 0, "dex": 0, "acc": 0, "type": "shield", "bag_name": "Tower Shield"},
  {"id": 306, "name": "Kite Shield", "price": 400, "req_str": 55, "req_int": 0, "atk": 0, "def": 30, "warm": 0, "marm": 0, "str": 0, "int": 0, "power": 0, "kind": 0, "dex": 0, "acc": 0, "type": "shield", "bag_name": "Kite Shield"},
+ {"id": 311, "name": "", "type": "shield"},
  {"id": 401, "name": "Sheepskin Helmet", "price": 80, "req_str": 25, "req_int": 0, "atk": 0, "def": 0, "warm": 1, "marm": 0, "str": 0, "int": 0, "power": 0, "kind": 0, "dex": 0, "acc": 0, "type": "helmet", "bag_name": "Sheepskin Helmet"},
  {"id": 402, "name": "Wooden Helmet", "price": 180, "req_str": 30, "req_int": 0, "atk": 0, "def": 0, "warm": 2, "marm": 0, "str": 0, "int": 0, "power": 0, "kind": 0, "dex": 0, "acc": 0, "type": "helmet", "bag_name": "Wooden Helmet"},
  {"id": 403, "name": "Helmet of the Mind", "price": 70, "req_str": 0, "req_int": 0, "atk": 0, "def": 0, "warm": 0, "marm": 0, "str": 0, "int": 1, "power": 0, "kind": 0, "dex": 0, "acc": 0, "type": "helmet", "bag_name": "Helmet of the Mind"},

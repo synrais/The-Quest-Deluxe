@@ -95,7 +95,8 @@ class Renderer:
         p, st = game.player, game.status
         self.bgi.s = scr
         anim.draw_guy2(self.bgi, hx // TILE + 1, hy // TILE + 1, p.hero.type, p.hero.invisible, p.hero.poisoned,
-                       st.killer, st.powboost, st.Shield, st.fShield)
+                       st.killer, st.powboost, st.Shield, st.fShield,
+                       look=self.pack.classes.get(p.hero.type, {}).get('look'))
 
     # ── the original's animations ─────────────────────────────────────────────
     def play(self, game, gen, fast=False, redraw=True):

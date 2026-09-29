@@ -5,5 +5,19 @@
  "engine": "deluxe",
  "format": 1,
  "levels": 7,
- "first_level": 1
+ "first_level": 1,
+ "start_potions": {
+  "6": 1
+ },
+ "story_order": [
+  "amb",
+  "sch",
+  "mar",
+  "mem",
+  "bar",
+  "ras",
+  "cow",
+  "hon"
+ ],
+ "reclass": true
 }

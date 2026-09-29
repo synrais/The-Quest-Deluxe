@@ -7,8 +7,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-KNIGHT, MAGE, ROGUE, MONK = 1, 2, 3, 4
-CLASS_NAMES = {KNIGHT: 'Knight', MAGE: 'Mage', ROGUE: 'Rogue', MONK: 'Monk'}
+KNIGHT, MAGE, ROGUE, MONK = 1, 2, 3, 4           # Quest I's classes (the pack's classes.json)
 
 # Equipment slots are cells of the original 17x13 `bag` matrix.
 SLOT_WEAPON = (12, 4)
@@ -155,49 +154,31 @@ class Player:
         return next((s for s in BACKPACK if not self.bag.get(s)), None)
 
 
-CLASS_START = {
-    #          mlife mmana str int dex acc
-    KNIGHT: (50, 0, 20, 10, 10, 10),
-    MAGE: (20, 30, 10, 20, 10, 10),
-    ROGUE: (35, 15, 10, 10, 15, 15),
-    MONK: (30, 20, 15, 15, 10, 10),
-}
-
-
-# creation(): the extra skill picked from the list (1 Bargaining, 2 Ambidexterity, 3 Memorization,
-# 4 Marksmanship, 5 Scholar) and the fault (1 Cowardice, 2 Rashness, 3 Honor), as Skills fields.
-SKILL_CHOICES = {1: 'bar', 2: 'amb', 3: 'mem', 4: 'mar', 5: 'sch'}
-FAULT_CHOICES = {1: 'cow', 2: 'ras', 3: 'hon'}
-CLASS_SKILL = {1: 'amb', 2: 'mem', 3: 'mar', 4: 'sch'}      # KNIGHT, MAGE, ROGUE, MONK get this one free
-
-
-def new_player(cls: int, skill: int = 0, fault: int = 0) -> Player:
-    """Starting character, exactly as creation() and newgame() set it up."""
+def new_player(cls: int, skill: int = 0, fault: int = 0, pack=None) -> Player:
+    """Starting character, exactly as creation() and newgame() set it up, from the pack's
+    classes.json, skills.json and quest.json. skill / fault are positions (1-based) in creation()'s
+    lists; 0 is none."""
+    from .pack import default_pack
+    pack = pack or default_pack()
+    c = pack.classes[cls]
     p = Player()
-    if skill in SKILL_CHOICES:
-        setattr(p.skill, SKILL_CHOICES[skill], 1)
-    setattr(p.skill, CLASS_SKILL[cls], 1)
-    if fault in FAULT_CHOICES:
-        setattr(p.skill, FAULT_CHOICES[fault], 1)
+    skills, faults = pack.skill_ids('skill'), pack.skill_ids('fault')
+    if 1 <= skill <= len(skills):
+        setattr(p.skill, skills[skill - 1], 1)
+    setattr(p.skill, c['skill'], 1)
+    if 1 <= fault <= len(faults):
+        setattr(p.skill, faults[fault - 1], 1)
     p.fkey = list(range(10))                     # newgame(): F1..F9 start bound to spells 1..9
-    ml, mm, s, i, d, a = CLASS_START[cls]
     h = p.hero
-    h.mlife = h.life = ml
-    h.mmana = h.mana = mm
-    h.bstr, h.bintl, h.bdex, h.bacc = s, i, d, a
+    h.mlife = h.life = c['life']
+    h.mmana = h.mana = c['mana']
+    h.bstr, h.bintl, h.bdex, h.bacc = c['str'], c['int'], c['dex'], c['acc']
     h.type, h.level, h.rep, h.exper, h.invisible, h.poisoned = cls, 1, 0, 100, -1, 0
-    p.inv.white = 1
-    p.bag[SLOT_WEAPON] = 201                      # club
-    if cls == KNIGHT:
-        p.bag[SLOT_OFFHAND] = 301                 # buckler
-    elif cls == MAGE:
-        p.spells[1] = p.spells[2] = p.spells[3] = 1   # heal, flame, teleport
-        p.book[0], p.book[1], p.book[2] = 1, 2, 3
-    elif cls == ROGUE:
-        p.bag[(12, 8)] = 230                      # sling
-        p.bag[(13, 8)] = 620                      # 20 pebbles
-    elif cls == MONK:
-        p.spells[1] = 1
-        p.book[0] = 1
-        p.bag[SLOT_AMULET] = 502                  # stoic necklace
+    for n, count in pack.quest.get('start_potions', {}).items():
+        setattr(p.inv, POTION_FIELDS[int(n)], count)
+    for cell, it in c.get('bag', {}).items():
+        p.bag[tuple(int(v) for v in cell.split(','))] = it
+    for n, s in enumerate(c.get('spells', [])):
+        p.spells[s] = 1
+        p.book[n] = s
     return p

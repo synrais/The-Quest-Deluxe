@@ -99,12 +99,12 @@ class Combat:
             self.g.target = None
         q = w.sq(e.x, e.y)
         q.mon = 0
-        r = random(2)
-        if q.deco in (0, 4):
-            q.deco = 3 if r == 0 else 5
-            corpse = self.g.pack.trait(e.type, 'corpse', 'body')
+        r, pk = random(2), self.g.pack
+        if q.deco in (0, pk.deco('blood')):
+            q.deco = pk.deco('remains') if r == 0 else pk.deco('remains2')
+            corpse = pk.trait(e.type, 'corpse', 'body')
             if corpse == 'bones':
-                q.deco = 6
+                q.deco = pk.deco('bones')
             elif corpse == 'none':
                 q.deco = 0
         a = ev.attacker
@@ -191,7 +191,7 @@ class Combat:
                 e.life -= dmg
                 q = self.w.sq(e.x, e.y)
                 if q.deco == 0 and e.life > 0 and bleeds(self.g.pack, e):
-                    q.deco = 4
+                    q.deco = self.g.pack.deco('blood')
                 if kind == rules.KIND_DOUBLE and random(5) == 1:
                     g.play('pause', 100)
                     e.life -= dmg
@@ -254,7 +254,7 @@ class Combat:
                 self.g.play_at(hit, e.x, e.y, 0)
             q = self.w.sq(e.x, e.y)
             if q.deco == 0 and e.life > 0 and bleeds(self.g.pack, e):
-                q.deco = 4
+                q.deco = self.g.pack.deco('blood')
             self.hurt(h.power, e, 2, by_hero=True)
         else:
             self.g.play_at('bhit', e.x, e.y, 6)
@@ -356,7 +356,7 @@ class Combat:
             for x in range(ox, ox + 10):
                 for y in range(oy, oy + 10):
                     q = w.sq(x, y)
-                    if q.deco == 6 and q.mon == 0 and (x, y) != (p.X, p.Y):
+                    if q.deco == g.pack.deco('bones') and q.mon == 0 and (x, y) != (p.X, p.Y):
                         e.moved = True
                         g.play_at('dcast2', e.x, e.y)
                         q.deco = 0
@@ -414,7 +414,7 @@ class Combat:
         h = self.p.hero
         q = self.w.sq(self.p.X, self.p.Y)
         if q.deco == 0 and h.mlife and h.life / h.mlife <= LOW_HEALTH:
-            q.deco = 4
+            q.deco = self.g.pack.deco('blood')
 
     def fire_shield(self):
         """Shield of Fire burns adjacent enemies every turn."""

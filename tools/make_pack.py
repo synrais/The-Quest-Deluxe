@@ -137,6 +137,61 @@ def item_traits(i: int) -> dict:
     return t
 
 
+def tile_traits(key: str, n: int) -> dict:
+    """Walls, doors and locks (main2's movement), the automap colours (dmap()) and the
+    decorations the engine puts down, as named fields."""
+    t = {}
+    if key == 'walls':
+        if n >= 1:
+            t['solid'] = True
+        elif n == -1:
+            t['door'] = 'plain'
+        elif n in (-2, -3, -4):
+            t['door'], t['key'] = 'locked', {-2: 'yellow', -3: 'red', -4: 'blue'}[n]
+        elif n in (-5, -6):
+            t['door'] = 'fake'
+        colour = {2: [1, 1], 3: [10, 4], 4: [0, 5], -1: [0, 5]}.get(n)
+        if 9 < n < 15:
+            colour = [0, 5]
+        if colour:
+            t['map_colour'] = colour
+        if n == 5:
+            t['map_colour_on_level'] = {'5': [8, 2]}
+    elif key == 'floors':
+        colour = {2: [8, 2], 7: [6, 3], 8: [6, 3], 6: [0, 5], 4: [0, 5]}.get(n)
+        if colour:
+            t['map_colour'] = colour
+    else:
+        t['role'] = {1: 'open_door', 2: 'open_chest', 3: 'remains', 4: 'blood', 5: 'remains2', 6: 'bones'}[n]
+    return t
+
+
+def spell_traits(n: int) -> dict:
+    """cast(): what each spell does, as an effect with its parameters (magic.py runs the effects)."""
+    return {
+        1: {'effect': 'heal', 'anim': ['aheal']},
+        2: {'effect': 'bolt', 'anim': ['aflame', 0]},
+        3: {'effect': 'teleport'},
+        4: {'effect': 'shield', 'anim': ['ashield', 1], 'absorb_power_of': 5},     # the original reads spell 5's power
+        5: {'effect': 'freeze', 'anim': ['aicering'], 'freeze_power_of': 4},       # ... and this reads spell 4's
+        6: {'effect': 'ward', 'anim': ['ablackward']},
+        7: {'effect': 'invisibility', 'anim': ['ainvisibility'], 'fizzle': 50},
+        8: {'effect': 'summon', 'creature': -100, 'anim': ['asskeleton', 1]},
+        9: {'effect': 'bolt', 'anim': ['ainferno', 0]},
+        10: {'effect': 'heal', 'anim': ['arestore']},
+        11: {'effect': 'drain'},
+        12: {'effect': 'bolt', 'anim': ['athunder'], 'repeat': 5},
+        13: {'effect': 'fire_shield', 'anim': ['ashield', 2]},
+        14: {'effect': 'bolt', 'anim': ['adeteriorate', 40], 'empties_mana': True, 'needs_target': True},
+        15: {'effect': 'summon', 'creature': -101, 'anim': ['astoneknight']},
+        16: {'effect': 'earthquake'},
+        17: {'effect': 'heal', 'anim': ['acure']},
+        18: {'effect': 'summon', 'creature': -102, 'anim': ['asscorpion']},
+        19: {'effect': 'bolt', 'anim': ['adeaths']},
+        20: {'effect': 'dark_hour', 'anim': ['adarkhour'], 'repeat': 6},
+    }.get(n, {})
+
+
 def write_text(path: str, text: str):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, 'w', encoding='utf-8', newline='\n') as fh:
@@ -190,7 +245,16 @@ def main():
     # ── items: Items.dat, prices.dat, and every item that has a picture ──────
     stats = {r[0]: r for r in src.numbers('Items.dat')}
     prices = {r[0]: r[1] for r in src.numbers('prices.dat') if len(r) > 1}
-    ids = sorted(set(stats) | set(prices) | {n for (k, n) in names if k == 'object'} | set(bag_ids))
+    # the maps also hold two numbers the original has no data for: -5 (level 6, inside a tree) and 311 (a
+    # blank "shield" on level 7); they're kept, typed by their number, so they behave as in the original
+    on_maps = set()
+    level = 1
+    while src.exists(level_filename(level)):
+        on_maps |= {int(line.split()[4]) for line in src.text(level_filename(level)).splitlines()
+                    if len(line.split()) == 8}
+        level += 1
+    ids = sorted(set(stats) | set(prices) | {n for (k, n) in names if k == 'object'} | set(bag_ids) | on_maps - {0})
+    ids = [0] + [i for i in ids if i != 0]
     items = []
     for i in ids:
         it = {'id': i, 'name': names.get(('object', i), '')}
@@ -209,11 +273,14 @@ def main():
 
     # ── spells ───────────────────────────────────────────────────────────────
     from quest2.rules import SPELL_NAMES
-    spells = [{'id': r[0], 'name': SPELL_NAMES.get(r[0], ''), **dict(zip(SPELL_COLUMNS, r[1:]))}
-              for r in src.numbers('Spells.dat')]
+    spells = [{'id': r[0], 'name': SPELL_NAMES.get(r[0], ''), **dict(zip(SPELL_COLUMNS, r[1:])),
+               **spell_traits(r[0])} for r in src.numbers('Spells.dat')]
     compact_json(os.path.join(OUT, 'spells.json'), 'spells', spells,
                  'Spells (Spells.dat): required intelligence, mana, range (0 = on the caster), power, '
-                 'duration. Icons: sprites/spells/<id>.png.')
+                 'duration; effect (heal, bolt, teleport, shield, fire_shield, freeze, ward, dark_hour, '
+                 'invisibility, summon, drain, earthquake) and its settings: anim = [animation, '
+                 'arguments...], repeat, creature, fizzle (% chance), empties_mana, needs_target. '
+                 'Icons: sprites/spells/<id>.png.')
 
     # ── creatures: MONSTERS.DAT, the monsdeath2() rewards, names ─────────────
     with open(os.path.join(CONTENT, 'monsters.json')) as fh:
@@ -241,8 +308,20 @@ def main():
     # ── map tiles ────────────────────────────────────────────────────────────
     tiles = {}
     for kind, key in (('floor', 'floors'), ('wall', 'walls'), ('extra', 'decos')):
-        tiles[key] = [{'id': n, 'name': names[(k, n)]} for (k, n) in sorted(names) if k == kind]
-    write_json(os.path.join(OUT, 'tiles.json'), tiles)
+        tiles[key] = [{'id': n, 'name': names[(k, n)], **tile_traits(key, n)}
+                      for (k, n) in sorted(names) if k == kind]
+    tiles['_comment'] = ('Walls: solid (blocks the way), or door: plain (opens when walked into), fake (a '
+                         'secret wall that opens the same way) or locked (needs the key of that colour). '
+                         'map_colour: [EGA colour, priority] on the automap (the higher priority of the '
+                         'floor and the wall wins; grass-green 2 at priority 0 otherwise); '
+                         'map_colour_on_level overrides it on one level. Decorations: role is what the '
+                         'engine uses them for (open_door, open_chest, remains, remains2, blood, bones).')
+    lines = [f'{{"_comment": {json.dumps(tiles.pop("_comment"))},']
+    for n, (key, rows) in enumerate(tiles.items()):
+        lines.append(f' "{key}": [')
+        lines += ['  ' + json.dumps(r) + (',' if i < len(rows) - 1 else '') for i, r in enumerate(rows)]
+        lines.append(' ]' + (',' if n < len(tiles) - 1 else ''))
+    write_text(os.path.join(OUT, 'tiles.json'), '\n'.join(lines + ['}']) + '\n')
 
     # ── text: the original's own files, decoded (the game reads them character by character) ──
     write_text(os.path.join(OUT, 'text', 'talk.txt'), src.text('Talk.dat').replace('\r\n', '\n'))
@@ -278,6 +357,43 @@ def main():
         with open(os.path.join(OUT, 'fonts', f), 'wb') as fh:
             fh.write(src.read(f))
 
+    # ── classes and skills: creation(), newgame(), levelup(), guy2() ─────────
+    classes = [
+        {'id': 1, 'name': 'Knight', 'life': 50, 'mana': 0, 'str': 20, 'int': 10, 'dex': 10, 'acc': 10,
+         'growth': [7, 3], 'skill': 'amb', 'no_fault': 'cow', 'look': {'colour': 5, 'shield_and_sword': True},
+         'bag': {'12,4': 201, '16,4': 301}, 'spells': []},
+        {'id': 2, 'name': 'Mage', 'life': 20, 'mana': 30, 'str': 10, 'int': 20, 'dex': 10, 'acc': 10,
+         'growth': [1, 5], 'skill': 'mem', 'no_fault': 'ras', 'look': {'colour': 4},
+         'bag': {'12,4': 201}, 'spells': [1, 2, 3]},
+        {'id': 3, 'name': 'Rogue', 'life': 35, 'mana': 15, 'str': 10, 'int': 10, 'dex': 15, 'acc': 15,
+         'growth': [4, 4], 'skill': 'mar', 'no_fault': 'hon', 'look': {'colour': 8},
+         'bag': {'12,4': 201, '12,8': 230, '13,8': 620}, 'spells': []},
+        {'id': 4, 'name': 'Monk', 'life': 30, 'mana': 20, 'str': 15, 'int': 15, 'dex': 10, 'acc': 10,
+         'growth': [3, 3], 'skill': 'sch', 'look': {'colour': 15},
+         'bag': {'12,4': 201, '14,6': 502}, 'spells': [1]},
+    ]
+    compact_json(os.path.join(OUT, 'classes.json'), 'classes', classes,
+                 'Hero classes: starting life, mana and stats; growth = [life, mana] gained per level; '
+                 'skill = the skill it gets free (skills.json); no_fault = the fault it may not take; '
+                 'look = how guy2() draws it (body colour, the Knight\'s shield and sword); bag = starting '
+                 'items by bag cell "column,row" (12,4 weapon, 16,4 off hand, 14,2 helmet, 14,4 armour, '
+                 '14,6 amulet, 12-15,8-11 backpack); spells = known at the start, in spell-book order.')
+    skills = [
+        {'id': 'bar', 'name': 'Bargaining', 'kind': 'skill', 'story': 'You are good at bargaining.'},
+        {'id': 'amb', 'name': 'Ambidexterity', 'kind': 'skill', 'story': 'You are ambidextrous.'},
+        {'id': 'mem', 'name': 'Memorization', 'kind': 'skill', 'story': 'You excel at spell memorization.'},
+        {'id': 'mar', 'name': 'Marksmanship', 'kind': 'skill', 'story': 'You excel at marksmanship.',
+         'only_free': True},
+        {'id': 'sch', 'name': 'Scholar', 'kind': 'skill', 'story': 'You are a scholar.'},
+        {'id': 'cow', 'name': 'Cowardice', 'kind': 'fault', 'story': 'You are a coward.'},
+        {'id': 'ras', 'name': 'Rashness', 'kind': 'fault', 'story': 'You are often very rash.'},
+        {'id': 'hon', 'name': 'Honor', 'kind': 'fault', 'story': 'You are extremely honorable.'},
+    ]
+    compact_json(os.path.join(OUT, 'skills.json'), 'skills', skills,
+                 'Skills and faults, in creation()\'s order. What each does is part of the engine '
+                 '(docs/QUEST_PACKS.md); story = the line story 1 prints about it. only_free: it can only '
+                 'come free with a class, and is only listed for that class.')
+
     write_json(os.path.join(OUT, 'quest.json'), {
         'title': 'The Quest',
         'author': 'Alex Kutsenok',
@@ -286,6 +402,9 @@ def main():
         'format': 1,
         'levels': level - 1,
         'first_level': 1,
+        'start_potions': {'6': 1},
+        'story_order': ['amb', 'sch', 'mar', 'mem', 'bar', 'ras', 'cow', 'hon'],
+        'reclass': True,
     })
     print(f'{OUT}: {len(items)} items, {len(spells)} spells, {len(creatures)} creatures, {level - 1} levels')
 

@@ -201,20 +201,11 @@ class Hud:
         px = pygame.PixelArray(self._map)
         cur = ((w.origin[0] - 1) // 10, (w.origin[1] - 1) // 10)
         colours = [self._map.map_rgb(c) for c in EGA]
+        pack = w.data.src.pack
         for i in range(1, 101):
             for ii in range(1, 101):
                 q = w.grid[i][ii]
-                col = 2
-                if q.wall == 2:
-                    col = 1
-                if q.floor == 2 or (q.wall == 5 and w.level == 5):
-                    col = 8
-                if q.floor in (7, 8):
-                    col = 6
-                if q.wall == 3:
-                    col = 10
-                if q.wall == 4 or 9 < q.wall < 15 or q.floor in (6, 4) or q.wall == -1:
-                    col = 0
+                col = pack.map_colour(q.floor, q.wall, w.level)
                 screen = ((i - 1) // 10, (ii - 1) // 10)
                 if screen not in w.visited and screen != cur:
                     col = 8

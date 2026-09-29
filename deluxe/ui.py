@@ -7,7 +7,7 @@ import pygame
 
 from . import rules
 from .rules import SPELL_NAMES, SP_INT, SP_MANA, SP_RANGE, SP_POWER
-from .state import CLASS_NAMES, KNIGHT, MAGE, ROGUE, MONK
+from .state import KNIGHT, MAGE, ROGUE, MONK
 from .render import EGA, W, H, TILE
 
 if TYPE_CHECKING:
@@ -235,7 +235,6 @@ class LoadScreen(Overlay):
     each with the hero's class and level. Up/Down move the yellow cross (with a click), Enter loads,
     Esc goes back to the title."""
     covers_map = True
-    CLASSES = {1: 'Knight', 2: 'Mage', 3: 'Rogue', 4: 'Monk'}
 
     def __init__(self, g: 'Game'):
         self.games = g.slots.listing()
@@ -269,7 +268,7 @@ class LoadScreen(Overlay):
         for n, level, htype in self.games:
             y = n * 20 + 30
             g.outtextxy(140, y, f'{n:2d}.')
-            g.outtextxy(180, y, self.CLASSES.get(htype, ''))
+            g.outtextxy(180, y, r.pack.class_name(htype))
             g.outtextxy(240, y, 'Level')
             g.outtextxy(295, y, f'{level:<2d}' if level < 10 else str(level))
         g.setlinestyle(0, 0, 3)
@@ -456,21 +455,26 @@ class Choice(Overlay):
 
 
 class ClassSelect(Choice):
-    """creation(), first page: the four classes or the questionnaire."""
-    count = 5
+    """creation(), first page: the pack's classes, then the questionnaire."""
+
+    def __init__(self, pack):
+        super().__init__()
+        self.pack = pack
+        self.classes = list(pack.classes.values())
+        self.count = len(self.classes) + 1
 
     def pick(self, g, i):
-        g.overlay = Quiz(g) if i == 5 else SkillSelect(i)
+        g.overlay = Quiz(g) if i == self.count else SkillSelect(self.classes[i - 1]['id'], self.pack)
 
     def draw(self, r, scr):
         creation_page(r, scr)
         r.btext(scr, 'What class do you choose to play as?', (0, 40), 9, SIMPLEX)
         r.btext(scr, '                           Strength   Intelligence   Dexterity   Accuracy', (0, 70), 5, SIMPLEX)
-        for n, name in enumerate(('Knight', 'Mage', 'Rogue', 'Monk',
-                                  'Answer questions to determine class (recommended)')):
+        names = [c['name'] for c in self.classes] + ['Answer questions to determine class (recommended)']
+        for n, name in enumerate(names):
             r.btext(scr, name, (150, 100 + 30 * n), 9, SIMPLEX)
-        for n, row in enumerate(('20         10         10         10', '10         20         10         10',
-                                 '10         10         15         15', '15         15         10         10')):
+        for n, c in enumerate(self.classes):
+            row = '         '.join(f'{c[k]:<2}' for k in ('str', 'int', 'dex', 'acc'))
             r.btext(scr, row, (240, 100 + 30 * n), 9, SIMPLEX)
         r.btext(scr, 'Press <Enter> to continue', (150, 440), 14, SIMPLEX)
         plus(r, scr, 129, self.i * 30 + 87)
@@ -491,7 +495,7 @@ class Quiz(Choice):
         if self.result:
             if ev.key in CONFIRM:
                 self.close(g)
-                g.overlay = SkillSelect(self.result)
+                g.overlay = SkillSelect(self.result, g.pack)
             return
         super().key(g, ev)
 
@@ -512,7 +516,7 @@ class Quiz(Choice):
         plus(r, scr, 37, self.i * 40 + 137)
         r.btext(scr, 'Press <Enter> to continue', (150, 440), 14, SIMPLEX)
         if self.result:
-            r.btext(scr, f'You decided to become a {CLASS_NAMES[self.result]}.', (50, 300), 9, SIMPLEX)
+            r.btext(scr, f'You decided to become a {r.pack.class_name(self.result)}.', (50, 300), 9, SIMPLEX)
 
 
 def quiz_class(total: int) -> int:
@@ -538,40 +542,48 @@ def quiz_class(total: int) -> int:
 
 class SkillSelect(Choice):
     """creation(): choose one extra skill. A second '+' marks the class's own free skill, which can't be
-    chosen again. Marksmanship is only listed for Rogues and can never be chosen."""
-    count = 5
+    chosen again. A skill that only comes free with a class (Marksmanship) is only listed for that
+    class and can never be chosen."""
 
-    def __init__(self, cls):
+    def __init__(self, cls, pack):
         super().__init__()
-        self.cls = cls
+        self.cls, self.pack = cls, pack
+        self.skills = [pack.skill(s) for s in pack.skill_ids('skill')]
+        self.count = len(self.skills)
+        self.own = pack.classes[cls]['skill']
 
     def allowed(self, i):
-        return i != self.cls + 1 and i != 4
+        s = self.skills[i - 1]
+        return s['id'] != self.own and not s.get('only_free')
 
     def pick(self, g, i):
-        g.overlay = FaultSelect(self.cls, i)
+        g.overlay = FaultSelect(self.cls, i, self.pack)
 
     def draw(self, r, scr):
         creation_page(r, scr)
         r.btext(scr, 'Choose a skill:', (50, 60), 9, SIMPLEX)
-        for n, name in enumerate(('Bargaining', 'Ambidexterity', 'Memorization', 'Marksmanship', 'Scholar')):
-            if name != 'Marksmanship' or self.cls == ROGUE:
-                r.btext(scr, name, (100, 100 + 40 * n), 9, SIMPLEX)
-        plus(r, scr, 79, (self.cls + 1) * 40 + 77)
+        for n, s in enumerate(self.skills):
+            if not s.get('only_free') or s['id'] == self.own:
+                r.btext(scr, s['name'], (100, 100 + 40 * n), 9, SIMPLEX)
+        own = next((n + 1 for n, s in enumerate(self.skills) if s['id'] == self.own), 0)
+        plus(r, scr, 79, own * 40 + 77)
         plus(r, scr, 59, self.i * 40 + 77)
         r.btext(scr, 'Press <Enter> to continue', (150, 440), 14, SIMPLEX)
 
 
 class FaultSelect(Choice):
-    """creation(): choose a fault. Knights can't be cowards, Mages can't be rash, Rogues can't be honorable."""
-    count = 3
+    """creation(): choose a fault. Each class may forbid one (Knights can't be cowards, Mages can't be
+    rash, Rogues can't be honorable); it isn't listed."""
 
-    def __init__(self, cls, skill):
+    def __init__(self, cls, skill, pack):
         super().__init__()
         self.cls, self.skill = cls, skill
+        self.faults = [pack.skill(s) for s in pack.skill_ids('fault')]
+        self.count = len(self.faults)
+        self.banned = pack.classes[cls].get('no_fault')
 
     def allowed(self, i):
-        return i != self.cls
+        return self.faults[i - 1]['id'] != self.banned
 
     def pick(self, g, i):
         g.start_new(self.cls, self.skill, i)
@@ -579,9 +591,9 @@ class FaultSelect(Choice):
     def draw(self, r, scr):
         creation_page(r, scr)
         r.btext(scr, 'Choose a fault:', (50, 60), 9, SIMPLEX)
-        for n, name in enumerate(('Cowardice', 'Rashness', 'Honor')):
-            if n + 1 != self.cls:
-                r.btext(scr, name, (100, 100 + 40 * n), 9, SIMPLEX)
+        for n, f in enumerate(self.faults):
+            if f['id'] != self.banned:
+                r.btext(scr, f['name'], (100, 100 + 40 * n), 9, SIMPLEX)
         plus(r, scr, 59, self.i * 40 + 77)
         r.btext(scr, 'Press <Enter> to continue', (150, 440), 14, SIMPLEX)
 

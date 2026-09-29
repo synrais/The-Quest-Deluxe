@@ -163,9 +163,9 @@ def chase(g, e, tx, ty, x0, x1, y0, y1, free, step):
             blocked = 2
             return
         blocked = 1
-        if w.sq(nx, ny).wall == -1:              # monsters open plain doors
+        if g.pack.wall(w.sq(nx, ny).wall).get('door') == 'plain':     # monsters open plain doors
             q = w.sq(nx, ny)
-            q.wall, q.deco = 0, 1
+            q.wall, q.deco = 0, g.pack.deco('open_door')
             blocked = 2
 
     while True:

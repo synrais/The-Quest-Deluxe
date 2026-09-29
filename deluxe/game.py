@@ -144,7 +144,7 @@ class Game:
         self.anim_host = ScreenHost(self)
         self.world = World(self.data)
         self.status = Status()
-        self.player = new_player(KNIGHT)
+        self.player = new_player(KNIGHT, pack=self.pack)
         self.combat = Combat(self)
         self.magic = Magic(self)
         self.events = Events(self)
@@ -233,12 +233,12 @@ class Game:
                                          'one to play.', 15, lambda: setattr(self, 'overlay', ui.TitleScreen()))
                 return
             then()
-        self.show_story(0, lambda: reserve(lambda: setattr(self, 'overlay', ui.ClassSelect())),
+        self.show_story(0, lambda: reserve(lambda: setattr(self, 'overlay', ui.ClassSelect(self.pack))),
                         esc=lambda: reserve(lambda: setattr(self, 'overlay', ui.TitleScreen())))
 
     def start_new(self, cls: int, skill: int = 0, fault: int = 0):
         """The end of creation() and newgame(): build the hero, then newmap() shows story 1."""
-        self.player = new_player(cls, skill, fault)
+        self.player = new_player(cls, skill, fault, self.pack)
         self.status = Status(Shield=0, fShield=0, powboost=-1, armboost=-1, saveslot=self.status.saveslot)
         self.status.p1, self.status.p2, self.status.p3 = rules.jumble()
         rules.status_update(self.player, self.status, self.items)
@@ -251,15 +251,11 @@ class Game:
 
     def story_header(self) -> list[str]:
         """story(1): who the hero became, in the original's order."""
-        from .state import CLASS_NAMES
-        sk = self.player.skill
-        lines = [f'When you were 18,you decided to become a {CLASS_NAMES[self.player.hero.type]}.']
-        for have, text in ((sk.amb, 'You are ambidextrous.'), (sk.sch, 'You are a scholar.'),
-                           (sk.mar, 'You excel at marksmanship.'), (sk.mem, 'You excel at spell memorization.'),
-                           (sk.bar, 'You are good at bargaining.'), (sk.ras, 'You are often very rash.'),
-                           (sk.cow, 'You are a coward.'), (sk.hon, 'You are extremely honorable.')):
-            if have == 1:
-                lines.append(text)
+        sk, pk = self.player.skill, self.pack
+        lines = [f'When you were 18,you decided to become a {pk.class_name(self.player.hero.type)}.']
+        for sid in pk.quest.get('story_order', []):
+            if getattr(sk, sid) == 1:
+                lines.append(pk.skill(sid).get('story', ''))
         return lines
 
     def show_story(self, sid: int, then=None, header=None, esc=None):
@@ -355,18 +351,19 @@ class Game:
         if not w.in_map(nx, ny):
             return False
         q = w.sq(nx, ny)
-        if q.wall >= 1:
+        wall = self.pack.wall(q.wall)
+        if wall.get('solid'):
             return False
         e = w.enemy_at(nx, ny)
         if e and (st.killer or e.att > -1 or e.type > 0):
             self.combat.melee(e)
             return True
-        if q.wall in (-1, -5, -6) or (q.wall == -2 and p.inv.ykey) or (q.wall == -3 and p.inv.rkey) \
-                or (q.wall == -4 and p.inv.bkey):
-            q.wall, q.deco = 0, 1
+        door = wall.get('door')
+        if door in ('plain', 'fake') or (door == 'locked' and getattr(p.inv, KEY_FIELDS[wall['key']])):
+            q.wall, q.deco = 0, self.pack.deco('open_door')
             self.tones((400, 100))
             return True
-        if q.wall in (-2, -3, -4):                   # locked: the original just doesn't move
+        if door == 'locked':                         # locked: the original just doesn't move
             return True
         if q.mon < 0 and q.mon > -100:
             if p.hero.invisible == -1:
@@ -442,7 +439,7 @@ class Game:
         pk = self.pack
         if pk.item_type(q.item) == 'chest':
             p.inv.coins += rules.random(40) + 80
-            q.item, q.deco = 0, 2
+            q.item, q.deco = 0, pk.deco('open_chest')
             self.events.run('opened_chest')
         if q.gold > 0:
             p.inv.coins += q.gold
@@ -630,7 +627,7 @@ class Game:
             h.life -= 1
             q = w.sq(p.X, p.Y)
             if q.deco == 0:
-                q.deco = 4
+                q.deco = self.pack.deco('blood')
             self.play('dying2')                       # "You are bleeding!", then the potion belt again
         self.upkeep()
         if h.exper <= 0 and not self.overlay:
@@ -640,7 +637,7 @@ class Game:
         """death(): the hero's body, death2()'s last words, then 'Want to load?'; No closes the
         screen in a black box and goes back to the title (mastermind())."""
         p = self.player
-        self.world.sq(p.X, p.Y).deco = 5
+        self.world.sq(p.X, p.Y).deco = self.pack.deco('remains2')
         self.messages = []
         self.play('death2')
 
@@ -680,11 +677,11 @@ class Game:
 
     def level_up(self):
         p, st = self.player, self.status
-        gained = rules.level_up_auto(p, st)
+        gained = rules.level_up_auto(p, st, self.pack)
         rules.status_update(p, st, self.items)
 
         def after_points():
-            new = rules.reclassify(p)
+            new = rules.reclassify(p, self.pack)
             rules.status_update(p, st, self.items)
             if new:
                 self.play('class_change', new)

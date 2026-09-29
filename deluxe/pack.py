@@ -43,6 +43,17 @@ def pack_path() -> str:
     return p if os.path.isdir(p) else os.path.join(PACKS_DIR, p)
 
 
+_default = None
+
+
+def default_pack() -> 'Pack':
+    """The pack in play (loaded once), for code that isn't handed one."""
+    global _default
+    if _default is None:
+        _default = Pack()
+    return _default
+
+
 def _load_json(path: str):
     with open(path, encoding='utf-8') as fh:
         return json.load(fh)
@@ -58,6 +69,16 @@ class Pack:
         self.spells = {r['id']: r for r in _load_json(self.path('spells.json'))['spells']}
         self.creatures = {r['id']: r for r in _load_json(self.path('creatures.json'))['creatures']}
         self.tiles = _load_json(self.path('tiles.json'))
+        self.classes = {r['id']: r for r in _load_json(self.path('classes.json'))['classes']}
+        self.skills = _load_json(self.path('skills.json'))['skills']
+        self.floors = {t['id']: t for t in self.tiles.get('floors', [])}
+        self.walls = {t['id']: t for t in self.tiles.get('walls', [])}
+        self.decos = {t['id']: t for t in self.tiles.get('decos', [])}
+        self._roles = {t['role']: t['id'] for t in self.decos.values() if 'role' in t}
+        self._doors = {}
+        for t in self.walls.values():
+            if 'door' in t:
+                self._doors.setdefault(t['door'], t['id'])
 
     def path(self, *parts) -> str:
         return os.path.join(self.root, *parts)
@@ -98,6 +119,37 @@ class Pack:
         if not hasattr(self, '_ammo'):
             self._ammo = {(r['ammo'], r['count']): i for i, r in self.items.items() if r.get('type') == 'ammo'}
         return self._ammo.get((group, count), 0) if count > 0 else 0
+
+    # ── classes and skills ──────────────────────────────────────────────────
+    def skill_ids(self, kind: str) -> list:
+        """creation()'s lists: the skills (kind 'skill') or the faults (kind 'fault'), in order."""
+        return [s['id'] for s in self.skills if s['kind'] == kind]
+
+    def skill(self, sid: str) -> dict:
+        return next((s for s in self.skills if s['id'] == sid), {})
+
+    def class_name(self, cls: int) -> str:
+        return self.classes.get(cls, {}).get('name', '')
+
+    # ── map tiles ───────────────────────────────────────────────────────────
+    def wall(self, v: int) -> dict:
+        return self.walls.get(v, {})
+
+    def deco(self, role: str) -> int:
+        """The decoration the engine puts down for a role (open_door, blood, bones, ...)."""
+        return self._roles.get(role, 0)
+
+    def door(self, kind: str = 'plain') -> int:
+        return self._doors.get(kind, 0)
+
+    def map_colour(self, floor: int, wall: int, level: int) -> int:
+        """dmap(): the automap colour of a square."""
+        best, rank = 2, 0
+        for t in (self.floors.get(floor, {}), self.walls.get(wall, {})):
+            c = t.get('map_colour_on_level', {}).get(str(level)) or t.get('map_colour')
+            if c and c[1] > rank:
+                best, rank = c
+        return best
 
     # ── creatures ───────────────────────────────────────────────────────────
     def trait(self, creature: int, name: str, default=None):

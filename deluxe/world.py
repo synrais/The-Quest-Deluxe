@@ -95,16 +95,17 @@ class World:
 
     def leave_room(self) -> None:
         """goroom2 (first half): write-back rules applied to the screen being left."""
+        pack = self.data.src.pack
         for x, y in self.room_tiles():
             q = self.grid[x][y]
-            hidden = self.data.src.pack.trait(q.mon, 'hides_as') if q.mon else None
+            hidden = pack.trait(q.mon, 'hides_as') if q.mon else None
             if hidden:
                 q.mon = hidden                             # a revealed wraith goes invisible again
             if q.mon <= -100:
                 q.mon = 0                                  # summoned allies vanish
-            if q.deco == 1 and q.mon == 0:                 # opened door stays open
+            if q.deco == pack.deco('open_door') and q.mon == 0:   # an opened door closes (as a plain door)
                 q.deco = 0
-                q.wall = -1
+                q.wall = pack.door('plain')
         # NPCs standing on the edge are nudged inside so they don't block the doorway
         ox, oy = self.origin
         for x, y in self.room_tiles():

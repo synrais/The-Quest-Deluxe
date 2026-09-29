@@ -863,12 +863,13 @@ def song_bevcop(h):
 HERO_COLOURS = {1: 5, 2: 4, 3: 8, 4: 15}           # Knight purple, Mage red, Rogue grey, Monk white
 
 
-def draw_guy2(g, x, y, htype, invisible, poisoned, killer, powboost, shield, fshield):
+def draw_guy2(g, x, y, htype, invisible, poisoned, killer, powboost, shield, fshield, look=None):
     """guy2(): the hero at screen square (x, y). While invisible only the eyes are drawn. The eyes
     are green when poisoned, red with the killer switch on, light red under a Berserker potion; the
     Shield spell adds a yellow ring, Shield of Fire a red one."""
     i, ii = (x - 1) * 40, y * 40 - 39
-    c = HERO_COLOURS.get(htype, 0)
+    c = HERO_COLOURS.get(htype, 0) if look is None else look.get('colour', 0)
+    armed = htype == 1 if look is None else look.get('shield_and_sword', False)
     if invisible <= 0:
         g.setfillstyle(1, 7)
         g.setcolor(7)
@@ -906,7 +907,7 @@ def draw_guy2(g, x, y, htype, invisible, poisoned, killer, powboost, shield, fsh
         g.setfillstyle(1, 8)
         g.bar(i + 17, ii + 38, i + 18, ii + 38)
         g.bar(i + 23, ii + 38, i + 22, ii + 38)
-        if htype == 1:                                  # the Knight's shield and sword
+        if armed:                                       # the Knight's shield and sword
             g.setcolor(15)
             g.setfillstyle(1, 4)
             g.fillellipse(i + 26, ii + 20, 5, 5)
