@@ -10,6 +10,10 @@ quest2/content/levels/level1.qs     ... level7.qs: the original story, ported
 quest2/content/levels/level8.qs     a new level: add L00008.dat and (optionally) this file
 ```
 
+In Quest Deluxe the same scripts live in the quest pack (docs/QUEST_PACKS.md):
+`packs/<name>/levels/common.qs` and `packs/<name>/levels/<n>/script.qs`, and the editor's Events
+tab edits them (its Map tab sets START, STORIES, SHOPS, TELEPORT and the other settings).
+
 The original seven were ported line by line from the decompiled code. Then they were checked
 against the real exe, which runs in an emulator (`tools/re/verify_events.py` and
 `tools/re/verify_deaths.py`). In thousands of random game states, every conversation and every
@@ -31,6 +35,7 @@ SHOPS = {(3, 2): 1}            # screen (column, row, 1-based) -> shop file S000
 TELEPORT = (20, 0)             # how far a teleporter pad (item 999) moves the hero
 ASK_TO_LEAVE = True            # ask "Want to travel further?" at the exit (item 1000)
 LEAVE_JINGLE = True            # play song_bevcop() when leaving for the next level
+PEACEFUL_SCREENS = [(1, 1)]    # Deluxe: screens where people and allies don't attack monsters
 ```
 
 ### Handlers
