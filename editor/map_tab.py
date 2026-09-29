@@ -98,6 +98,12 @@ class MapTab(ttk.Frame):
         g.pack(fill='x')
         ttk.Label(g, text='Gold per square').pack(side='left')
         ttk.Spinbox(g, from_=1, to=9999, width=6, textvariable=self.gold).pack(side='left', padx=4)
+        f = ttk.Frame(right)
+        f.pack(fill='x', pady=(4, 0))
+        ttk.Label(f, text='Find').pack(side='left')
+        self.find = tk.StringVar()
+        self.find.trace_add('write', lambda *a: self._fill_palette())
+        ttk.Entry(f, textvariable=self.find, width=18).pack(side='left', padx=4, fill='x', expand=True)
         pal = ttk.Frame(right)
         pal.pack(fill='both', expand=True, pady=4)
         self.palette = ttk.Treeview(pal, show='tree', selectmode='browse', height=18)
@@ -230,8 +236,11 @@ class MapTab(ttk.Frame):
             t.insert('', 'end', iid='0', text='  (remove gold)', image=self.art.icon('gold', 0))
         else:
             t.insert('', 'end', iid='0', text='  (nothing)', image=self.art.icon(layer, 0))
+            want = self.find.get().strip().lower()
             for r in self.app.project.entries(layer):
                 name = r.get('name') or ''
+                if want and want not in name.lower() and want != str(r['id']):
+                    continue
                 t.insert('', 'end', iid=str(r['id']), text=f'  {r["id"]}  {name}', image=self.art.icon(layer, r['id']))
         v = str(self.value[layer])
         if t.exists(v):
