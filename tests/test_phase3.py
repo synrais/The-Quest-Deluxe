@@ -80,13 +80,11 @@ print('after flame: mana', g.player.hero.mana, 'imp', imp.life if imp in g.world
 
 # 3. Rogue ranged
 g = new(ROGUE)
-key(g, pygame.K_i)
-inv = g.overlay
-inv.i = inv.ORDER.index((12, 8))
+key(g, pygame.K_i)                  # the cursor starts on the first backpack cell: the sling
 key(g, pygame.K_RETURN)
-inv.i = inv.ORDER.index((13, 8))
+key(g, pygame.K_RIGHT)              # the pebbles
 key(g, pygame.K_RETURN)
-print('rogue equip', g.player.bag, inv.note)
+print('rogue equip', g.player.bag, type(g.overlay).__name__)
 shot(g, 't_inventory.png')
 key(g, pygame.K_ESCAPE)
 x, y = find(g, lambda x, y, q: q.mon == 2 and (x - 1) // 10 == (x - 5) // 10 and g.world.sq(x - 4, y).wall == 0
@@ -103,10 +101,10 @@ x, y = find(g, lambda x, y, q: q.mon == -5)
 nx = x - 1 if g.world.sq(x - 1, y).wall == 0 else x + 1
 warp(g, nx, y)
 key(g, pygame.K_RIGHT if nx < x else pygame.K_LEFT)
-print('shop overlay', type(g.overlay).__name__, getattr(g.overlay, 'stock', None))
+print('shop overlay', type(g.overlay).__name__)
 key(g, pygame.K_RIGHT)
 key(g, pygame.K_RETURN)
-print('buy note', g.overlay.note, 'coins', g.player.inv.coins, 'bag', g.player.bag)
+print('bought: coins', g.player.inv.coins, 'bag', g.player.bag, 'potions', g.player.inv)
 shot(g, 't_shop.png')
 key(g, pygame.K_ESCAPE)
 

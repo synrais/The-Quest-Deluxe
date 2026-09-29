@@ -7,9 +7,7 @@ import pygame
 
 from . import rules
 from .rules import SPELL_NAMES, SP_INT, SP_MANA, SP_RANGE, SP_POWER
-from .state import (CLASS_NAMES, KNIGHT, MAGE, ROGUE, MONK, BACKPACK, SLOT_WEAPON, SLOT_OFFHAND, SLOT_HELMET,
-                    SLOT_ARMOR, SLOT_AMULET, IT_REQ_STR, IT_REQ_INT, IT_ATK, IT_DEF, IT_WARM, IT_MARM, IT_STR,
-                    IT_INT, IT_POWER, IT_KIND, IT_DEX, IT_ACC, POTION_FIELDS)
+from .state import CLASS_NAMES, KNIGHT, MAGE, ROGUE, MONK
 from .render import EGA, W, H, TILE
 
 if TYPE_CHECKING:
@@ -836,168 +834,48 @@ class CharacterSheet(Overlay):
 
 # ── inventory & shops ─────────────────────────────────────────────────────────
 
-EQUIP_CELLS = [(SLOT_HELMET, (505, 60)), (SLOT_WEAPON, (430, 140)), (SLOT_ARMOR, (505, 140)),
-               (SLOT_OFFHAND, (580, 140)), (SLOT_AMULET, (505, 220))]
-EQUIP_LABEL = {SLOT_HELMET: 'Head', SLOT_WEAPON: 'Arm', SLOT_ARMOR: 'Body', SLOT_OFFHAND: 'Arm', SLOT_AMULET: 'Jewelry'}
+# pygame keys -> what the original's getch() returns (the arrows come as 0 and a scan code)
+GETCH = {pygame.K_UP: [0, 72], pygame.K_DOWN: [0, 80], pygame.K_LEFT: [0, 75], pygame.K_RIGHT: [0, 77],
+         pygame.K_KP8: [0, 72], pygame.K_KP2: [0, 80], pygame.K_KP4: [0, 75], pygame.K_KP6: [0, 77],
+         pygame.K_RETURN: [13], pygame.K_KP_ENTER: [13], pygame.K_ESCAPE: [27], pygame.K_BACKSPACE: [8]}
 
 
-def cell_pos(slot):
-    for s, pos in EQUIP_CELLS:
-        if s == slot:
-            return pos
-    col, row = slot[0] - 12, slot[1] - 8
-    return 432 + col * 48, 280 + row * 30
+def getch_codes(ev) -> list[int]:
+    if ev.key in GETCH:
+        return GETCH[ev.key]
+    ch = getattr(ev, 'unicode', '') or ''
+    if len(ch) == 1 and ord(ch) < 128:
+        return [ord(ch)]
+    return []
 
 
-def item_desc(g, it: int) -> str:
-    if not it:
-        return ''
-    name = g.item_name(it)
-    t = g.items.tell
-    parts = []
-    for label, col in (('atk', IT_ATK), ('def', IT_DEF), ('W.arm', IT_WARM), ('M.arm', IT_MARM), ('power', IT_POWER),
-                       ('str', IT_STR), ('int', IT_INT), ('dex', IT_DEX), ('acc', IT_ACC)):
-        v = t(it, col)
-        if v:
-            parts.append(f'{label} {v:+d}' if col not in (IT_POWER,) else f'{label} {v}')
-    req = [f'{lbl} {t(it, c)}' for lbl, c in (('STR', IT_REQ_STR), ('INT', IT_REQ_INT)) if t(it, c)]
-    kind = {1: 'double strike', 2: 'parry', 3: 'pierce', 4: 'ranged', 5: 'two-handed', 6: 'two-handed, parry'}.get(t(it, IT_KIND))
-    s = name + ('  (' + kind + ')' if kind else '')
-    if 600 < it < 700:
-        s += f'  x{(it - 1) % 20 + 1}'
-    return s + ('   ' + ', '.join(parts) if parts else '') + ('   needs ' + ', '.join(req) if req else '')
+class Page(Overlay):
+    """One of the original's own key loops (quest2.invshop): the generator draws on its own copy of
+    the screen and waits for keys; when it returns, then(key it returned) runs."""
+    covers_map = True
 
+    def __init__(self, g: 'Game', layer: pygame.Surface, gen, then: Callable):
+        self.layer, self.gen, self.then = layer, gen, then
+        self.done = False
+        self._run(g, None)
 
-class Inventory(Overlay):
-    """inventory(): equipment + 16-slot backpack. mode 'use' (i key) or 'sell' (in a shop)."""
-    ORDER = [SLOT_HELMET, SLOT_WEAPON, SLOT_ARMOR, SLOT_OFFHAND, SLOT_AMULET] + BACKPACK
-
-    def __init__(self, g: 'Game', mode: str = 'use', shop=None):
-        self.mode, self.shop = mode, shop
-        self.i = 5
-        self.note = ''
-
-    @property
-    def slot(self):
-        return self.ORDER[self.i]
+    def _run(self, g, key):
+        try:
+            v = self.gen.send(key) if key is not None else next(self.gen)
+            while v is not None:                       # a delay() inside a tone
+                g.renderer.wait(self.layer, v, fast=g.fast)
+                v = next(self.gen)
+        except StopIteration as stop:
+            self.done = True
+            g.speaker.nosound()
+            self.close(g)
+            self.then(stop.value)
 
     def key(self, g, ev):
-        k = ev.key
-        if k == pygame.K_ESCAPE or (k == pygame.K_i and self.mode == 'use'):
-            self.close(g)
-            if self.shop:
-                g.overlay = self.shop
-            return
-        if k == pygame.K_b and self.shop:
-            self.close(g)
-            g.overlay = self.shop
-            return
-        if k in ARROWS:
-            self.move(*ARROWS[k])
-            return
-        it = g.player.item(self.slot)
-        if k in CONFIRM and it:
-            if self.mode == 'sell':
-                self.note = g.sell(self.slot)
-            elif self.slot in BACKPACK:
-                self.note = g.equip(self.slot)
-            else:
-                self.note = g.unequip(self.slot)
-        elif k in (pygame.K_BACKSPACE, pygame.K_DELETE) and it and self.mode == 'use':
-            self.note = g.unequip(self.slot) if self.slot not in BACKPACK else ''
-        elif k == pygame.K_d and it and self.mode == 'use':
-            self.note = g.drop(self.slot)
-
-    def move(self, dx, dy):
-        if self.slot in BACKPACK:
-            c, r = self.slot[0] - 12, self.slot[1] - 8
-            c, r = c + dx, r + dy
-            if r < 0:
-                self.i = self.ORDER.index(SLOT_AMULET)
+        for code in getch_codes(ev):
+            if self.done:
                 return
-            c, r = max(0, min(3, c)), min(3, r)
-            self.i = self.ORDER.index((12 + c, 8 + r))
-            return
-        graph = {SLOT_HELMET: {(0, 1): SLOT_ARMOR}, SLOT_ARMOR: {(0, -1): SLOT_HELMET, (0, 1): SLOT_AMULET,
-                                                                 (-1, 0): SLOT_WEAPON, (1, 0): SLOT_OFFHAND},
-                 SLOT_WEAPON: {(1, 0): SLOT_ARMOR, (0, -1): SLOT_HELMET, (0, 1): SLOT_AMULET},
-                 SLOT_OFFHAND: {(-1, 0): SLOT_ARMOR, (0, -1): SLOT_HELMET, (0, 1): SLOT_AMULET},
-                 SLOT_AMULET: {(0, -1): SLOT_ARMOR, (0, 1): (12, 8)}}
-        nxt = graph.get(self.slot, {}).get((dx, dy))
-        if nxt:
-            self.i = self.ORDER.index(nxt)
+            self._run(g, code)
 
     def draw(self, r, scr):
-        g = r.game
-        panel(r, scr, 'Store: Sell' if self.mode == 'sell' else 'Inventory', 455 if self.mode == 'sell' else 465)
-        for slot, (x, y) in EQUIP_CELLS:
-            r.btext(scr, EQUIP_LABEL[slot], (x + 20, y - 18), 14, COMPLEX_S, center=True)
-        for slot in self.ORDER:
-            x, y = cell_pos(slot)
-            rect = pygame.Rect(x, y, 44 if slot in BACKPACK else 42, 28 if slot in BACKPACK else 42)
-            pygame.draw.rect(scr, EGA[14] if slot == self.slot else EGA[8], rect, 2 if slot == self.slot else 1)
-            it = g.player.item(slot)
-            if it:
-                img = r.sprites.get('object', it)
-                if img:
-                    size = 26 if slot in BACKPACK else 40
-                    scr.blit(pygame.transform.scale(img, (size, size)), (x + (rect.w - size) // 2, y + 1))
-                else:
-                    r.btext(scr, str(it), (x + 4, y + 10), 15, ROM)
-        r.btext(scr, f'${g.player.inv.coins}', (430, 374), 14, TRIPLEX)
-        it = g.player.item(self.slot)
-        lines = [(item_desc(g, it), 11)] if it else []
-        if self.mode == 'sell' and it:
-            lines.append((f'Sells for {g.sell_price(it)} gold.  Enter sells, B buys, Esc leaves', 14))
-        else:
-            lines.append(('Enter equips/removes, D drops, Esc closes', 7))
-        if self.note:
-            lines.insert(0, (self.note, 12))
-        bottom(r, scr, lines)
-
-
-class Shop(Overlay):
-    """peddler(): a 4x10 grid of wares. Enter buys, S switches to selling."""
-
-    def __init__(self, g: 'Game', stock: list[int]):
-        self.stock = stock[:40]
-        self.i = 0
-        self.note = ''
-
-    def key(self, g, ev):
-        k = ev.key
-        if k == pygame.K_ESCAPE:
-            self.close(g)
-        elif k in ARROWS:
-            dx, dy = ARROWS[k]
-            c, r = self.i % 4 + dx, self.i // 4 + dy
-            if 0 <= c < 4 and 0 <= r < 10:
-                self.i = r * 4 + c
-        elif k in (pygame.K_s, pygame.K_i):
-            g.overlay = Inventory(g, 'sell', shop=self)
-        elif k in CONFIRM and self.i < len(self.stock) and self.stock[self.i]:
-            self.note = g.buy(self.stock[self.i])
-
-    def draw(self, r, scr):
-        g = r.game
-        panel(r, scr, 'Store: Buy')
-        for n in range(40):
-            c, row = n % 4, n // 4
-            x, y = 425 + c * 52, 40 + row * 34
-            rect = pygame.Rect(x, y, 48, 32)
-            pygame.draw.rect(scr, EGA[14] if n == self.i else EGA[8], rect, 2 if n == self.i else 1)
-            it = self.stock[n] if n < len(self.stock) else 0
-            if it:
-                img = r.sprites.get('object', it)
-                if img:
-                    scr.blit(pygame.transform.scale(img, (30, 30)), (x + 9, y + 1))
-        it = self.stock[self.i] if self.i < len(self.stock) else 0
-        lines = []
-        if self.note:
-            lines.append((self.note, 12))
-        if it:
-            lines.append((item_desc(g, it), 11))
-            lines.append((f'Price {g.buy_price(it)}   Gold {g.player.inv.coins}   Enter buys, S sells, Esc leaves', 14))
-        else:
-            lines.append((f'Gold {g.player.inv.coins}   S sells, Esc leaves', 14))
-        bottom(r, scr, lines)
+        scr.blit(self.layer, (0, 0))

@@ -26,6 +26,7 @@ _SPRITE_RE = re.compile(r'^(floor|wall|enemy|object|extra|spell)_(-?\d+)_?(?:\[(
 class Sprites:
     def __init__(self):
         self.images: dict[tuple[str, int], pygame.Surface] = {}
+        self.bag: dict[int, pygame.Surface] = {}
         self.names: dict[tuple[str, int], str] = {}
         self.hero: dict[str, pygame.Surface] = {}
         self.gold = None
@@ -45,6 +46,12 @@ class Sprites:
                 self.hero[stem[5:]] = pygame.image.load(path).convert_alpha()
             elif stem == 'gold':
                 self.gold = pygame.image.load(path).convert_alpha()
+        # bagdraw()'s own pictures (tools/re/bag_icons.py): a whole 40x40 cell, grey background included
+        bag_dir = os.path.join(SPRITES_DIR, 'bag')
+        if os.path.isdir(bag_dir):
+            for f in os.listdir(bag_dir):
+                if f.startswith('bag_') and f.endswith('.png'):
+                    self.bag[int(f[4:-4])] = pygame.image.load(os.path.join(bag_dir, f)).convert()
 
     def get(self, kind: str, n: int):
         return self.images.get((kind, n))
@@ -117,6 +124,15 @@ class Renderer:
             if wait > 0:
                 pygame.time.wait(wait)
         self.present()
+
+    def wait(self, surface, ms, fast=False):
+        """delay(ms) while an original key loop owns the screen: show its surface, then wait."""
+        if fast:
+            return
+        self.screen.blit(surface, (0, 0))
+        self.present()
+        pygame.event.pump()
+        pygame.time.wait(max(0, ms))
 
     def wait_talk(self, game, text, fast=False):
         """talk()'s getch loop: the message stays in the strip until Space is pressed."""

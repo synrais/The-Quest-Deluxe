@@ -18,8 +18,7 @@ from dataclasses import asdict
 import pygame
 
 from .formats import GameData, Square, MAP_SIZE, DATA_DIR
-from .state import (Status, Player, Hero, Inventory, Skills, new_player, POTION_FIELDS, BACKPACK, KNIGHT,
-                    SLOT_WEAPON, SLOT_OFFHAND, IT_REQ_STR, IT_REQ_INT, IT_KIND, IT_STR, IT_INT, Enemy)
+from .state import Status, Player, Hero, Inventory, Skills, new_player, POTION_FIELDS, KNIGHT, Enemy
 from .world import World, screen_of, room_origin
 from .savefile import SaveData, Slots
 from . import savefile
@@ -32,6 +31,7 @@ from .events import Events
 from .render import Renderer, TILE
 from .speaker import Speaker, sound_setting
 from . import anim
+from . import invshop
 from . import ui
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -68,6 +68,56 @@ class ScreenHost(anim.Host):
     def move_hero(self, x, y):
         if self.on_move:
             self.on_move(x, y)
+
+
+class PageHost:
+    """What the inventory and shop pages (quest2.invshop) work on: the player's own bag, gold and
+    potions, a copy of the hero (the original passes it by value), and a BGI on the page's surface."""
+
+    def __init__(self, game, layer, store):
+        from dataclasses import replace
+        from .bgi import BGI
+        self.game = game
+        p = game.player
+        self.g = BGI(layer, game.data.src)
+        self.g._fonts = game.renderer.bgi._fonts
+        self.layer = layer
+        self.bag, self.store, self.inv, self.skill = p.bag, store, p.inv, p.skill
+        self.hero = replace(p.hero)
+        self.level = game.world.level
+        self.tell = game.items.tell
+        self._prices = {r[0]: r[1] for r in game.data.prices if len(r) > 1}
+        self.recompute()
+
+    def price(self, it):
+        return self._prices.get(it, 0)
+
+    def recompute(self):
+        tmp = Player(hero=self.hero, inv=self.inv, skill=self.skill)
+        tmp.bag = self.bag
+        rules.status_update(tmp, self.game.status, self.game.items)
+
+    def asound(self, f):
+        self.game.speaker.sound(f)
+
+    def nosound(self):
+        self.game.speaker.nosound()
+
+    def bagdraw(self, i, ii, a):
+        it = (self.store if a == 2 else self.bag).get((i, ii), 0)
+        img = self.game.renderer.sprites.bag.get(it) if it else None
+        if img:
+            self.layer.blit(img, invshop.icon_pos(i, ii, a))
+
+    def put3(self, it):
+        """put3(): drop the item at the hero's square (or the nearest free one) and redraw it."""
+        g, p = self.game, self.game.player
+        g.put_item(p.X, p.Y, it)
+        r = g.renderer
+        ox, oy = g.world.origin
+        for x, y in g.world.room_tiles():
+            r.draw_tile(self.layer, (x - ox) * TILE, (y - oy) * TILE, g.world.grid[x][y])
+        r.draw_hero(self.layer, g, (p.X - ox) * TILE, (p.Y - oy) * TILE)
 
 
 class Msg(str):
@@ -279,7 +329,7 @@ class Game:
         elif k == pygame.K_s:
             self.overlay = ui.SpellBook(self)
         elif k == pygame.K_i:
-            self.overlay = ui.Inventory(self)
+            self.open_inventory(1)
         elif k == pygame.K_c:
             self.overlay = ui.CharacterSheet()
         elif k == pygame.K_k:
@@ -443,134 +493,44 @@ class Game:
         self.tones((740, 100))
         return True
 
-    def equip(self, slot) -> str:
-        """Move a backpack item into its equipment slot (inventory(), Enter)."""
-        p, h, t = self.player, self.player.hero, self.items.tell
-        it = p.item(slot)
-        if it >= 900:
-            return "You can't use that."
-        if t(it, IT_REQ_STR) > h.str:
-            return 'You are not strong enough.'
-        if t(it, IT_REQ_INT) > h.intl:
-            return 'You are not intelligent enough.'
-        target = rules.item_slot(it)
-        if target is None:
-            return self.events.on_use_item(it, slot) or "You can't equip that."
-        wep = p.item(SLOT_WEAPON)
-        if 200 < it < 230 and p.skill.amb == 1 and 200 < wep < 230 and not p.item(SLOT_OFFHAND) \
-                and t(it, IT_REQ_STR) <= h.str // 2 and t(it, IT_KIND) < 5 and t(wep, IT_KIND) < 5:
-            target = SLOT_OFFHAND                      # second weapon with Ambidexterity
-        if target == SLOT_OFFHAND and 300 < it < 400 and t(wep, IT_KIND) >= 5:
-            return 'You need a free hand for a shield.'
-        if target == SLOT_WEAPON and t(it, IT_KIND) >= 5 and p.item(SLOT_OFFHAND):
-            msg = self.unequip(SLOT_OFFHAND)
-            if p.item(SLOT_OFFHAND):
-                return 'Two-handed: make room for your off-hand item first.'
-        if 600 < it < 700 and 600 < p.item(SLOT_OFFHAND) < 700 \
-                and (it - 601) // 20 == (p.item(SLOT_OFFHAND) - 601) // 20:
-            base = 601 + (it - 601) // 20 * 20
-            total = (it - base + 1) + (p.item(SLOT_OFFHAND) - base + 1)
-            p.bag[SLOT_OFFHAND] = base + min(total, 20) - 1
-            p.bag[slot] = base + total - 20 - 1 if total > 20 else 0
-            rules.status_update(p, self.status, self.items)
-            return 'Ammunition combined.'
-        old = p.item(target)
-        if old:
-            self.stat_bonus(old, -1)
-        p.bag[target] = it
-        p.bag[slot] = old
-        self.stat_bonus(it, +1)
-        rules.status_update(p, self.status, self.items)
-        return f'You equip the {self.item_name(it).lower()}.'
+    # ── the inventory and the shops: the original's own pages (quest2.invshop) ──
+    def page_layer(self) -> pygame.Surface:
+        """The screen as it is when a page opens; the page draws over its right side and strip."""
+        self.renderer.draw(self)
+        return self.renderer.screen.copy()
 
-    def stat_bonus(self, it: int, sign: int):
-        """STR items raise max life and INT items raise max mana while worn (inventory())."""
-        h = self.player.hero
-        h.mlife += sign * self.items.tell(it, IT_STR)
-        h.mmana += sign * self.items.tell(it, IT_INT)
-        h.life, h.mana = min(h.life, h.mlife), min(h.mana, h.mmana)
+    def open_inventory(self, mode: int = 1, store=None):
+        """inventory(mode): 1 from the i key, 2 as the shop's selling page. Afterwards
+        statusupdate(); 'b' on the selling page goes back to buying."""
+        layer = self.page_layer()
+        host = PageHost(self, layer, store or {})
 
-    def unequip(self, slot) -> str:
-        p = self.player
-        it = p.item(slot)
-        free = p.free_backpack_slot()
-        if not free:
-            return 'Your backpack is full.'
-        p.bag[free], p.bag[slot] = it, 0
-        self.stat_bonus(it, -1)
-        rules.status_update(p, self.status, self.items)
-        return f'You take off the {self.item_name(it).lower()}.'
+        def done(key):
+            rules.status_update(self.player, self.status, self.items)
+            if mode == 2 and key == ord('b'):
+                self.open_shop()
+        self.overlay = ui.Page(self, layer, invshop.inventory(host, mode), done)
 
-    def drop(self, slot) -> str:
-        p = self.player
-        it = p.item(slot)
-        if it >= 900:
-            return "You can't drop that."
-        q = self.world.sq(p.X, p.Y)
-        if q.item:
-            return 'There is already something here.'
-        if slot not in BACKPACK:
-            self.stat_bonus(it, -1)
-        q.item, p.bag[slot] = it, 0
-        rules.status_update(p, self.status, self.items)
-        return 'Dropped.'
-
-    # ── shops ─────────────────────────────────────────────────────────────────
     def open_shop(self):
+        """peddler(): the shop's wares come from S0000<level><n>.dat, n from the screen. The file-name
+        buffer keeps the last shop's number, so an unlisted screen sells the last shop's wares
+        (0: none). 's' or 'i' goes to the selling page."""
         sx, sy = screen_of(self.player.X, self.player.Y)
-        # peddler(): the shop number is kept from the last shop visited when this screen isn't listed
-        # (the original reuses its file-name buffer), and 0 means an empty shop.
         self.last_shop = self.events.meta(self.world.level, 'SHOPS', {}).get((sx, sy), self.last_shop)
-        n = self.last_shop
-        try:
-            rows = self.data.shop(self.world.level, n)
-        except FileNotFoundError:
-            rows = []
-        stock = [v for row in rows for v in row]
-        self.overlay = ui.Shop(self, stock)
+        store = {}
+        if self.last_shop:
+            try:
+                nums = [v for row in self.data.shop(self.world.level, self.last_shop) for v in row][:40]
+            except FileNotFoundError:
+                nums = []
+            store = {(12 + k % 4, 2 + k // 4): v for k, v in enumerate(nums)}
+        layer = self.page_layer()
+        host = PageHost(self, layer, store)
 
-    def base_price(self, it: int) -> int:
-        return next((r[1] for r in self.data.prices if r and r[0] == it), 0)
-
-    def buy_price(self, it: int) -> int:
-        price = self.base_price(it)
-        if 0 < it < 9 and self.world.level != 1:
-            price = price * 2 * (self.world.level - 1)
-        if self.player.skill.bar == 1 and it > 8:
-            price = price * 7 // 10
-        return price
-
-    def sell_price(self, it: int) -> int:
-        return self.base_price(it) * 6 // 10
-
-    def buy(self, it: int) -> str:
-        p = self.player
-        price = self.buy_price(it)
-        if p.inv.coins < price:
-            return 'You cannot afford that.'
-        if 1 <= it <= 8:
-            f = POTION_FIELDS[it]
-            setattr(p.inv, f, getattr(p.inv, f) + 1)
-        else:
-            free = p.free_backpack_slot()
-            if not free:
-                return 'Your backpack is full.'
-            p.bag[free] = it
-        p.inv.coins -= price
-        return f'Bought for {price} gold.'
-
-    def sell(self, slot) -> str:
-        p = self.player
-        it = p.item(slot)
-        if it >= 900:
-            return "You can't sell that."
-        if slot not in BACKPACK:
-            self.stat_bonus(it, -1)
-        price = self.sell_price(it)
-        p.bag[slot] = 0
-        p.inv.coins += price
-        rules.status_update(p, self.status, self.items)
-        return f'Sold for {price} gold.'
+        def done(key):
+            if key in (ord('s'), ord('i')):
+                self.open_inventory(2, store)
+        self.overlay = ui.Page(self, layer, invshop.peddler(host), done)
 
     # ── magic ─────────────────────────────────────────────────────────────────
     def begin_cast(self, spell: int):

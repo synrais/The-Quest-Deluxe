@@ -190,6 +190,31 @@ tones and delays, in the same order, with the same `rand()` draws.
   the hero moves 20 tiles east, and `teleporter2()` plays where they land. On other levels only the
   rings play.
 
+## The inventory and the shops
+
+`inventory()` and `peddler()` are ported call for call in `quest2/invshop.py`, and
+`tools/re/verify_invshop.py` runs them next to the exe with random bags, shops and key presses.
+The drawing, tones, drops, prices and resulting bag all match.
+
+- **Inventory (i):** the cursor starts on the first backpack cell. Enter uses an item if the hero is
+  strong and clever enough (a chime), or beeps (100 Hz). Where an item goes depends on its number:
+  101-199 body, 201-299 weapon, 301-399 off-hand, 401-499 head, 501-599 neck, 601-699 off-hand ammunition,
+  topping up a worn stack of the same kind. With Ambidexterity a light second weapon, or a second
+  shield, goes in the other hand. A two-handed weapon empties the off-hand, and is undone if the
+  backpack is full. Backspace takes a worn item off, or drops a backpack item on the ground (quest
+  items, 900 and up, only beep). i or Esc closes.
+- **The hero is passed by value.** Whatever `inventory()` does to the hero's max life and mana (it
+  adds and removes items' STR and INT there) is thrown away when the page closes, and
+  `statusupdate()` rebuilds the stats. So items never raise max life or mana.
+- **Shops:** `peddler()` shows 4 x 10 wares, with a red X on what the hero can't afford. Potions cost
+  `price * 2 * (level - 1)` after level 1, and Bargaining takes 30% off everything else. Enter buys (600
+  then 700 Hz) or beeps (100 Hz). s or i opens the selling page (`inventory(2)`, 60% of the price,
+  Backspace sells). b returns to buying, and Esc leaves. A shop file with fewer than 40 wares
+  leaves the rest empty.
+- **Pictures:** in the bag and the shop, items are drawn by different routines from the map, bigger
+  and with the count for ammunition. `tools/re/bag_icons.py` renders them from the exe into
+  `sprites/bag/`.
+
 ## Saving and loading
 
 The original keeps **one save file per game**: `data\saveNN.dat`, NN = 01..20. Quest II uses the same
