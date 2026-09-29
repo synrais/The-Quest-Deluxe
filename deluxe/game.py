@@ -250,6 +250,24 @@ class Game:
                 self.save_game(ask=False)             # newgame(): save(0, ...) before play starts
         self.show_story(1, begin, header=self.story_header())
 
+    def quick_start(self, cls: int, level: int, at=None):
+        """Test play: a new hero of class cls straight on the level (at square at, if it's free),
+        without the title, the stories or character creation, and without a save slot."""
+        self.overlay = None
+        self.player = new_player(cls, pack=self.pack)
+        self.status = Status(Shield=0, fShield=0, powboost=-1, armboost=-1)
+        self.status.p1, self.status.p2, self.status.p3 = rules.jumble()
+        self.goto_level(level)
+        w = self.world
+        if at and w.in_map(*at) and not self.pack.wall(w.sq(*at).wall).get('solid') and not w.sq(*at).mon:
+            w.leave_room()
+            self.player.X, self.player.Y = at
+            w.enter_room(self.player, self.status)
+            self.count_hostiles()
+            self.events.on_enter_room()
+        rules.status_update(self.player, self.status, self.items)
+        self.messages = []
+
     def story_header(self) -> list[str]:
         """story(1): who the hero became, in the original's order."""
         sk, pk = self.player.skill, self.pack

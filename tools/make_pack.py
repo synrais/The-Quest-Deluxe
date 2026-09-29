@@ -21,6 +21,7 @@ sys.path.insert(0, ROOT)
 
 from quest2.formats import DataSource, level_filename  # noqa: E402
 from quest2.bgi import FONT_FILES  # noqa: E402
+from deluxe.packio import write_text, write_json, write_table, tiles_text, map_text  # noqa: E402
 
 OUT = os.path.join(ROOT, 'packs', 'quest1')
 SPRITES = os.path.join(ROOT, 'sprites')
@@ -192,22 +193,8 @@ def spell_traits(n: int) -> dict:
     }.get(n, {})
 
 
-def write_text(path: str, text: str):
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, 'w', encoding='utf-8', newline='\n') as fh:
-        fh.write(text)
-
-
-def write_json(path: str, data):
-    write_text(path, json.dumps(data, indent=1, ensure_ascii=False) + '\n')
-
-
 def compact_json(path: str, key: str, rows: list, comment: str):
-    """One object per line: easy to read and to compare."""
-    lines = [f'{{"_comment": {json.dumps(comment)},', f' "{key}": [']
-    lines += [' ' + json.dumps(r, ensure_ascii=False) + (',' if i < len(rows) - 1 else '') for i, r in enumerate(rows)]
-    lines += [' ]', '}']
-    write_text(path, '\n'.join(lines) + '\n')
+    write_table(path, key, rows, comment)
 
 
 def main():
@@ -316,12 +303,7 @@ def main():
                          'floor and the wall wins; grass-green 2 at priority 0 otherwise); '
                          'map_colour_on_level overrides it on one level. Decorations: role is what the '
                          'engine uses them for (open_door, open_chest, remains, remains2, blood, bones).')
-    lines = [f'{{"_comment": {json.dumps(tiles.pop("_comment"))},']
-    for n, (key, rows) in enumerate(tiles.items()):
-        lines.append(f' "{key}": [')
-        lines += ['  ' + json.dumps(r) + (',' if i < len(rows) - 1 else '') for i, r in enumerate(rows)]
-        lines.append(' ]' + (',' if n < len(tiles) - 1 else ''))
-    write_text(os.path.join(OUT, 'tiles.json'), '\n'.join(lines + ['}']) + '\n')
+    write_text(os.path.join(OUT, 'tiles.json'), tiles_text(tiles))
 
     # ── text: the original's own files, decoded (the game reads them character by character) ──
     write_text(os.path.join(OUT, 'text', 'talk.txt'), src.text('Talk.dat').replace('\r\n', '\n'))
@@ -333,9 +315,7 @@ def main():
     while src.exists(level_filename(level)):
         d = os.path.join(OUT, 'levels', str(level))
         rows = [line.split() for line in src.text(level_filename(level)).splitlines() if line.split()]
-        body = '\n'.join(' '.join(r) for r in rows)
-        write_text(os.path.join(d, 'map.txt'),
-                   '# x y floor wall item creature gold deco\n' + body + '\n')
+        write_text(os.path.join(d, 'map.txt'), map_text(rows))
         with open(os.path.join(CONTENT, 'levels', f'level{level}.qs'), encoding='utf-8') as fh:
             script = fh.read()
         if level == 2:
@@ -349,7 +329,8 @@ def main():
             if src.exists(name):
                 write_text(os.path.join(d, 'shops', f'{shop}.txt'), src.text(name).replace('\r\n', '\n'))
         level += 1
-    shutil.copyfile(os.path.join(CONTENT, 'levels', 'common.qs'), os.path.join(OUT, 'levels', 'common.qs'))
+    with open(os.path.join(CONTENT, 'levels', 'common.qs'), encoding='utf-8') as fh:
+        write_text(os.path.join(OUT, 'levels', 'common.qs'), fh.read())
 
     # ── fonts ────────────────────────────────────────────────────────────────
     os.makedirs(os.path.join(OUT, 'fonts'))
