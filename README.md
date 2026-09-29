@@ -1,6 +1,8 @@
 The Quest II — a faithful remake of The Quest for Windows and Linux
 ════════════════════════════════════════════════════════════════════
   Run:      python run_quest2.py            (needs Python 3.10+ and pygame-ce)
+  Windows:  python tools/build_release.py phase4  ->  dist/TheQuestII-phase4.zip; unzip it and
+            double-click "Play The Quest II.bat" (finds or installs Python, then pygame-ce)
   Engine:   quest2/            reads the original data files from data/ or TheQuest.zip
   Levels:   quest2/content/levels/*.qs      quest and event scripts, see docs/EVENTS.md
             New level: add data/L00008.dat (+ level8.qs); it plays after level 7.

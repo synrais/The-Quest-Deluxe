@@ -4,3 +4,6 @@ tests/out/
 tools/re/out/
 saves/
 sprites_backup_*/
+build/
+dist/
+.deps/
