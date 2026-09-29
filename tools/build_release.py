@@ -1,9 +1,12 @@
 """Build the Windows release zip of The Quest II.
 
-    python tools/build_release.py phase4        ->  dist/TheQuestII-phase4.zip
+    python tools/build_release.py phase4          ->  dist/TheQuestII-phase4.zip
+    python tools/build_release.py phase4 --play   ->  dist/TheQuestII-phase4-play.zip
 
 The zip holds one folder, TheQuestII/, with the game, the original's data (TheQuest.zip, data/,
-sprites/), the docs and the level editor. Double-clicking "Play The Quest II.bat" finds Python (or
+sprites/), the docs and the level editor. With --play it holds only what the game needs to run:
+run_quest2.py, quest2/, sprites/ and TheQuest.zip (data/ is left out: its level files are the
+ones in TheQuest.zip, and the game makes data/ when it first saves). Double-clicking "Play The Quest II.bat" finds Python (or
 offers to install it with winget), sets up pygame-ce from the bundled wheels the first time, and
 starts the game. The wheels are downloaded from PyPI once and cached in build/wheels/.
 """
@@ -22,6 +25,8 @@ TOP = 'TheQuestII'
 
 FILES = ['run_quest2.py', 'TheQuest.zip', 'README.md', 'requirements.txt', 'level_editor.py', 'icon.ico']
 DIRS = ['quest2', 'data', 'sprites', 'docs']
+PLAY_FILES = ['run_quest2.py', 'TheQuest.zip']
+PLAY_DIRS = ['quest2', 'sprites']
 
 README = """THE QUEST II
 ============
@@ -65,14 +70,14 @@ def crlf(path: str) -> bytes:
         return fh.read().replace(b'\r\n', b'\n').replace(b'\n', b'\r\n')
 
 
-def build(name: str, notes: str = '') -> str:
-    out = os.path.join(ROOT, 'dist', f'TheQuestII-{name}.zip')
+def build(name: str, notes: str = '', play: bool = False) -> str:
+    out = os.path.join(ROOT, 'dist', f'TheQuestII-{name}{"-play" if play else ""}.zip')
     os.makedirs(os.path.dirname(out), exist_ok=True)
     with zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED) as z:
-        for f in FILES:
+        for f in PLAY_FILES if play else FILES:
             if os.path.exists(os.path.join(ROOT, f)):
                 z.write(os.path.join(ROOT, f), f'{TOP}/{f}')
-        for d in DIRS:
+        for d in PLAY_DIRS if play else DIRS:
             for base, subdirs, files in os.walk(os.path.join(ROOT, d)):
                 subdirs[:] = [s for s in subdirs if s != '__pycache__']
                 for f in files:
@@ -89,9 +94,10 @@ def build(name: str, notes: str = '') -> str:
 
 
 if __name__ == '__main__':
-    if len(sys.argv) < 2:
+    args = [a for a in sys.argv[1:] if a != '--play']
+    if not args:
         sys.exit(__doc__)
-    notes_file = sys.argv[2] if len(sys.argv) > 2 else None
+    notes_file = args[1] if len(args) > 1 else None
     notes = open(notes_file, encoding='utf-8').read() if notes_file else ''
-    path = build(sys.argv[1], notes)
+    path = build(args[0], notes, play='--play' in sys.argv)
     print(f'{path}  ({os.path.getsize(path) / 1e6:.1f} MB)')

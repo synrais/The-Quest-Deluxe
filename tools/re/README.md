@@ -51,7 +51,7 @@ matching `.asm` file.
 | `sprite_check.py` | Compares every PNG in `sprites/` with what the game draws. It writes `out/sprites/report.txt`, plus an image (original, PNG, diff) for each sprite that differs. |
 | `verify_anims.py` | Runs every animation, jingle and hero drawing in `quest2/anim.py` next to the original (`aflame()`, `ahit()`, `guy2()`, `song_key()` ...) with many arguments and the same `rand()` seed, and checks that both make exactly the same BGI calls, tones and delays. |
 | `verify_saves.py` | Runs the exe's own `save()` and `load2()` on random game states next to `quest2/savefile.py`: the saved text must match character for character, and the loaded values must match. Also round-trips `data/SAVE01.DAT`. |
-| `verify_arcs.py` | Runs the Borland graphics kernel's own emulated ARC (EGAVGA.BGI leaves arcs to the kernel) for thick full circles and random arcs, and compares its lines pixel for pixel with `BGI.ellipse()` at thickness 3. |
+| `verify_bgi.py` | Runs the Borland graphics kernel inside the exe (it clips lines, draws thick lines, and does the arcs, ellipses, sectors, polygons and `bar3d` that EGAVGA.BGI leaves to it) with a recording stand-in for the driver, and compares the result pixel for pixel with `quest2/bgi.py` for random lines, rectangles, bars, `bar3d`, ellipses and arcs (1 and 3 pixels), `fillellipse`, `sector`, `drawpoly` and `fillpoly`. |
 | `verify_invshop.py` | Runs the exe's `inventory()` and `peddler()` next to `quest2/invshop.py` with random bags, shops and key presses: the same drawing, tones, drops, purchases and resulting bag. |
 | `bag_icons.py` | Renders the item pictures `bagdraw()` uses in the bag and the shop into `sprites/bag/`. |
 
@@ -61,7 +61,8 @@ python sprite_check.py            # all sprites
 python sprite_check.py enemy_2    # just one
 ```
 
-`bgi.py` matches Borland's lines, midpoint circles, thick (3-pixel) curves, fill patterns and 4-way
-flood fill exactly. It approximates ellipses whose two radii differ, and `bar3d`/`fillpoly`. Where
-a sprite uses one of those, a small difference is usually the emulator, not the sprite. The DOSBox
-screenshots settled Wishing Well, Table and Moose that way.
+`bgi.py` draws every shape the game uses exactly as the original: lines (clipped as the kernel
+clips them), rectangles, bars and fill patterns, `bar3d`, ellipses and arcs of any radii at 1 or 3
+pixels, `fillellipse`, `sector`/`pieslice`, `drawpoly`, `fillpoly` and 4-way flood fill
+(`verify_bgi.py` checks the kernel-drawn ones). So `sprite_check.py` differences are in the PNGs.
+All sprites match except the invisible wraith, which the game never draws.

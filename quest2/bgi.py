@@ -4,10 +4,13 @@ The original game draws everything (HUD, text, screens) with BGI calls in 640x48
 This module reproduces the calls the game uses so the HUD can be ported call-for-call:
 colours, lines (1 or 3 px), rectangles, bars, circles, arcs, ellipses, flood fill, and text in
 the stroked .CHR fonts shipped in TheQuest.zip (bgi/*.CHR) plus the 8x8 ROM font.
+
+EGAVGA.BGI draws only pixels, lines and bars itself; arcs, ellipses, sectors, polygons and bar3d
+are drawn by the Borland kernel inside the exe, and so is the line clipping and the 3-pixel
+thickness. Those parts are ports of the kernel code (tools/re/verify_bgi.py checks them).
 """
 from __future__ import annotations
 
-import math
 import os
 import struct
 
@@ -74,6 +77,185 @@ def _bgi_sin(a: int) -> int:
 def _fix_mul(v: int, r: int) -> int:
     """The integer part of a 16.16 value times r (rounded down, as the kernel's 32-bit multiply)."""
     return (v * r) >> 16
+
+
+def _arc_end(angle: int, rx: int, ry: int) -> tuple[int, int]:
+    """Where the kernel puts the point at `angle` degrees on an ellipse (offset from the centre)."""
+    return _fix_mul(_bgi_sin(angle + 90), rx), -_fix_mul(_bgi_sin(angle), ry)
+
+
+def _pseudo_angle(x: int, y: int) -> int:
+    """The kernel's cheap stand-in for the angle of (x, y) (y down), used to clip arcs: it rises
+    counter-clockwise from 0 degrees, one quadrant per 2000."""
+    up = -y
+    if x >= 0:
+        return up - x if up >= 0 else x + 6000 + up
+    return -x + 2000 - up if up >= 0 else x + 4000 - up
+
+
+def _ellipse_steps(rx: int, ry: int):
+    """The (x, y) steps of the kernel's integer midpoint ellipse for one quadrant (x, y >= 0, y
+    measured down), scaled by 100 * max(rx, ry)^2; None if its 32-bit sums would overflow."""
+    rx, ry = rx or 1, ry or 1
+    s = max(rx, ry) ** 2 * 100
+    p, q = s // rx // rx, s // ry // ry
+    if s >= 1 << 32 or q * ry * ry >= 1 << 32:
+        return None
+    d, t, acc = q * ry * ry - s, 2 * q * ry, 0
+    i, j = 0, ry
+    out = []
+    while True:                         # the flat part: step x, sometimes y
+        out.append((i, j))
+        u, v = acc + p, t - q
+        if 2 * d + 2 * u >= v:
+            j -= 1
+            d -= v
+            t = v - q
+        i += 1
+        d += u
+        acc = u + p
+        if acc >= t:
+            break
+    while j >= 0:                       # the steep part: step y, sometimes x
+        out.append((i, j))
+        u, v = acc + p, t - q
+        if (u >> 1) + d <= v:
+            i += 1
+            d += u
+            acc = u + p
+        j -= 1
+        d -= v
+        t = v - q
+    return out
+
+
+def kernel_ellipse(cx: int, cy: int, start: int, end: int, rx: int, ry: int) -> list:
+    """The pixels of a 1-pixel arc exactly as the Borland kernel (its emulated ARC) plots them,
+    clipped to the arc with _pseudo_angle. A sweep of under 2 degrees, or a short one that starts
+    and ends on the same pixel, plots only the end point; a zero sweep plots nothing."""
+    sweep = (end - start) & 0xFFFF
+    if sweep == 0:
+        return []
+    ps, pe = _arc_end(start, rx, ry), _arc_end(end, rx, ry)
+    if sweep < (350 if ps == pe else 2):
+        return [(cx + pe[0], cy + pe[1])]
+    a, b = _pseudo_angle(*ps), _pseudo_angle(*pe)
+    wrap = b <= a
+    out = []
+    for i, j in _ellipse_steps(rx, ry) or ():
+        for sx, sy in ((i, j), (-i, j), (i, -j), (-i, -j)):
+            k = _pseudo_angle(sx, sy)
+            if (k >= a or k <= b) if wrap else a <= k <= b:
+                out.append((cx + sx, cy + sy))
+    return out
+
+
+MAXX, MAXY = 639, 479                   # the kernel clips to the screen (the game sets no viewport)
+
+
+def _outcode(x, y):
+    return (1 if x < 0 else 2 if x > MAXX else 0) + (4 if y < 0 else 8 if y > MAXY else 0)
+
+
+def _trunc_div(a, b):
+    q = abs(a) // abs(b)
+    return q if (a < 0) == (b < 0) else -q
+
+
+def _clip_line(x1, y1, x2, y2):
+    """The kernel's Cohen-Sutherland clip: the ends of the visible part, or None. The slope is
+    taken once from the whole line, and each step moves the outside end onto one edge, with the
+    intersection rounded toward zero."""
+    if 0 <= x1 <= MAXX and 0 <= y1 <= MAXY and 0 <= x2 <= MAXX and 0 <= y2 <= MAXY:
+        return x1, y1, x2, y2
+    dx, dy = x2 - x1, y2 - y1
+    if not (-0x8000 <= dx < 0x8000 and -0x8000 <= dy < 0x8000):
+        return None
+    while True:
+        c1, c2 = _outcode(x1, y1), _outcode(x2, y2)
+        if not c1 | c2:
+            return x1, y1, x2, y2
+        if c1 & c2:
+            return None
+        swapped = not c1
+        if swapped:
+            x1, y1, x2, y2 = x2, y2, x1, y1
+        if dx == 0:
+            y1 = min(max(y1, 0), MAXY)
+        elif dy == 0:
+            x1 = min(max(x1, 0), MAXX)
+        elif x1 < 0 or x1 > MAXX:
+            edge = 0 if x1 < 0 else MAXX
+            y1 += _trunc_div((edge - x1) * dy, dx)
+            x1 = edge
+        else:
+            edge = 0 if y1 < 0 else MAXY
+            x1 += _trunc_div((edge - y1) * dx, dy)
+            y1 = edge
+        if swapped:
+            x1, y1, x2, y2 = x2, y2, x1, y1
+
+
+SEP, END = 'sep', 'end'                 # the kernel's 0x8001 / 0x8000 markers in its polygon buffer
+
+
+class _PolyBuffer:
+    """The kernel's polygon buffer while it collects points: a repeat of the first point is
+    dropped while it is the only one; coming back to the first point closes the path (a SEP
+    follows) and the next point starts anew."""
+
+    def __init__(self):
+        self.buf, self.first, self.count = [], None, 0
+
+    def add(self, p):
+        p = tuple(p)
+        if self.count == 0:
+            self.first, self.count = p, 1
+            self.buf.append(p)
+        elif p == self.first:
+            if self.count > 1:
+                self.buf.extend((p, SEP))
+                self.count = 0
+        else:
+            self.buf.append(p)
+            self.count += 1
+
+    def restart(self, p):
+        """Add p as the start of a fresh path (the kernel zeroes its count first)."""
+        self.count = 0
+        self.add(p)
+
+
+def _poly_buffer(points, close=False) -> list:
+    """The buffer for a polyline, ending in END. fillpoly() adds the very first point again, as
+    the start of a fresh path, which gives the closing edge."""
+    pb = _PolyBuffer()
+    for p in points:
+        pb.add(p)
+    if close and pb.buf:
+        pb.restart(pb.buf[0])
+    return pb.buf + [END]
+
+
+def _buffer_edges(buf):
+    """The segments the kernel draws (and fills between) from a polygon buffer."""
+    edges, prev, k = [], buf[0], 1
+    if prev in (SEP, END):
+        return edges
+    while k < len(buf):
+        item = buf[k]
+        if item == END:
+            break
+        if item == SEP:
+            k += 1
+            if buf[k] in (SEP, END):
+                break
+            prev = buf[k]
+        else:
+            edges.append((prev, item))
+            prev = item
+        k += 1
+    return edges
 
 
 def bresenham(x1, y1, x2, y2):
@@ -208,16 +390,21 @@ class BGI:
             self.s.set_at((x, y), EGA[c])
 
     def line(self, x1, y1, x2, y2):
-        pts = bresenham(x1, y1, x2, y2)
         col = self.rgb
         if self.thick >= 3:
-            # BGI thick lines are three parallel 1-pixel lines, offset across the line
+            # the kernel draws thick lines as three 1-pixel lines, offset across the line
             dx, dy = (0, 1) if abs(x2 - x1) >= abs(y2 - y1) else (1, 0)
-            for d in (-1, 0, 1):
-                for x, y in pts:
-                    self._set(x + d * dx, y + d * dy, col)
+            for d in (0, -1, 1):
+                self._line1(x1 + d * dx, y1 + d * dy, x2 + d * dx, y2 + d * dy, col)
         else:
-            for x, y in pts:
+            self._line1(x1, y1, x2, y2, col)
+
+    def _line1(self, x1, y1, x2, y2, col):
+        """A 1-pixel line, clipped to the screen first as the kernel does (the driver then draws
+        the clipped line, whose pixels can differ from the part of the whole line on screen)."""
+        ends = _clip_line(x1, y1, x2, y2)
+        if ends:
+            for x, y in bresenham(*ends):
                 self._set(x, y, col)
 
     def _set(self, x, y, col):
@@ -225,9 +412,11 @@ class BGI:
             self.s.set_at((x, y), col)
 
     def rectangle(self, x1, y1, x2, y2):
-        x1, x2 = sorted((x1, x2))
-        y1, y2 = sorted((y1, y2))
-        pygame.draw.rect(self.s, self.rgb, (x1, y1, x2 - x1 + 1, y2 - y1 + 1), 1)
+        """graphics.lib draws it as four line() calls, so it takes the line thickness."""
+        self.line(x1, y1, x2, y1)
+        self.line(x2, y1, x2, y2)
+        self.line(x2, y2, x1, y2)
+        self.line(x1, y2, x1, y1)
 
     def bar(self, x1, y1, x2, y2):
         x1, x2 = sorted((x1, x2))
@@ -261,44 +450,57 @@ class BGI:
             for x in range(rect.left, rect.right):
                 self.s.set_at((x, y), self._fill_colour(x, y))
 
-    def _fill_points(self, pts):
-        for x, y in pts:
-            if 0 <= x < self.s.get_width() and 0 <= y < self.s.get_height():
-                self.s.set_at((x, y), self._fill_colour(x, y))
-
     def bar3d(self, x1, y1, x2, y2, depth, top):
-        self.bar(x1, y1, x2, y2)
-        self.rectangle(x1, y1, x2, y2)
+        """As the Borland kernel draws it: the fill inside the front face only, the face outlined,
+        and the side (and the top, if asked) raised by depth * 3 / 4."""
+        if x1 & 0xFFFF >= x2 & 0xFFFF:          # graphics.lib orders the corners (unsigned)
+            x1, x2 = x2, x1
+        if y1 & 0xFFFF >= y2 & 0xFFFF:
+            y1, y2 = y2, y1
+        self.bar(min(x1, x2) + 1, min(y1, y2) + 1, max(x1, x2) - 1, max(y1, y2) - 1)
+        self.line(x1, y2, x1, y1)
+        self.line(x1, y1, x2, y1)
+        self.line(x2, y1, x2, y2)
+        self.line(x2, y2, x1, y2)
         if depth:
-            self.line(x2, y2, x2 + depth, y2 - depth)
-            self.line(x2 + depth, y2 - depth, x2 + depth, y1 - depth)
-            if top:
-                self.line(x1, y1, x1 + depth, y1 - depth)
-                self.line(x1 + depth, y1 - depth, x2 + depth, y1 - depth)
-                self.line(x2, y1, x2 + depth, y1 - depth)
+            dy = (depth & 0xFFFF) * 3 % 0x10000 >> 2
+            self.line(x2, y2, x2 + depth, y2 - dy)
+            self.line(x2 + depth, y2 - dy, x2 + depth, y1 - dy)
+            if top & 0xFF:
+                self.line(x2 + depth, y1 - dy, x1 + depth, y1 - dy)
+                self.line(x1 + depth, y1 - dy, x1, y1)
+                self.line(x2, y1, x2 + depth, y1 - dy)
 
     def drawpoly(self, pts):
-        for a, b in zip(pts, pts[1:]):
-            self.line(*a, *b)
+        for (x1, y1), (x2, y2) in _buffer_edges(_poly_buffer(pts)):
+            self.line(x1, y1, x2, y2)
 
     def fillpoly(self, pts):
-        """Scan-convert the polygon (even-odd), fill with the fill style, then outline it."""
-        if pts[0] != pts[-1]:
-            pts = list(pts) + [pts[0]]
-        ys = [p[1] for p in pts]
-        inside = []
-        for y in range(min(ys), max(ys) + 1):
+        """The kernel's scan-line fill, then the outline."""
+        buf = _poly_buffer(pts, close=True)
+        self._fill_buffer(buf)
+        for (x1, y1), (x2, y2) in _buffer_edges(buf):
+            self.line(x1, y1, x2, y2)
+
+    def _fill_buffer(self, buf):
+        """The kernel's scan-line fill of a polygon buffer (at least 4 entries, END included).
+        Rows run from the lowest y up to (not including) the highest; each edge counts on rows
+        min(y) <= row < max(y), crossing at the x rounded toward zero; the crossings are sorted
+        and filled in pairs with bar()."""
+        ys = [p[1] for p in buf if p not in (SEP, END)]
+        if len(buf) < 4 or not ys:
+            return
+        edges = _buffer_edges(buf)
+        for row in range(min(ys), max(max(ys), min(ys) + 1)):
             xs = []
-            for (xa, ya), (xb, yb) in zip(pts, pts[1:]):
-                if ya == yb:
-                    continue
-                if min(ya, yb) <= y < max(ya, yb):
-                    xs.append(xa + (y - ya) * (xb - xa) / (yb - ya))
+            for (xa, ya), (xb, yb) in edges:
+                if min(ya, yb) <= row < max(ya, yb):
+                    if yb < ya:
+                        xa, ya, xb, yb = xb, yb, xa, ya
+                    xs.append(xa + _trunc_div((row - ya) * (xb - xa), yb - ya))
             xs.sort()
             for a, b in zip(xs[::2], xs[1::2]):
-                inside.extend((x, y) for x in range(int(math.ceil(a)), int(math.floor(b)) + 1))
-        self._fill_points(inside)
-        self.drawpoly(pts)
+                self.bar(a, row, b, row)
 
     def circle(self, x, y, r):
         self.arc(x, y, 0, 360, r)
@@ -309,10 +511,12 @@ class BGI:
     def ellipse(self, x, y, start, end, rx, ry):
         """Outline of an elliptical arc; angles in degrees, counter-clockwise, 0 = right."""
         col = self.rgb
+        if int(start) & 0xFFFF == 0xFFFF:       # the kernel takes start -1 as a getarccoords() query
+            return
         if self.thick >= 3:
             self._thick_arc(x, y, start, end, rx, ry)
             return
-        for px, py in self._arc_points(x, y, start, end, rx, ry):
+        for px, py in kernel_ellipse(x, y, int(start), int(end), rx, ry):
             self._set(px, py, col)
 
     def _thick_arc(self, x, y, start, end, rx, ry):
@@ -322,115 +526,63 @@ class BGI:
         three pixels across. Collecting drops a repeat of the first point while it is the only
         one, and coming back to the first point closes the path; the next point starts anew."""
         start, end = int(start), int(end)
-        if start >= end:
+        if start & 0xFFFF >= end & 0xFFFF:  # an unsigned compare: negative angles count as large
             end += 360
-        paths, first = [], None
-        for a in range(start, end + 1):
-            p = (x + _fix_mul(_bgi_sin(a + 90), rx), y - _fix_mul(_bgi_sin(a), ry))
-            if first is None:
-                first = p
-                paths.append([p])
-            elif p == first:
-                if len(paths[-1]) > 1:
-                    paths[-1].append(p)
-                    first = None
-            else:
-                paths[-1].append(p)
-        for path in paths:
-            for (x1, y1), (x2, y2) in zip(path, path[1:]):
-                self.line(x1, y1, x2, y2)
-
-    @staticmethod
-    def _quadrant(rx, ry):
-        """One quadrant of a midpoint ellipse (x, y >= 0, y up); matches the original's circles."""
         pts = []
-        if rx == 0 or ry == 0:
-            return [(k, 0) for k in range(rx + 1)] + [(0, k) for k in range(ry + 1)]
-        rx2, ry2 = rx * rx, ry * ry
-        x, y = 0, ry
-        dx, dy = 0, 2 * rx2 * y
-        d1 = ry2 - rx2 * ry + rx2 / 2          # rx2/2 (not the textbook /4) matches the game
-        while dx < dy:
-            pts.append((x, y))
-            x += 1
-            dx += 2 * ry2
-            if d1 < 0:
-                d1 += dx + ry2
-            else:
-                y -= 1
-                dy -= 2 * rx2
-                d1 += dx - dy + ry2
-        d2 = ry2 * (x + 0.5) ** 2 + rx2 * (y - 1) ** 2 - rx2 * ry2
-        while y >= 0:
-            pts.append((x, y))
-            y -= 1
-            dy -= 2 * rx2
-            if d2 > 0:
-                d2 += rx2 - dy
-            else:
-                x += 1
-                dx += 2 * ry2
-                d2 += dx - dy + rx2
-        return pts
-
-    @classmethod
-    def _arc_points(cls, x, y, start, end, rx, ry):
-        """Pixels of the ellipse whose angle lies in [start, end] (degrees, counter-clockwise)."""
-        start %= 360
-        end = end % 360 if end % 360 or end == 0 else 360
-        full = (end - start) % 360 == 0 and end != start or (start == 0 and end in (0, 360) and True)
-        seen, pts = set(), []
-        for qx, qy in cls._quadrant(rx, ry):
-            for sx, sy in ((1, 1), (-1, 1), (-1, -1), (1, -1)):
-                ex, ey = sx * qx, sy * qy
-                p = (x + ex, y - ey)
-                if p in seen:
-                    continue
-                ang = math.degrees(math.atan2(ey * rx, ex * ry)) % 360 if (ex or ey) else 0
-                if full or cls._in_arc(ang, start, end):
-                    seen.add(p)
-                    pts.append(p)
-        return pts
-
-    @staticmethod
-    def _in_arc(ang, start, end):
-        """Is angle `ang` (0..360) on the arc from start to end? 0 and 360 are the same direction."""
-        eps = 1e-9
-        if start <= end:
-            return start - eps <= ang <= end + eps or (end >= 360 - eps and ang <= eps)
-        return ang >= start - eps or ang <= end + eps
+        for a in range(start, max(end, start) + 1):     # the loop runs at least once
+            ex, ey = _arc_end(a, rx, ry)
+            pts.append((x + ex, y + ey))
+        for (x1, y1), (x2, y2) in _buffer_edges(_poly_buffer(pts)):
+            self.line(x1, y1, x2, y2)
 
     def fillellipse(self, x, y, rx, ry):
-        self.sector(x, y, 0, 360, rx, ry, outline_edges=False)
+        """The kernel fills a bar across each row the ellipse steps reach, then outlines it with
+        an ARC (so a thick line style gives a thick rim)."""
+        for i, j in _ellipse_steps(rx, ry) or ():
+            self.bar(x - i, y + j, x + i, y + j)
+            self.bar(x - i, y - j, x + i, y - j)
+        self.ellipse(x, y, 0, 360, rx, ry)
 
     def pieslice(self, x, y, start, end, r):
         self.sector(x, y, start, end, r, r)
 
-    def sector(self, x, y, start, end, rx, ry, outline_edges=True):
-        """A filled elliptical wedge (fillellipse when it is the whole ellipse), outlined in the
-        current colour."""
-        whole = not outline_edges
-        rim = self._arc_points(x, y, 0 if whole else start, 360 if whole else end, rx, ry)
-        rows: dict[int, list[int]] = {}
-        for px, py in self._arc_points(x, y, 0, 360, rx, ry):
-            rows.setdefault(py, []).append(px)
-        inside = []
-        for py, xs in rows.items():
-            for px in range(min(xs), max(xs) + 1):
-                if whole:
-                    inside.append((px, py))
-                else:
-                    ang = math.degrees(math.atan2((y - py) * rx, (px - x) * ry)) % 360 if (px, py) != (x, y) else start
-                    if self._in_arc(ang, start % 360, end % 360 if end % 360 else 360):
-                        inside.append((px, py))
-        self._fill_points(inside)
-        col = self.rgb
-        for p in rim:
-            self._set(*p, col)
-        if outline_edges and (end - start) % 360:
-            a0, a1 = math.radians(start), math.radians(end)
-            self.line(x, y, x + int(round(rx * math.cos(a0))), y - int(round(ry * math.sin(a0))))
-            self.line(x, y, x + int(round(rx * math.cos(a1))), y - int(round(ry * math.sin(a1))))
+    def sector(self, x, y, start, end, rx, ry):
+        """A filled elliptical wedge as the Borland kernel draws it. The angles are taken mod 360
+        (unsigned, an end of 360 kept) and put in increasing order, so start > end draws the
+        wedge from end to start. It goes a quadrant at a time: the arc pixels in that quadrant,
+        collected as a polygon with the centre, are filled with fillpoly()'s scan-line rule and
+        the arc alone is outlined. Then the two radii are drawn, to where the first quadrant
+        started and to where the last one ended."""
+        a, b = (int(start) & 0xFFFF) % 360, int(end) & 0xFFFF
+        if b != 360:
+            b %= 360
+        if a >= b:
+            a, b = b, a
+        first_start = last_end = None
+        while True:
+            q, last = a // 90, min(b // 90, 3)
+            seg_end = b if q == last else (q + 1) * 90
+            if seg_end == a:
+                first_start = first_start or (0, 0)     # the kernel keeps its zeroed points
+            else:
+                last_end = _arc_end(seg_end, rx, ry)
+                pb = _PolyBuffer()
+                for p in kernel_ellipse(x, y, a, seg_end, rx, ry):
+                    pb.add(p)
+                pb.add((x, y))
+                pb.restart(pb.buf[0])
+                buf = pb.buf + [END]
+                self._fill_buffer(buf)
+                if len(buf) >= 3:                       # the outline leaves out the last three
+                    for (x1, y1), (x2, y2) in _buffer_edges(buf[:-3] + [END]):
+                        self.line(x1, y1, x2, y2)
+                first_start = first_start or _arc_end(a, rx, ry)
+            if q == last:
+                break
+            a = seg_end
+        last_end = last_end or (0, 0)
+        self.line(x, y, x + first_start[0], y + first_start[1])
+        self.line(x, y, x + last_end[0], y + last_end[1])
 
     def floodfill(self, x, y, border):
         """Fill the 4-connected region around (x, y) bounded by the border colour."""

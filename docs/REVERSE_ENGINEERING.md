@@ -141,17 +141,37 @@ stroke fonts and the 8×8 ROM font. `quest2/hud.py` ports `stats()`, `dlife2()`,
 Gothic (4) for page titles, Complex (8) for the stat sheet, Simplex (6) for story and talk,
 Triplex (1) for the spellbook, Triplex Script (7) for the message strip, and Sans (3) for gold.
 
-Thick (3-pixel) circles and arcs, such as the key outlines in `dkeys2()`, are not drawn by
-EGAVGA.BGI. Its ARC entry is an "emulate" slot, which the kernel in the exe patches at start-up with a
-far call into its own code (after `__GRP_ovr`). For thickness 3 the kernel takes one point per degree
-from start to end: x = cx + (rx × sin(a + 90)) and y = cy − (ry × sin(a)), with sin from its own table
-of sin × 32768 values (rounded down), and each product rounded down. It collects the points as a
-polygon: a repeat of the first point is dropped while it is still the only point, and returning to
-the first point closes the path. It then draws each segment as a thick line, including
-zero-length ones. So the ring is a pixel narrower than a brushed circle and slightly lopsided, and
-the top of a circle gets one stray pixel above it. `bgi.py` does the same; `tools/re/verify_arcs.py`
-checks it against the kernel code, and the result matches the DOSBox screenshots of the key panel
-exactly. Thin circles keep the midpoint algorithm.
+EGAVGA.BGI itself only puts pixels, 1-pixel lines and bars. The Borland kernel in the exe (after
+`__GRP_ovr`) sits in front of it as a pseudo-driver: it clips every line to the screen first
+(Cohen-Sutherland, the slope taken once from the whole line, intersections rounded toward zero, so
+a clipped line's pixels can differ from the visible part of the whole line), draws a 3-pixel line
+as three 1-pixel lines offset across it, and draws `rectangle()` as four `line()` calls. The
+driver's ARC, PIESLICE, FILLED ELLIPSE, FILLPOLY and BAR3D entries are "emulate" slots, which the
+kernel patches at start-up with a far call into its own code, so those shapes are the kernel's:
+
+- **1-pixel arcs and ellipses:** an integer midpoint ellipse scaled by 100 × max(rx, ry)²; an arc
+  keeps the pixels whose cheap "pseudo-angle" (one quadrant per 2000) lies between those of its
+  end points. A sweep under 2 degrees plots just the end point.
+- **`fillellipse`:** a bar across each row the ellipse steps reach, then the outline as an arc.
+- **`fillpoly`:** a scan-line fill from the lowest y up to (not including) the highest, each edge
+  counted on rows min(y) ≤ row < max(y), crossings rounded toward zero and filled in pairs; then
+  the outline.
+- **`sector`/`pieslice`:** the angles are taken mod 360 and put in increasing order (so a start
+  above the end draws the other wedge). Each quadrant's arc pixels plus the centre are filled as a
+  polygon and the arc outlined; then the two radii.
+- **`bar3d`:** the fill inside the front face only, the face outlined, and the side and top raised by
+  depth × 3 / 4.
+
+Thick (3-pixel) circles and arcs, such as the key outlines in `dkeys2()`, work differently. The
+kernel takes one point per degree from start to end: x = cx + (rx × sin(a + 90)) and
+y = cy − (ry × sin(a)), with sin from its own table of sin × 32768 values (rounded down), and each
+product rounded down. It collects the points as a polygon: a repeat of the first point is dropped
+while it is still the only point, and returning to the first point closes the path. It then draws
+each segment as a thick line, including zero-length ones. So the ring is a pixel narrower than a
+brushed circle and slightly lopsided, and the top of a circle gets one stray pixel above it.
+
+`bgi.py` does all of this, and `tools/re/verify_bgi.py` checks it against the kernel code. The key
+panel matches the DOSBox screenshots exactly, and every sprite matches what the game draws.
 
 ### Animations and sound
 
