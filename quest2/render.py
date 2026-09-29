@@ -118,15 +118,34 @@ class Renderer:
                 pygame.time.wait(wait)
         self.present()
 
+    def wait_talk(self, game, text, fast=False):
+        """talk()'s getch loop: the message stays in the strip until Space is pressed."""
+        if fast:
+            return
+        from .ui import TalkBox
+        box = TalkBox(text)
+        clock = pygame.time.Clock()
+        while game.running:
+            self.draw(game, present=False)
+            box.draw(self, self.screen)
+            self.present()
+            for ev in pygame.event.get():
+                if ev.type == pygame.QUIT:
+                    game.running = False
+                elif ev.type == pygame.KEYDOWN and ev.key == pygame.K_SPACE:
+                    return
+            clock.tick(30)
+
     # ── frame ─────────────────────────────────────────────────────────────────
-    def draw(self, game):
+    def draw(self, game, present=True):
         self.game = game
         scr = self.screen
         scr.fill((0, 0, 0))
         if game.overlay and game.overlay.covers_map or not game.world.grid:
             if game.overlay:
                 game.overlay.draw(self, scr)
-            self.present()
+            if present:
+                self.present()
             return
         w, p = game.world, game.player
         ox, oy = w.origin
@@ -145,7 +164,8 @@ class Renderer:
         self.draw_message(scr, game)
         if game.overlay:
             game.overlay.draw(self, scr)
-        self.present()
+        if present:
+            self.present()
 
     def draw_message(self, scr, game):
         """The bottom strip shows this turn's messages, or the potion belt when there are none."""

@@ -102,7 +102,7 @@ class Game:
         self.target: Enemy | None = None
         self.cursor = None
         self.overlay = None
-        self.talk_queue: list = []         # NPC lines waiting to be shown, oldest first
+        self.talk_log: list = []           # every talk() message shown, in order (read by the verifiers)
         self.last_shop = 0                 # peddler()'s remembered shop number
         self.pending_next_level = False    # set by a level script (e.g. the end of level 7)
         self.overlay = ui.TitleScreen()     # title() / mastermind()
@@ -246,8 +246,6 @@ class Game:
             return
         if self.overlay:
             self.overlay.key(self, ev)
-            if self.overlay is None and self.talk_queue:
-                self.next_talk()
             return
         k = ev.key
         self.messages = []
@@ -356,16 +354,12 @@ class Game:
         self.events.on_talk(npc, x, y)
 
     def show_talk(self, text):
-        """Queue one of talk()'s messages; each waits for Space in the message strip."""
-        self.talk_queue.append(text)
-        if self.overlay is None:
-            self.next_talk()
-
-    def next_talk(self):
-        if self.talk_queue:
-            text = self.talk_queue.pop(0)
-            self.tones((500, 50), (600, 50), (500, 50))   # talk(): a chime, then the message
-            self.overlay = ui.TalkBox(text, self.next_talk)
+        """The end of talk(): a chime, the message in the strip, then a wait for Space. Like the
+        original, nothing after the conversation happens until then (a scene's animations, the
+        next line, the monsters' turn)."""
+        self.talk_log.append(text)
+        self.tones((500, 50), (600, 50), (500, 50))
+        self.renderer.wait_talk(self, text, fast=self.fast)
 
     def autosave(self, slot: int):
         """The original saves the game itself at a few story points."""

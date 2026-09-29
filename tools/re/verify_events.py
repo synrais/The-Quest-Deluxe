@@ -57,8 +57,7 @@ def run_case(emu, g, level, grid0, npc_pos, hero_pos, state, seed, npc=None):
     p.hero.rep = state['rep']
     p.inv.coins = state['coins']
     p.bag = dict(state['bag'])
-    g.talk_queue = []
-    g.overlay = True          # keep messages queued so we can read them
+    g.talk_log = []
     ox, oy = g.world.origin
     ens = list(g.world.enemies)
     # ── original ──
@@ -103,7 +102,7 @@ def run_case(emu, g, level, grid0, npc_pos, hero_pos, state, seed, npc=None):
         g.events.talk(npc, nx, ny)
     # ── compare ──
     diffs = []
-    text = g.talk_queue[-1] if g.talk_queue else None
+    text = g.talk_log[-1] if g.talk_log else None
     mine = (text[0], text[1]) if text else None
     theirs = tuple(emu.texts[-2:]) if len(emu.texts) >= 2 else None
     if mine != theirs:
