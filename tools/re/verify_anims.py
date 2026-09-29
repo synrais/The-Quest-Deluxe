@@ -18,6 +18,7 @@ os.environ.setdefault('SDL_VIDEODRIVER', 'dummy')
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.dirname(os.path.dirname(HERE)))
+import engine                                       # noqa: E402,F401  (QUEST_ENGINE=deluxe checks Deluxe)
 
 import pygame                                       # noqa: E402
 

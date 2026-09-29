@@ -1,0 +1,140 @@
+{
+ "floors": [
+  {
+   "id": 1,
+   "name": "Grass"
+  },
+  {
+   "id": 2,
+   "name": "Pebbled Footpath"
+  },
+  {
+   "id": 3,
+   "name": "Small Shrubs"
+  },
+  {
+   "id": 4,
+   "name": "Red Carpet"
+  },
+  {
+   "id": 6,
+   "name": "Grey Carpet"
+  },
+  {
+   "id": 7,
+   "name": "Water Bridge"
+  },
+  {
+   "id": 8,
+   "name": "Desert Sand"
+  }
+ ],
+ "walls": [
+  {
+   "id": -6,
+   "name": "Fake Diamond Mesh Gray"
+  },
+  {
+   "id": -5,
+   "name": "Fake Stippled Dark Gray"
+  },
+  {
+   "id": -4,
+   "name": "Locked Blue Key Door"
+  },
+  {
+   "id": -3,
+   "name": "Locked Red Key Door"
+  },
+  {
+   "id": -2,
+   "name": "Locked Gold Key Door"
+  },
+  {
+   "id": -1,
+   "name": "Door"
+  },
+  {
+   "id": 1,
+   "name": "Pine Trees"
+  },
+  {
+   "id": 2,
+   "name": "Water"
+  },
+  {
+   "id": 3,
+   "name": "Pine Trees"
+  },
+  {
+   "id": 4,
+   "name": "Diagonal Pinstripe White"
+  },
+  {
+   "id": 5,
+   "name": "Boulder"
+  },
+  {
+   "id": 6,
+   "name": "Apple Tree"
+  },
+  {
+   "id": 7,
+   "name": "Wishing Well"
+  },
+  {
+   "id": 8,
+   "name": "Decayed Tree"
+  },
+  {
+   "id": 9,
+   "name": "Table"
+  },
+  {
+   "id": 10,
+   "name": "Stippled Dark Gray"
+  },
+  {
+   "id": 11,
+   "name": "Diamond Mesh Gray"
+  },
+  {
+   "id": 12,
+   "name": "Diagonal Pinstripe Amber"
+  },
+  {
+   "id": 13,
+   "name": "Diamond Mesh Amber"
+  },
+  {
+   "id": 14,
+   "name": "Diagonal Pinstripe Red"
+  }
+ ],
+ "decos": [
+  {
+   "id": 1,
+   "name": "Opened Door"
+  },
+  {
+   "id": 2,
+   "name": "Opened Chest"
+  },
+  {
+   "id": 3,
+   "name": "Blood with Limb"
+  },
+  {
+   "id": 4,
+   "name": "Bloody Footprints"
+  },
+  {
+   "id": 5,
+   "name": "Blood Puddle"
+  },
+  {
+   "id": 6,
+   "name": "Dark Blood Puddle"
+  }
+ ]
+}

@@ -21,6 +21,7 @@ os.environ.setdefault('SDL_VIDEODRIVER', 'dummy')
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.dirname(os.path.dirname(HERE)))
+import engine                                       # noqa: E402,F401  (QUEST_ENGINE=deluxe checks Deluxe)
 
 import pygame                                       # noqa: E402
 
@@ -147,7 +148,8 @@ class PortHost:
         self.st = Status(**s['st'])
         self.level = s['st']['level']
         self.ax, self.ay = s.get('ax', 0), s.get('ay', 0)
-        self._items = rules.ItemTable(data.items)
+        self.pack = getattr(data.src, 'pack', None)       # Deluxe's quest pack (QUEST_ENGINE=deluxe)
+        self._items = rules.ItemTable(data.items, self.pack) if self.pack else rules.ItemTable(data.items)
         self._prices = {r[0]: r[1] for r in data.prices if len(r) > 1}
         self._rules, self._player = rules, Player
 
