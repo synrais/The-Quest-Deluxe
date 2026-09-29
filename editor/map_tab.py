@@ -496,6 +496,10 @@ class MapTab(ttk.Frame):
                 return
             if k:
                 shops[(sx, sy)] = k
+                if k not in p.shops.setdefault(n, {}):
+                    p.shops[n][k] = '1 3\n'                   # a new shop starts with two potions
+                    p.touch(('shops', n))
+                    self.app.text_tab.load()
             else:
                 shops.pop((sx, sy), None)
             p.set_constant(n, 'SHOPS', shops, 'screen (column, row) -> shop number')

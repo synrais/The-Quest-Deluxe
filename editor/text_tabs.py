@@ -178,22 +178,45 @@ class TextTab(Editor):
         super().__init__(master, app,
                          'Dialogue: level person number "line 1 (optional "line 2) ending with ; - level 0 lines '
                          'are shared, 1-3 are chit-chat, 10 and up are said by scripts (say). Stories: '
-                         'number and line count, then the lines. The questionnaire: 8 questions of 9 lines.')
+                         'number and line count, then the lines. The questionnaire: 8 questions of 9 lines. '
+                         'Shops: the item numbers a shop sells (up to 40), filling its shelves in order; the '
+                         "Map tab's Shop tool says which screen has which shop.")
 
     def keys(self):
-        return list(self.NAMES)
+        p = self.app.project
+        shops = [('shop', n, k) for n in range(1, p.levels + 1) for k in sorted(p.shops.get(n, {}))]
+        return list(self.NAMES) + shops
 
     def label(self, k):
-        return self.NAMES[k]
+        return f'Level {k[1]} shop {k[2]}' if isinstance(k, tuple) else self.NAMES[k]
 
     def get(self, k):
+        if isinstance(k, tuple):
+            return self.app.project.shops[k[1]][k[2]]
         return self.app.project.texts[k]
 
     def put(self, k, text):
-        self.app.project.texts[k] = text
-        self.app.project.touch(k)
+        if isinstance(k, tuple):
+            self.app.project.shops[k[1]][k[2]] = text
+            self.app.project.touch(('shops', k[1]))
+        else:
+            self.app.project.texts[k] = text
+            self.app.project.touch(k)
 
     def problems(self, k, text):
+        if isinstance(k, tuple):
+            items = {r['id'] for r in self.app.project.tables['items']}
+            out = []
+            for i, line in enumerate(text.splitlines(), 1):
+                for v in line.split():
+                    if not v.lstrip('-').isdigit():
+                        out.append((i, f'line {i}: {v} is not an item number'))
+                    elif int(v) and int(v) not in items:
+                        out.append((i, f'line {i}: there is no item {v}'))
+            n = sum(len(line.split()) for line in text.splitlines())
+            if n > 40:
+                out.append((None, f'a shop holds 40 things; this lists {n}'))
+            return out
         if k == 'talk':
             lines = parse_talk(text)
             starts = sum(1 for line in text.splitlines() if line[:1].isdigit() or line[:2].lstrip('-')[:1].isdigit())
