@@ -1,0 +1,4 @@
+pygame-ce>=2.4
+# only for the reverse-engineering tools in tools/re:
+capstone
+unicorn
