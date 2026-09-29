@@ -137,7 +137,8 @@ class Game:
         self.spells = rules.SpellTable(self.data.spells)
         self.rewards = self.pack.rewards()
         self.renderer = Renderer(window, self.data.src, self.pack)
-        self.slots = Slots(DATA_DIR)                 # data\\save01.dat .. save20.dat, as in the original
+        # saves/<pack>/save01.dat .. save20.dat: the original's format, kept apart from the classic port's
+        self.slots = Slots(os.path.join(ROOT, 'saves', os.path.basename(self.pack.root)))
         # scripted runs (tests, the dummy video driver) play animations instantly and silently
         self.fast = os.environ.get('SDL_VIDEODRIVER') == 'dummy'
         self.speaker = Speaker(enabled=not self.fast and sound_setting(self.data.src))
@@ -552,7 +553,7 @@ class Game:
             self.messages = []
             self.magic.cast_at(spell, x, y)
             self.end_turn()
-        self.overlay = ui.Cursor(self, p.X, p.Y, f'Cast {rules.SPELL_NAMES[spell]}: choose a target',
+        self.overlay = ui.Cursor(self, p.X, p.Y, f'Cast {self.pack.spell_name(spell)}: choose a target',
                                  picked, allowed=lambda x, y: self.magic.in_range(spell, x, y),
                                  can_pick=lambda x, y: self.magic.valid_target(spell, x, y),
                                  on_cancel=self.end_turn)       # Esc: nothing cast, but the turn is used

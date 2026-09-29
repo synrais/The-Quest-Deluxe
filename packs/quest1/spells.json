@@ -10,7 +10,7 @@
  {"id": 8, "name": "Summon Skeleton", "req_int": 30, "mana": 8, "range": 4, "power": 0, "duration": 0, "effect": "summon", "creature": -100, "anim": ["asskeleton", 1]},
  {"id": 9, "name": "Inferno", "req_int": 30, "mana": 10, "range": 3, "power": 25, "duration": 0, "effect": "bolt", "anim": ["ainferno", 0]},
  {"id": 10, "name": "Restore", "req_int": 30, "mana": 20, "range": 0, "power": 70, "duration": 0, "effect": "heal", "anim": ["arestore"]},
- {"id": 11, "name": "Life Drain", "req_int": 35, "mana": 13, "range": 1, "power": 20, "duration": 0, "effect": "drain"},
+ {"id": 11, "name": "Life Drain", "req_int": 35, "mana": 13, "range": 1, "power": 20, "duration": 0, "effect": "drain", "needs_target": true},
  {"id": 12, "name": "Thunder Bolt", "req_int": 35, "mana": 25, "range": 4, "power": 40, "duration": 0, "effect": "bolt", "anim": ["athunder"], "repeat": 5},
  {"id": 13, "name": "Shield of Fire", "req_int": 35, "mana": 15, "range": 0, "power": 8, "duration": 10, "effect": "fire_shield", "anim": ["ashield", 2]},
  {"id": 14, "name": "Deteriorate", "req_int": 40, "mana": 1, "range": 1, "power": 100, "duration": 0, "effect": "bolt", "anim": ["adeteriorate", 40], "empties_mana": true, "needs_target": true},

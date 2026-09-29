@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Callable
 import pygame
 
 from . import rules
-from .rules import SPELL_NAMES, SP_INT, SP_MANA, SP_RANGE, SP_POWER
+from .rules import SP_INT, SP_MANA
 from .state import KNIGHT, MAGE, ROGUE, MONK
 from .render import EGA, W, H, TILE
 
@@ -698,7 +698,7 @@ class SpellBook(Overlay):
                 pygame.draw.rect(scr, EGA[14], (x - 1, y - 1, 42, 42), 2)
         s = p.book[self.i]
         if s:
-            r.btext(scr, SPELL_NAMES[s], (1, 422), 4 if g.spells.tell(s, SP_INT) > p.hero.intl else 1, (1, 4))
+            r.btext(scr, r.pack.spell_name(s), (1, 422), 4 if g.spells.tell(s, SP_INT) > p.hero.intl else 1, (1, 4))
 
 
 class LearnSpell(Overlay):
@@ -724,7 +724,7 @@ class LearnSpell(Overlay):
         g = r.game
         panel(r, scr, 'New Spell')
         for n, s in enumerate(self.c):
-            r.btext(scr, SPELL_NAMES[s], (420, 50 + n * 28), 14 if n == self.i else 7, TRIPLEX)
+            r.btext(scr, r.pack.spell_name(s), (420, 50 + n * 28), 14 if n == self.i else 7, TRIPLEX)
         takes = 2 if g.player.skill.mem == 1 else 3
         bottom(r, scr, [(f'Choose a spell to memorise (takes {takes} level-ups).', 14),
                         ('Enter chooses, Esc skips', 7)])

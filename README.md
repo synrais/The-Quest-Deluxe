@@ -13,6 +13,17 @@ The Quest II — a faithful remake of The Quest for Windows and Linux
   Sound:    PC-speaker tones like the original; put 0 in sound.txt (game folder) to turn them off
   Tests:    tests/test_phase3.py, tests/test_anims.py, tests/test_saves.py
 
+Quest Deluxe — the extended engine (the classic port above stays frozen as the faithful version)
+  Run:      python run_deluxe.py            plays packs/quest1 (QUEST_PACK=<name> for another pack)
+  Engine:   deluxe/            a fork of quest2/ that reads everything from a quest pack
+  Packs:    packs/<name>/      items, creatures, spells, classes, tiles, text, levels, sprites as
+                               JSON / text / PNG; see docs/QUEST_PACKS.md
+            packs/quest1       The Quest itself, built by tools/make_pack.py from the original
+  Saves:    saves/<pack>/save01.dat .. save20.dat
+  Tests:    tests/lockstep.py  classic and Deluxe side by side on random keys: every screen and
+                               the whole game state must match; QUEST_ENGINE=deluxe runs the
+                               tools/re verifiers against Deluxe
+
 The Quest — Level Editor
 Reads/writes L00001.dat – L00007.dat map files and SAVE*.dat save files.
 

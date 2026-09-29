@@ -127,7 +127,7 @@ def mon_hit(e: Enemy, p: Player, st: Status, spells: SpellTable, pack) -> int:
     if random(100) + 1 > e.atk - h.defense:
         return 0
     power = spread(e.power)
-    if st.Shield > 0 and spells.tell(5, 4) >= power:
+    if st.Shield > 0 and pack.shield_absorbs() >= power:
         return SHIELDED
     power -= h.marm if pack.trait(e.type, 'magic_attack') else h.warm
     return power
@@ -145,10 +145,6 @@ def hurt_amount(dmg: int, target_warm: int, target_marm: int, kind: int) -> int:
 
 # ── Spells.dat columns (spelltell) ────────────────────────────────────────────
 SP_INT, SP_MANA, SP_RANGE, SP_POWER, SP_DURATION = 1, 2, 3, 4, 5
-SPELL_NAMES = {1: 'Heal', 2: 'Flame', 3: 'Teleport', 4: 'Shield', 5: 'Ring of Ice', 6: 'Black Ward',
-               7: 'Invisibility', 8: 'Summon Skeleton', 9: 'Inferno', 10: 'Restore', 11: 'Life Drain',
-               12: 'Thunder Bolt', 13: 'Shield of Fire', 14: 'Deteriorate', 15: 'Summon Stone Knight',
-               16: 'Earthquake', 17: 'Cure', 18: 'Summon Scorpion', 19: 'Meteor', 20: 'Dark Hour'}
 
 # Items.dat weapon kinds (column 10)
 KIND_NORMAL, KIND_DOUBLE, KIND_PARRY, KIND_PIERCE, KIND_RANGED_, KIND_TWOHAND, KIND_TWOHAND_PARRY = range(7)

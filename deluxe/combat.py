@@ -46,7 +46,7 @@ class Combat:
             target.att = 9
         dam = rules.spread(dmg)
         warm, marm = (h.warm, h.marm) if target is None else (target.warm, target.marm)
-        if target is None and st.Shield > 0 and self.g.spells.tell(5, rules.SP_POWER) >= dam:
+        if target is None and st.Shield > 0 and self.g.pack.shield_absorbs() >= dam:
             self.g.tones((400, 70), (350, 70))            # the Shield spell absorbs the blow
             return 0
         if kind == 0:
@@ -419,7 +419,7 @@ class Combat:
     def fire_shield(self):
         """Shield of Fire burns adjacent enemies every turn."""
         p = self.p
-        power = self.g.spells.tell(13, rules.SP_POWER)
+        power = self.g.pack.fire_shield_power()
         for e in list(self.w.enemies):
             if e in self.w.enemies and abs(e.x - p.X) + abs(e.y - p.Y) == 1:
                 self.g.play_at('afireball', e.x, e.y, 1)

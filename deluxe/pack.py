@@ -120,6 +120,25 @@ class Pack:
             self._ammo = {(r['ammo'], r['count']): i for i, r in self.items.items() if r.get('type') == 'ammo'}
         return self._ammo.get((group, count), 0) if count > 0 else 0
 
+    # ── spells ──────────────────────────────────────────────────────────────
+    def spell(self, s: int) -> dict:
+        return self.spells.get(s, {})
+
+    def spell_name(self, s: int) -> str:
+        return self.spells.get(s, {}).get('name', '')
+
+    def _by_effect(self, effect: str) -> dict:
+        return next((r for r in self.spells.values() if r.get('effect') == effect), {})
+
+    def shield_absorbs(self) -> int:
+        """How big a blow the Shield spell stops: the power of the spell its absorb_power_of names
+        (in Quest I, Ring of Ice's: the original reads the wrong spell)."""
+        sh = self._by_effect('shield')
+        return self.spell(sh.get('absorb_power_of', sh.get('id', 0))).get('power', 0)
+
+    def fire_shield_power(self) -> int:
+        return self._by_effect('fire_shield').get('power', 0)
+
     # ── classes and skills ──────────────────────────────────────────────────
     def skill_ids(self, kind: str) -> list:
         """creation()'s lists: the skills (kind 'skill') or the faults (kind 'fault'), in order."""

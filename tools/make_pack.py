@@ -179,7 +179,7 @@ def spell_traits(n: int) -> dict:
         8: {'effect': 'summon', 'creature': -100, 'anim': ['asskeleton', 1]},
         9: {'effect': 'bolt', 'anim': ['ainferno', 0]},
         10: {'effect': 'heal', 'anim': ['arestore']},
-        11: {'effect': 'drain'},
+        11: {'effect': 'drain', 'needs_target': True},
         12: {'effect': 'bolt', 'anim': ['athunder'], 'repeat': 5},
         13: {'effect': 'fire_shield', 'anim': ['ashield', 2]},
         14: {'effect': 'bolt', 'anim': ['adeteriorate', 40], 'empties_mana': True, 'needs_target': True},
