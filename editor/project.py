@@ -145,8 +145,11 @@ class Project:
         for i, line in enumerate(lines):
             m = re.match(rf'^{name}\s*=\s*(.*)$', line)
             if m:
-                old_comment = line[line.index('#'):] if '#' in m.group(1) else ''
-                lines[i] = f'{new:<35} {old_comment}'.rstrip() if old_comment else new
+                if '#' in m.group(1):                          # keep the comment where it was
+                    col = line.index('#')
+                    lines[i] = f'{new:<{col}}{line[col:]}' if len(new) < col else f'{new}  {line[col:]}'
+                else:
+                    lines[i] = new
                 break
         else:
             # after the last top-level setting, or after the docstring

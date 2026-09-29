@@ -23,15 +23,42 @@ PYGAME = 'pygame-ce==2.5.8'
 PY_VERSIONS = ('3.12', '3.13')         # 3.12 is what the launcher installs; others download on first run
 TOP = 'TheQuestII'
 
-FILES = ['run_quest2.py', 'TheQuest.zip', 'README.md', 'requirements.txt', 'level_editor.py', 'icon.ico']
-DIRS = ['quest2', 'data', 'sprites', 'docs']
-PLAY_FILES = ['run_quest2.py', 'TheQuest.zip']
-PLAY_DIRS = ['quest2', 'sprites']
+FILES = ['run_quest2.py', 'run_deluxe.py', 'run_editor.py', 'TheQuest.zip', 'README.md', 'requirements.txt',
+         'icon.ico']
+DIRS = ['quest2', 'deluxe', 'editor', 'packs', 'data', 'sprites', 'docs']
+PLAY_FILES = ['run_quest2.py', 'run_deluxe.py', 'TheQuest.zip']
+PLAY_DIRS = ['quest2', 'deluxe', 'packs', 'sprites']
+
+# the other launchers are "Play The Quest II.bat" with another title and program (and a tkinter check)
+LAUNCHERS = {
+    'Play Quest Deluxe.bat': ('Quest Deluxe', 'run_deluxe.py', False),
+    'Quest Editor.bat': ('Quest Editor', 'run_editor.py', True),
+}
+TK_CHECK = '''%PY% -c "import tkinter" >nul 2>&1
+if errorlevel 1 (
+    echo The editor needs tkinter, which this Python doesn't have.
+    echo Reinstall Python from https://www.python.org/downloads/ with "tcl/tk and IDLE" ticked.
+    pause
+    exit /b 1
+)
+'''
+
+
+def launcher(title: str, program: str, tk: bool) -> bytes:
+    text = crlf(os.path.join(ROOT, 'windows', 'Play The Quest II.bat')).decode()
+    text = text.replace('title The Quest II', f'title {title}')
+    run = '%PY% run_quest2.py %*'
+    assert run in text
+    text = text.replace(run, (TK_CHECK.replace('\n', '\r\n') if tk else '') + f'%PY% {program} %*')
+    return text.encode()
 
 README = """THE QUEST II
 ============
 
-To play: double-click "Play The Quest II.bat".
+To play: double-click "Play The Quest II.bat" - the original game, remade exactly.
+Quest Deluxe: double-click "Play Quest Deluxe.bat" - the extended engine, playing a quest pack
+(packs/quest1 is the original quest; it plays the same for now).
+To make quests: double-click "Quest Editor.bat" (in the full build) - see docs/QUEST_PACKS.md.
 
 The first time, it looks for Python 3.10 or newer. If Python isn't installed, it offers to install
 Python 3.12 for you (with winget, which comes with Windows 10 and 11). Then it sets up pygame-ce
@@ -86,6 +113,9 @@ def build(name: str, notes: str = '', play: bool = False) -> str:
                     p = os.path.join(base, f)
                     z.write(p, f'{TOP}/{os.path.relpath(p, ROOT)}'.replace(os.sep, '/'))
         z.writestr(f'{TOP}/Play The Quest II.bat', crlf(os.path.join(ROOT, 'windows', 'Play The Quest II.bat')))
+        for name, (title, program, tk) in LAUNCHERS.items():
+            if program in (PLAY_FILES if play else FILES):
+                z.writestr(f'{TOP}/{name}', launcher(title, program, tk))
         extra = f'\nWhat is new in this build:\n{notes}\n' if notes else ''
         z.writestr(f'{TOP}/READ ME FIRST.txt', README.format(extra=extra).replace('\n', '\r\n'))
         for w in wheels():

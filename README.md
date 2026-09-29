@@ -19,8 +19,11 @@ Quest Deluxe — the extended engine (the classic port above stays frozen as the
   Packs:    packs/<name>/      items, creatures, spells, classes, tiles, text, levels, sprites as
                                JSON / text / PNG; see docs/QUEST_PACKS.md
             packs/quest1       The Quest itself, built by tools/make_pack.py from the original
+  Editor:   python run_editor.py   (needs tkinter) maps, level settings, events, dialogue and stories,
+                               quest settings; new packs; Play (F5) test-plays from the clicked square
   Saves:    saves/<pack>/save01.dat .. save20.dat
-  Tests:    tests/lockstep.py  classic and Deluxe side by side on random keys: every screen and
+  Tests:    tests/test_packs.py, tests/test_editor.py (under xvfb-run on Linux), and
+            tests/lockstep.py  classic and Deluxe side by side on random keys: every screen and
                                the whole game state must match; QUEST_ENGINE=deluxe runs the
                                tools/re verifiers against Deluxe
 

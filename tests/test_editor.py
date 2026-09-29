@@ -1,0 +1,92 @@
+"""The Quest Editor's window, driven by simulated mouse clicks on a copy of packs/quest1.
+
+Needs tkinter and a display (on Linux without one: xvfb-run python tests/test_editor.py).
+Paints walls by dragging, undoes and redoes, sets the start, fills a rectangle with gold,
+checks a script and the dialogue, saves, and checks what reached the files.
+"""
+import os
+import shutil
+import sys
+import tempfile
+import time
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, ROOT)
+try:
+    import tkinter as tk
+    root = tk.Tk()
+except Exception as e:                          # noqa: BLE001
+    print(f'skipped: no tkinter or no display ({e})')
+    sys.exit(0)
+
+tmp = tempfile.mkdtemp()
+os.environ['HOME'] = tmp                        # the editor remembers the last pack here
+pack = os.path.join(tmp, 'edpack')
+shutil.copytree(os.path.join(ROOT, 'packs', 'quest1'), pack)
+
+from editor.app import App  # noqa: E402
+
+app = App(root, pack)
+
+
+def pump(n=15):
+    for _ in range(n):
+        root.update()
+        time.sleep(0.01)
+
+
+def click(x, y, drag_to=None):
+    c = app.map_tab.canvas
+    s = app.map_tab.size
+    c.event_generate('<ButtonPress-1>', x=(x - 1) * s + 5, y=(y - 1) * s + 5)
+    if drag_to:
+        c.event_generate('<B1-Motion>', x=(drag_to[0] - 1) * s + 5, y=(drag_to[1] - 1) * s + 5)
+        c.event_generate('<Motion>', x=(drag_to[0] - 1) * s + 5, y=(drag_to[1] - 1) * s + 5)
+    end = drag_to or (x, y)
+    c.event_generate('<ButtonRelease-1>', x=(end[0] - 1) * s + 5, y=(end[1] - 1) * s + 5)
+    pump(3)
+
+
+pump(30)
+m, g = app.map_tab, app.project.grid(1)
+m.layer.set('wall')
+m.value['wall'] = 5                                   # boulders
+click(3, 3, drag_to=(6, 3))                           # a fast drag still paints every square
+assert [g.get(x, 3)[1] for x in range(3, 7)] == [5, 5, 5, 5], [g.get(x, 3)[1] for x in range(3, 7)]
+m.undo()
+assert g.get(4, 3)[1] == 3 and g.get(3, 3)[1] == 0     # back to the pine tree and grass
+m.redo()
+assert g.get(4, 3)[1] == 5
+print('paint, undo, redo: ok')
+
+m.tool.set('start')
+click(7, 8)
+assert app.project.constant(1, 'START') == (7, 8)
+m.tool.set('rect')
+m.layer.set('gold')
+m.value['gold'] = 1
+m.gold.set(25)
+click(2, 6, drag_to=(3, 7))
+assert all(g.get(x, y)[4] == 25 for x in (2, 3) for y in (6, 7))
+print('start and gold rectangle: ok')
+
+app.tabs.select(app.events_tab)
+pump()
+app.events_tab.show(1)
+assert app.events_tab.check()
+app.tabs.select(app.text_tab)
+pump()
+assert app.text_tab.check()
+print('script and dialogue checks: ok')
+
+assert app.dirty
+app.save()
+assert not app.dirty
+with open(os.path.join(pack, 'levels', '1', 'map.txt')) as fh:
+    lines = set(fh.read().splitlines())
+assert '3 3 1 5 0 0 0 0' in lines and '2 6 1 0 0 0 25 0' in lines
+with open(os.path.join(pack, 'levels', '1', 'script.qs')) as fh:
+    assert 'START = (7, 8)                      # where newmap() puts the hero' in fh.read()
+print('saved: map and script as expected')
+root.destroy()
+print('all editor checks passed')
