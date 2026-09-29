@@ -140,6 +140,41 @@ stroke fonts and the 8×8 ROM font. `quest2/hud.py` ports `stats()`, `dlife2()`,
 `dcoins()`, `dmoney()`, `dkeys2()`, `dmap()` and `dpotions2()` call for call. The fonts the game uses:
 Gothic (4) for page titles, Complex (8) for the stat sheet, Simplex (6) for story and talk,
 Triplex (1) for the spellbook, Triplex Script (7) for the message strip, and Sans (3) for gold.
+
+### Animations and sound
+
+The original has **no combat text**. Hits, misses, blocks, spells and deaths show only as short
+animations drawn over the map, with PC-speaker tones. They block the game while they play, like
+everything in the original. `quest2/anim.py` ports all of them call for call as generators that yield
+each `delay()`, and `tools/re/verify_anims.py` checks each one against the exe: the same BGI calls,
+tones and delays, in the same order, with the same `rand()` draws.
+
+- **Hero melee (`main2`):** `ahit(square, side, 1)` (white stroke, high tone) on a hit and
+  `bhit(square, side)` (grey disc) on a miss. The side is where the blow comes from: 1 right,
+  2 below, 3 left, 4 above. There's a 100 ms pause around the Ambidexterity weapon swap and before a
+  double strike. A ranged weapon in melee beeps (150 Hz). A magic weapon rings when it deals damage
+  (`herohit`).
+- **Enemy melee:** `ahit(hero, side, 2)` (low tone) on a hit, `bhit2(hero, side)` for a parry, and
+  two falling tones when the Shield spell absorbs the blow (`monhit`, `hurt`). Before the enemies act,
+  `main2` waits 100 ms (50 ms with no hostiles on screen).
+- **Missiles:** `sthit` (sling), `arhit` (bows) and `bolthit` (crossbow). The hero's miss is
+  `bhit(6)` plus a 150 Hz beep; a monster's miss shows nothing.
+- **Spells (`cast`):** `dcast()` (the caster's eyes flicker) for every cast, then the spell's own
+  animation. A fizzle is `dcast()` plus a 50 Hz beep. A spell that does no damage shows `bhit(5)`.
+  Monsters' spells hurt first and animate after.
+- **Deaths:** every death beeps (200 then 500 Hz, `deadenemycheck`). The hero's are `dying2()`
+  ("You are bleeding!") and `death2()`. `death()` then asks "Want to load?". On No, a black box
+  grows from the middle of the screen and the title menu returns.
+- **Other beeps:** doors (400 Hz), picking things up (300/400), a full backpack (150), potions
+  (740), conversations (a 500/600/500 chime), and the `reput2`, `honor`, `cantsave` and `noarrows2`
+  warnings. The jingles are `song_key()` for a key, `song_jazz()` for a level-up, and
+  `song_bevcop()` for a new level, except when leaving levels 5 and 7.
+- **The hero (`guy2`)** is drawn in code, not from a sprite. While invisible **only the eyes are
+  drawn**. The eyes are green when poisoned, red with the killer switch, and light red under a
+  Berserker potion. The Shield spell adds a yellow triple ring, Shield of Fire a red one.
+- **Sound on/off:** `asound()` reads `sound.txt` on every call and beeps only if it holds 1 (the
+  manual: "1=sound, 0=no sound"). Quest II reads `sound.txt` from the game folder, then `data/`, then
+  `TheQuest.zip` (which ships 1).
 - **Kills (`monsdeath2`):** the hero's remaining exp-to-level goes down by the monster's
   experience value, and the loot table is rolled. Both are now in `quest2/content/monsters.json`.
 - **Reputation:** killing an NPC while at least one other NPC is on the screen costs 3 reputation
@@ -151,8 +186,9 @@ Triplex (1) for the spellbook, Triplex Script (7) for the message strip, and San
 - **Honour (fault):** attacking or casting at an enemy sets `hon` 1→2. While `hon == 2` and hostiles
   remain, you can't leave the screen ("It is not honorable to flee from your enemy!"). A kill or a
   new screen resets it to 1.
-- **Teleporter (item 999):** on level 5 the pad moves the hero 20 tiles east. On other levels it
-  only plays the effect.
+- **Teleporter (item 999):** `teleporter1()` plays on the pad (after a 500 ms pause), then on level 5
+  the hero moves 20 tiles east, and `teleporter2()` plays where they land. On other levels only the
+  rings play.
 
 ## How levels and events work
 

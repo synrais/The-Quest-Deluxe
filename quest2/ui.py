@@ -756,9 +756,10 @@ class LevelUpScreen(Overlay):
             self.gained = list(self.gained) + [self.i + 1]
             rules.status_update(g.player, g.status, g.items)
             self.picks -= 1
+            g.tones((400, 50), (500, 50))
             if self.picks <= 0:
+                self.then()                   # a class change is announced over this page
                 self.close(g)
-                self.then()
 
     def draw(self, r, scr):
         draw_sheet(r, scr, r.game, 'Level Up', cursor=self.i, gained=self.gained)

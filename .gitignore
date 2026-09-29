@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+tests/out/
+tools/re/out/
+saves/
+sprites_backup_*/

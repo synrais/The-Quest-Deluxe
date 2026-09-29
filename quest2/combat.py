@@ -50,7 +50,7 @@ class Combat:
         dam = rules.spread(dmg)
         warm, marm = (h.warm, h.marm) if target is None else (target.warm, target.marm)
         if target is None and st.Shield > 0 and self.g.spells.tell(5, rules.SP_POWER) >= dam:
-            self.say('Your shield absorbs the blow.')
+            self.g.tones((400, 70), (350, 70))            # the Shield spell absorbs the blow
             return 0
         if kind == 0:
             dam -= warm
@@ -97,6 +97,7 @@ class Combat:
     def fall(self, i: int, e: Enemy):
         """The generic half of a death in deadenemycheck()."""
         w, h, ev = self.w, self.p.hero, self.g.events
+        self.g.tones((200, 50), (500, 50))                 # every death beeps
         if self.g.target is e:
             self.g.target = None
         q = w.sq(e.x, e.y)
@@ -169,30 +170,39 @@ class Combat:
             self.anger_npcs()
 
     def melee(self, e: Enemy):
-        """Walking into an enemy: herohit(), Ambidexterity second swing, kind-1 double strikes."""
-        p, items = self.p, self.g.items
+        """Walking into an enemy: herohit(), Ambidexterity second swing, kind-1 double strikes.
+        Only animations and tones show the result, as in the original: ahit() on a hit, bhit() on a
+        miss, a low beep for a ranged weapon."""
+        p, g, items = self.p, self.g, self.g.items
         self.wake_on_attack(e)
+        # movewhere: which side the blow comes from (1 right, 2 below, 3 left, 4 above)
+        where = 1 if e.x < p.X else 3 if e.x > p.X else 2 if e.y < p.Y else 4
         for swing in (0, 1):
             if swing == 1:
                 p.bag[SLOT_WEAPON], p.bag[SLOT_OFFHAND] = p.bag.get(SLOT_OFFHAND, 0), p.bag.get(SLOT_WEAPON, 0)
+                g.play('pause', 100)
             rules.status_update(p, self.g.status, items)
-            if items.tell(p.item(SLOT_WEAPON), IT_KIND) == KIND_RANGED:
-                self.say("You can't fight hand to hand with that.")
-            else:
-                dmg = rules.hero_hit(p, e, items)
-                if dmg > 0:
+            dmg = rules.hero_hit(p, e, items)
+            kind = items.tell(p.item(SLOT_WEAPON), IT_KIND)
+            if dmg > 0 and kind == 3:
+                g.tones((450, 20))                    # herohit(): a magic weapon rings
+            if kind == KIND_RANGED:
+                g.tones((150, 150))
+            elif dmg > 0:
+                g.play_at('ahit', e.x, e.y, where, 1)
+                e.life -= dmg
+                q = self.w.sq(e.x, e.y)
+                if q.deco == 0 and e.life > 0 and bleeds(e):
+                    q.deco = 4
+                if kind == rules.KIND_DOUBLE and random(5) == 1:
+                    g.play('pause', 100)
                     e.life -= dmg
-                    self.say(f'You hit for {dmg}.')
-                    q = self.w.sq(e.x, e.y)
-                    if q.deco == 0 and e.life > 0 and bleeds(e):
-                        q.deco = 4
-                    if items.tell(p.item(SLOT_WEAPON), IT_KIND) == rules.KIND_DOUBLE and random(5) == 1:
-                        e.life -= dmg
-                        self.say(f'A second strike for {dmg}!')
-                else:
-                    self.say('You miss.')
+                    g.play_at('ahit', e.x, e.y, where, 1)
+            else:
+                g.play_at('bhit', e.x, e.y, where)
             if swing == 1:
                 p.bag[SLOT_WEAPON], p.bag[SLOT_OFFHAND] = p.bag.get(SLOT_OFFHAND, 0), p.bag.get(SLOT_WEAPON, 0)
+                g.play('pause', 100)
                 rules.status_update(p, self.g.status, items)
             off = p.item(SLOT_OFFHAND)
             if not (swing == 0 and p.skill.amb == 1 and 200 < off < 300 and e.life > 0):
@@ -224,7 +234,7 @@ class Combat:
         if items.tell(wep, IT_KIND) != KIND_RANGED:
             return 'You have no ranged weapon.'
         if not rules.ammo_ok(wep, ammo):
-            return 'You have no ammunition for this weapon.' if ammo == 0 else "That ammunition doesn't fit."
+            return 'noarrows' if ammo == 0 else "That ammunition doesn't fit."
         return None
 
     def shoot(self, e: Enemy):
@@ -239,13 +249,17 @@ class Combat:
         self.g.target = e
         d = distance(e.x - p.X, e.y - p.Y)
         if (8 - d) * 10 + h.atk + 5 - e.defense >= random(100) + 1:
+            wep = p.item(SLOT_WEAPON)
+            hit = {230: 'sthit', 231: 'arhit', 232: 'arhit', 233: 'bolthit'}.get(wep)
+            if hit:
+                self.g.play_at(hit, e.x, e.y, 0)
             q = self.w.sq(e.x, e.y)
             if q.deco == 0 and e.life > 0 and bleeds(e):
                 q.deco = 4
-            dmg = self.hurt(h.power, e, 2, by_hero=True)
-            self.say(f'Your shot hits for {dmg}.')
+            self.hurt(h.power, e, 2, by_hero=True)
         else:
-            self.say('Your shot misses.')
+            self.g.play_at('bhit', e.x, e.y, 6)
+            self.g.tones((150, 50))
         ammo = p.item(SLOT_OFFHAND) - 1
         p.bag[SLOT_OFFHAND] = 0 if ammo % 20 == 0 else ammo
         rules.status_update(p, self.g.status, self.g.items)
@@ -253,6 +267,7 @@ class Combat:
     # ── the enemies attack (main2, after the hero's action) ───────────────────
     def enemy_attacks(self):
         p, h, st, items = self.p, self.p.hero, self.g.status, self.g.items
+        self.g.play('pause', 100 if st.ems > 0 else 50)      # main2() pauses before the enemies act
         for e in list(self.w.enemies):
             if e not in self.w.enemies or e.life <= 0:
                 continue
@@ -276,25 +291,35 @@ class Combat:
             else:
                 self.enemy_cast(e, name)
 
+    def side(self, e: Enemy) -> int:
+        """Which side of the hero e attacks from, as ahit()/bhit2() draw it."""
+        p = self.p
+        return 3 if e.x < p.X else 1 if e.x > p.X else 2 if e.y > p.Y else 4
+
+    def poison_hero(self):
+        self.p.hero.poisoned = 1
+        self.g.play('ampoisoned2', 1)
+
     def enemy_melee(self, e: Enemy, name: str):
-        p, h, items = self.p, self.p.hero, self.g.items
+        p, h, g, items = self.p, self.p.hero, self.g, self.g.items
         if e.type == 22:
             e.type = 23
             self.w.sq(e.x, e.y).mon = 23
-            self.say('A wraith appears!')
         dmg = rules.mon_hit(e, p, self.g.status, self.g.spells)
+        if dmg == rules.SHIELDED:
+            g.tones((400, 70), (350, 70))                 # monhit(): the Shield spell absorbs it
+            dmg = 0
         parry = items.tell(p.item(SLOT_WEAPON), IT_KIND) in (2, 6) or \
             (p.skill.amb == 1 and items.tell(p.item(SLOT_OFFHAND), IT_KIND) in (2, 6))
         if parry and random(5) == 1:
             dmg = 0
-            self.say(f'You parry the {name}.')
+            g.play_at('bhit2', p.X, p.Y, self.side(e))
         if dmg > 0:
             h.life -= dmg
-            self.say(f'The {name} hits you for {dmg}.')
+            g.play_at('ahit', p.X, p.Y, self.side(e), 2)
             self.bleed_hero()
             if e.type in (12, -102) and random(2) == 1 and not h.poisoned:
-                h.poisoned = 1
-                self.g.log('You have been poisoned!', 4)
+                self.poison_hero()
 
     def enemy_ranged(self, e: Enemy, name: str):
         p, h = self.p, self.p.hero
@@ -303,23 +328,29 @@ class Combat:
             d = 99
             e.moved = False
         if e.atk + (8 - d) * 10 + 5 - h.defense >= random(100) + 1:
-            dmg = self.hurt(e.power, None, 2, e)
-            self.say(f'The {name} shoots you for {dmg}.')
+            hit = 'sthit' if e.type == 3 else 'arhit' if e.type in (17, 26, 27, 30) else None
+            if hit:
+                self.g.play_at(hit, p.X, p.Y, 1)
+            if e.type == 39:
+                self.g.play_at('bolthit', p.X, p.Y, 1)
+            self.hurt(e.power, None, 2, e)
             self.bleed_hero()
             if e.type == 27 and random(2) == 1 and not h.poisoned:
-                h.poisoned = 1
-                self.g.log('You have been poisoned!', 4)
+                self.poison_hero()
 
     def enemy_cast(self, e: Enemy, name: str):
-        w, p, h = self.w, self.p, self.p.hero
+        """main2(), a creature without a melee or missile attack: heal, raise, explode, or cast at the
+        hero. The damage comes first and the animation after, as in the original."""
+        g, w, p, h = self.g, self.w, self.p, self.p.hero
         if e.type == 38:                                   # cleric heals a wounded ally
             for o in w.enemies:
                 if o is e or not (o.att > -1 or o.att in (-4, -5)) or o.life >= o.mlife:
                     continue
                 t1 = e.power
                 o.life = min(o.mlife, o.life + t1 - t1 // 3 + random(2 * (t1 // 3)))
+                g.play_at('dcast2', e.x, e.y)
+                g.play_at('aheal2', o.x, o.y)
                 e.moved = True
-                self.say(f'The {name} heals its ally.')
                 break
         if e.type == 32:                                   # necromancer raises a skeleton from bones
             ox, oy = w.origin
@@ -328,40 +359,56 @@ class Combat:
                     q = w.sq(x, y)
                     if q.deco == 6 and q.mon == 0 and (x, y) != (p.X, p.Y):
                         e.moved = True
+                        g.play_at('dcast2', e.x, e.y)
                         q.deco = 0
                         e.life -= 2
-                        self.g.spawn(33, x, y)
-                        self.say(f'The {name} raises the dead!')
-                        self.check_dead(e)
+                        g.play_at('asskeleton', x, y, 2)
+                        g.spawn(33, x, y)
                         break
                 else:
                     continue
                 break
+            self.check_dead()                              # deadenemycheck(-1), raised or not
         if e.type == 44:                                   # kamikaze demon: 6 blasts then dies
             for _ in range(6):
+                g.play_at('adarkhour', p.X, p.Y)
                 self.hurt(e.power, None, 1, e)
-            self.say(f'The {name} explodes!')
+                g.play_at('adarkhour', e.x, e.y)
             self.hurt(e.power * 6, e, 1, e)
             return
-        if e.att == -4:
-            return
-        dmg = self.hurt(e.power, None, 1, e)
-        self.say(f'The {name} casts at you for {dmg}.')
-        if e.type == 31 and dmg > 0:
-            e.life += dmg
-            e.mlife += dmg
-        if e.type == 33 and dmg > 0 and random(20) == 1 and not h.poisoned:
-            h.poisoned = 1
-            self.g.log('You have been poisoned!', 4)
-        if e.type == 45:                                   # the Deceiver turns summons into demons
+        dmg = e.power
+        if e.att != -4:
+            dmg = self.hurt(e.power, None, 1, e)
+        t = e.type
+        if t == 5:
+            g.play_at('afireball', p.X, p.Y, 1)
+        elif t in (8, -11):
+            g.play_at('aflame', p.X, p.Y, 1)
+        elif t == 11:
+            g.play_at('alightning', p.X, p.Y, 1)
+        elif t == 31:
+            g.play_at('adrain', p.X, p.Y, 3)
+        elif t == 33:
+            g.play_at('agflame', p.X, p.Y, 1)
+            if dmg > 0 and random(20) == 1 and not h.poisoned:
+                self.poison_hero()
+        elif t in (42, 43):
+            g.play_at('ainferno', p.X, p.Y, 1)
+        elif t == 45:                                      # the Deceiver turns summons into demons
             around = sum(1 for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))
                          if w.in_map(e.x + dx, e.y + dy) and w.sq(e.x + dx, e.y + dy).mon < -99)
             if random(2) == 0 and around > 1:
+                g.play('screen_flash', 5)
                 for o in w.enemies:
                     if o.type < -99:
                         o.att, o.type, o.power, o.marm, o.atk, o.life = 9, 44, 25, 15, 0, 40
                         w.sq(o.x, o.y).mon = 44
-                self.say('Your allies are twisted into demons!')
+            else:
+                g.play_at('aearthq', p.X, p.Y)
+        if dmg > 0 and t == 31:
+            g.play_at('adrain', e.x, e.y, 4)
+            e.life += dmg
+            e.mlife += dmg
 
     def bleed_hero(self):
         h = self.p.hero
@@ -375,4 +422,6 @@ class Combat:
         power = self.g.spells.tell(13, rules.SP_POWER)
         for e in list(self.w.enemies):
             if e in self.w.enemies and abs(e.x - p.X) + abs(e.y - p.Y) == 1:
-                self.hurt(power, e, 1, by_hero=True)
+                self.g.play_at('afireball', e.x, e.y, 1)
+                if self.hurt(power, e, 1, by_hero=True) == 0:
+                    self.g.play_at('bhit', e.x, e.y, 5)

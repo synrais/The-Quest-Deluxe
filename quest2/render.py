@@ -7,10 +7,10 @@ import re
 import pygame
 
 from .formats import ROOT
-from .state import CLASS_NAMES
 from .world import ROOM
 from .bgi import BGI
 from .hud import Hud
+from . import anim
 
 SPRITES_DIR = os.path.join(ROOT, 'sprites')
 W, H = 640, 480
@@ -85,6 +85,39 @@ class Renderer:
             else:
                 pygame.draw.circle(surf, EGA[12] if q.mon > 0 else EGA[11], (px + 20, py + 20), 12)
 
+    def draw_hero(self, scr, game, hx, hy):
+        """guy2(), ported call for call (quest2.anim.draw_guy2), at pixel position (hx, hy)."""
+        p, st = game.player, game.status
+        self.bgi.s = scr
+        anim.draw_guy2(self.bgi, hx // TILE + 1, hy // TILE + 1, p.hero.type, p.hero.invisible, p.hero.poisoned,
+                       st.killer, st.powboost, st.Shield, st.fShield)
+
+    # ── the original's animations ─────────────────────────────────────────────
+    def play(self, game, gen, fast=False, redraw=True):
+        """Run an animation generator (quest2.anim) on top of the current frame, blocking, as the
+        original does. Each yielded value is a delay() in ms; time is kept exactly, and frames are
+        only shown when there's time (or at least every 1/60 s)."""
+        if fast:
+            for _ in gen:
+                pass
+            return
+        if redraw:
+            self.draw(game)
+        self.bgi.s = self.screen
+        clock = pygame.time.get_ticks
+        target = shown = clock()
+        for ms in gen:
+            target += max(0, ms)
+            now = clock()
+            if now < target or now - shown >= 16:
+                self.present()
+                shown = clock()
+            pygame.event.pump()                  # keys pressed meanwhile stay queued, like the BIOS buffer
+            wait = target - clock()
+            if wait > 0:
+                pygame.time.wait(wait)
+        self.present()
+
     # ── frame ─────────────────────────────────────────────────────────────────
     def draw(self, game):
         self.game = game
@@ -99,30 +132,8 @@ class Renderer:
         ox, oy = w.origin
         for x, y in w.room_tiles():
             self.draw_tile(scr, (x - ox) * TILE, (y - oy) * TILE, w.grid[x][y])
-        hero = self.sprites.hero.get(CLASS_NAMES[p.hero.type])
         hx, hy = (p.X - ox) * TILE, (p.Y - oy) * TILE
-        if hero:
-            if p.hero.invisible > 0:
-                ghost = hero.copy()
-                ghost.set_alpha(110)
-                scr.blit(ghost, (hx, hy))
-            else:
-                scr.blit(hero, (hx, hy))
-        else:
-            pygame.draw.circle(scr, EGA[15], (hx + 20, hy + 20), 14)
-        if game.status.Shield > 0 or game.status.fShield > 0:
-            pygame.draw.circle(scr, EGA[9] if game.status.Shield > 0 else EGA[12], (hx + 20, hy + 20), 21, 2)
-        for kind, sid, x, y in game.fx:
-            if kind == 'spell' and w.in_room(x, y):
-                icon = self.sprites.get('spell', sid)
-                if icon:
-                    fx = icon.copy()
-                    fx.set_alpha(170)
-                    scr.blit(fx, ((x - ox) * TILE, (y - oy) * TILE))
-            elif kind == 'teleport' and w.in_room(x, y):
-                cx = (x - ox) * TILE                   # teleporter1/2: three blue rings, top to bottom
-                for ry in (9, 18, 27):
-                    pygame.draw.ellipse(scr, EGA[1], (cx + 10, (y - oy) * TILE + ry - 2, 20, 4), 1)
+        self.draw_hero(scr, game, hx, hy)
         t = game.target
         if t is not None and t in w.enemies:
             pygame.draw.rect(scr, EGA[12], ((t.x - ox) * TILE, (t.y - oy) * TILE, TILE, TILE), 1)

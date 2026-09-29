@@ -142,12 +142,15 @@ def talk(npc):
 def opened_chest():
     # main2(): these chests belong to someone
     if (hx == 84 and hy == 32) or (hx == 55 and hy == 16) or (hx == 58 and hy == 17):
+        effect('pause', 500)                  # delay(500), then reput(-1)
         change_rep(-1)
 
 
 def took(item):
     # main2(): taking the emerald at (64, 95) or the Amulet of Fury at (3, 37) is stealing
     if hx == 64 and hy == 95 and item == 9:
+        effect('pause', 500)                  # delay(500), then reput(-1)
         change_rep(-1)
     if hx == 3 and hy == 37 and item == 507:
+        effect('pause', 500)                  # delay(500), then reput(-1)
         change_rep(-1)

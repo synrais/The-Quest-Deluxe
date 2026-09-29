@@ -27,18 +27,46 @@ from .combat import Combat
 from .magic import Magic
 from .ai import monsmove
 from .events import Events
-from .render import Renderer
+from .render import Renderer, TILE
+from .speaker import Speaker, sound_setting
+from . import anim
 from . import ui
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CONTENT = os.path.join(os.path.dirname(__file__), 'content')
 SAVE_DIR = os.path.join(ROOT, 'saves')
 
-DEATH_LINES = ['You fell to the ground at the feet of your enemies...', 'How does the agony of defeat taste?',
-               'Life is a dream. One day we must all wake up. (WoT)']
-
 DIRS = {pygame.K_LEFT: (-1, 0), pygame.K_RIGHT: (1, 0), pygame.K_UP: (0, -1), pygame.K_DOWN: (0, 1),
         pygame.K_KP4: (-1, 0), pygame.K_KP6: (1, 0), pygame.K_KP8: (0, -1), pygame.K_KP2: (0, 1)}
+
+
+class ScreenHost(anim.Host):
+    """Where the original's animations draw in the game: the real screen, the speaker, and the
+    renderer's tiles for clean2()/guy2() (1-based screen squares)."""
+
+    def __init__(self, game):
+        super().__init__(game.renderer.bgi)
+        self.game = game
+        self.on_move = None
+
+    def asound(self, freq):
+        self.game.speaker.sound(freq)
+
+    def nosound(self):
+        self.game.speaker.nosound()
+
+    def clean2(self, x, y):
+        w, r = self.game.world, self.game.renderer
+        ox, oy = w.origin
+        r.draw_tile(r.screen, (x - 1) * TILE, (y - 1) * TILE, w.grid[ox + x - 1][oy + y - 1])
+
+    def guy2(self, x, y):
+        r = self.game.renderer
+        r.draw_hero(r.screen, self.game, (x - 1) * TILE, (y - 1) * TILE)
+
+    def move_hero(self, x, y):
+        if self.on_move:
+            self.on_move(x, y)
 
 
 class Msg(str):
@@ -58,6 +86,10 @@ class Game:
         with open(os.path.join(CONTENT, 'monsters.json')) as fh:
             self.rewards = {int(k): v for k, v in json.load(fh).items() if not k.startswith('_')}
         self.renderer = Renderer(window, self.data.src)
+        # scripted runs (tests, the dummy video driver) play animations instantly and silently
+        self.fast = os.environ.get('SDL_VIDEODRIVER') == 'dummy'
+        self.speaker = Speaker(enabled=not self.fast and sound_setting(self.data.src))
+        self.anim_host = ScreenHost(self)
         self.world = World(self.data)
         self.status = Status()
         self.player = new_player(KNIGHT)
@@ -67,11 +99,9 @@ class Game:
         self.start_level = start_level
         self.levels = self.data.level_count()
         self.messages: list[str] = []
-        self.fx: list = []
         self.target: Enemy | None = None
         self.cursor = None
         self.overlay = None
-        self.effects: list = []            # original visual effects requested by level scripts
         self.talk_queue: list = []         # NPC lines waiting to be shown, oldest first
         self.last_shop = 0                 # peddler()'s remembered shop number
         self.pending_next_level = False    # set by a level script (e.g. the end of level 7)
@@ -86,10 +116,31 @@ class Game:
     def change_rep(self, delta: int):
         """hero.rep += delta, then reput()'s message."""
         self.player.hero.rep += delta
-        if delta < 0:
-            self.log('Your reputation has become worse!', 4)
-        else:
-            self.log('Your reputation has become better!', 2)
+        self.play('reput2', delta)
+
+    def play(self, name: str, *args, on_move=None, redraw=True):
+        """Run one of the original's animations now (quest2.anim), blocking like the original.
+        Its rand() draws happen even when drawing is skipped, so the random sequence stays the same.
+        redraw=False keeps drawing over what the previous animation left on the screen."""
+        self.anim_host.on_move = on_move
+        try:
+            self.renderer.play(self, getattr(anim, name)(self.anim_host, *args), fast=self.fast, redraw=redraw)
+        finally:
+            self.speaker.nosound()
+            self.anim_host.on_move = None
+
+    def tones(self, *seq):
+        """asound(f); delay(ms) ... nosound(): one of the original's short beeps."""
+        self.play('tones', *seq)
+
+    def on_screen(self, x: int, y: int) -> tuple[int, int]:
+        """Map square -> the original's 1-based screen square (ax, ay)."""
+        ox, oy = self.world.origin
+        return x - ox + 1, y - oy + 1
+
+    def play_at(self, name: str, x: int, y: int, *args, **kw):
+        """An animation at map square (x, y)."""
+        self.play(name, *self.on_screen(x, y), *args, **kw)
 
     def monster_name(self, t: int) -> str:
         return self.renderer.sprites.names.get(('enemy', t), 'creature').lower()
@@ -162,6 +213,8 @@ class Game:
         self.events.run('level_start')
 
     def next_level(self):
+        if self.world.level and self.events.meta(self.world.level, 'LEAVE_JINGLE', True):
+            self.play('song_bevcop')
         nxt = self.world.level + 1
         if nxt > self.levels:
             ending = [8, 9] if self.status.mission1 == 2 else [8]
@@ -198,7 +251,6 @@ class Game:
             return
         k = ev.key
         self.messages = []
-        self.fx = []
         acted = False
         if k in DIRS:
             acted = self.try_move(*DIRS[k])
@@ -252,10 +304,9 @@ class Game:
         if q.wall in (-1, -5, -6) or (q.wall == -2 and p.inv.ykey) or (q.wall == -3 and p.inv.rkey) \
                 or (q.wall == -4 and p.inv.bkey):
             q.wall, q.deco = 0, 1
-            self.log('The door opens.')
+            self.tones((400, 100))
             return True
-        if q.wall in (-2, -3, -4):
-            self.log('The door is locked.')
+        if q.wall in (-2, -3, -4):                   # locked: the original just doesn't move
             return True
         if q.mon < 0 and q.mon > -100:
             if p.hero.invisible == -1:
@@ -268,7 +319,7 @@ class Game:
             return False
         if not w.in_room(nx, ny):
             if p.skill.hon == 2 and st.ems > 0:
-                self.log('It is not honorable to flee from your enemy!')
+                self.play('honor')
                 return False
             w.leave_room()
             p.X, p.Y = nx, ny
@@ -287,6 +338,8 @@ class Game:
             else:
                 self.next_level()
         elif q.item == 999:
+            # teleporter1() on the pad, the jump (level 5), then teleporter2() where the hero lands
+            self.play_at('teleporter1', p.X, p.Y)
             ddx, ddy = self.events.meta(w.level, 'TELEPORT', (0, 0))
             if (ddx, ddy) != (0, 0) and w.in_map(p.X + ddx, p.Y + ddy):
                 w.leave_room()
@@ -296,8 +349,7 @@ class Game:
                 self.events.on_enter_room()
                 self.target = None
                 self.count_hostiles()
-                self.log('You are teleported!')
-            self.fx.append(('teleport', 0, p.X, p.Y))      # teleporter2(): rings where the hero lands
+            self.play_at('teleporter2', p.X, p.Y)
         return True
 
     def talk(self, npc: int, x: int, y: int):
@@ -312,6 +364,7 @@ class Game:
     def next_talk(self):
         if self.talk_queue:
             text = self.talk_queue.pop(0)
+            self.tones((500, 50), (600, 50), (500, 50))   # talk(): a chime, then the message
             self.overlay = ui.TalkBox(text, self.next_talk)
 
     def autosave(self, slot: int):
@@ -326,6 +379,8 @@ class Game:
         checks (before, after a chest, after an item goes into the backpack)."""
         p, q = self.player, self.world.sq(self.player.X, self.player.Y)
         turn = bool(q.item or q.gold)
+        if turn:
+            self.tones((300, 50), (400, 50))
         self.events.run('before_pickup')
         if q.item == 15:
             p.inv.coins += rules.random(40) + 80
@@ -341,12 +396,16 @@ class Game:
         if q.item in (12, 13, 14):
             setattr(p.inv, {12: 'ykey', 13: 'rkey', 14: 'bkey'}[q.item], 1)
             q.item = 0
+            self.play('song_key')
         free = p.free_backpack_slot()
-        if free and q.item and q.item != 1000:
-            it = q.item
-            p.bag[free] = it
-            q.item = 0
-            self.events.run('took', it)
+        if free and q.item != 1000:
+            if q.item:
+                it = q.item
+                p.bag[free] = it
+                q.item = 0
+                self.events.run('took', it)
+        elif q.item:
+            self.tones((150, 150))                   # no room in the backpack
         return turn
 
     def drink(self, n: int) -> bool:
@@ -370,12 +429,12 @@ class Game:
             h.life, h.mana = h.mlife, h.mmana
         elif n == 7:
             h.poisoned = 0
-            self.log('The poison is cured!', 2)
+            self.play('ampoisoned2', 0)
         elif n == 8:
             self.status.powboost = self.status.armboost = 11
-            self.log('A berserker rage fills you!')
         h.life, h.mana = min(h.life, h.mlife), min(h.mana, h.mmana)
         rules.status_update(p, self.status, self.items)
+        self.tones((740, 100))
         return True
 
     def equip(self, slot) -> str:
@@ -509,23 +568,25 @@ class Game:
 
     # ── magic ─────────────────────────────────────────────────────────────────
     def begin_cast(self, spell: int):
-        self.messages, self.fx = [], []
+        self.messages = []
         why = self.magic.can_cast(spell)
         if why:
             self.log(why)
             return
-        if self.magic.fizzles(spell):
-            self.log('The spell fizzles!')
+        p = self.player
+        if self.magic.fizzles(spell):                 # dcast(), then a low beep; the spell is lost
+            self.play_at('dcast2', p.X, p.Y)
+            self.tones((50, 200))
             self.end_turn()
             return
+        self.play_at('dcast2', p.X, p.Y)              # dcast(): the hero's eyes flicker
         if self.spells.tell(spell, SP_RANGE) == 0:
             self.magic.cast_self(spell)
             self.end_turn()
             return
-        p = self.player
 
         def picked(x, y):
-            self.messages, self.fx = [], []
+            self.messages = []
             self.magic.cast_at(spell, x, y)
             self.end_turn()
         self.overlay = ui.Cursor(self, p.X, p.Y, f'Cast {rules.SPELL_NAMES[spell]}: choose a target',
@@ -544,6 +605,9 @@ class Game:
     # ── ranged ────────────────────────────────────────────────────────────────
     def ranged(self, choose: bool) -> bool:
         why = self.combat.can_shoot()
+        if why == 'noarrows':
+            self.play('noarrows2')                    # a ranged weapon with nothing in the off-hand
+            return False
         if why:
             self.log(why)
             return False
@@ -563,7 +627,7 @@ class Game:
                     (q.mon > 0 or self.status.killer or q.mon < -99)
 
             def picked(x, y):
-                self.messages, self.fx = [], []
+                self.messages = []
                 self.combat.shoot(self.world.enemy_at(x, y))
                 self.end_turn()
             self.overlay = ui.Cursor(self, sx, sy, 'Choose a target', picked, can_pick=ok)
@@ -592,16 +656,29 @@ class Game:
         # dying and death
         if h.life < 1:
             if h.life <= -5:
-                self.overlay = ui.Notice(DEATH_LINES[rules.random(3)], 4, self.quit)
+                self.death()
                 return
             h.life -= 1
             q = w.sq(p.X, p.Y)
             if q.deco == 0:
                 q.deco = 4
-            self.log('You are bleeding!', 4)
+            self.play('dying2')                       # "You are bleeding!", then the potion belt again
         self.upkeep()
         if h.exper <= 0 and not self.overlay:
             self.level_up()
+
+    def death(self):
+        """death(): the hero's body, death2()'s last words, then 'Want to load?'; No closes the
+        screen in a black box and goes back to the title (mastermind())."""
+        p = self.player
+        self.world.sq(p.X, p.Y).deco = 5
+        self.messages = []
+        self.play('death2')
+
+        def no():
+            self.play('death_wipe', redraw=False)
+            self.overlay = ui.TitleScreen()
+        self.overlay = ui.YesNo('Want to load?', lambda: self.load_menu(back=no), no)
 
     def upkeep(self):
         """Top of the main2() loop after a turn: faults, poison, spell timers, boosts."""
@@ -641,9 +718,10 @@ class Game:
             new = rules.reclassify(p)
             rules.status_update(p, st, self.items)
             if new:
-                self.log(f'You have become a {rules_class_name(new)}!')
+                self.play('class_change', new)
             self.after_level_spells()
-        self.log(f'Level up! You are now level {p.hero.level}.')
+        self.play('alevelup')                         # "Level Up!" in the strip, then song_jazz()
+        self.play('song_jazz', redraw=False)
         self.overlay = ui.LevelUpScreen(self, gained, rules.choices_this_level(p), after_points)
 
     def after_level_spells(self):
@@ -653,9 +731,7 @@ class Game:
         for s in range(1, 21):
             if p.spells[s] > 1:
                 p.spells[s] -= 1
-                if p.spells[s] == 1:
-                    self.log(f'You have learnt {rules.SPELL_NAMES[s]}!')
-                else:
+                if p.spells[s] != 1:
                     finished_or_none = False
                 break
         if not finished_or_none:
@@ -673,7 +749,7 @@ class Game:
         if not self.world.grid:
             return
         if not self.can_save():
-            self.overlay = ui.Notice('You cannot save right now, there are enemies near!')
+            self.play('cantsave')
             return
         self.overlay = ui.Menu('Save game', [(self.slot_label(n), lambda n=n: self.save(n)) for n in range(1, 6)],
                                'Enter saves to the slot, Esc cancels', cancel=lambda: None)
@@ -753,7 +829,3 @@ class Game:
             self.renderer.draw(self)
             clock.tick(30)
 
-
-def rules_class_name(c: int) -> str:
-    from .state import CLASS_NAMES
-    return CLASS_NAMES[c]

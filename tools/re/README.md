@@ -10,7 +10,7 @@ Python 3.10+ and `pip install capstone`.
 | Script | What it does |
 |---|---|
 | `tds.py` | Parses the TDS debug tables (symbols, modules, scopes, types, members, names). |
-| `types.py` | Prints the game's structs (`heroo`, `inve`, `monsters`, `skills`, `statuss`, `square`). |
+| `structs.py` | Prints the game's structs (`heroo`, `inve`, `monsters`, `skills`, `statuss`, `square`). |
 | `qdis.py` | Annotated disassembly. Writes `out/asm/<SEG>_<func>.asm`. Call names, globals, locals and string literals are resolved. |
 | `lift.py` | "Lifts" the unoptimised Borland code into pseudo-C with gotos. Writes `out/pc/<SEG>_<func>.c`. This is the easiest way to read the game logic. |
 
@@ -49,6 +49,7 @@ matching `.asm` file.
 |---|---|
 | `emu.py` | Loads the exe into the Unicorn x86 emulator and calls any game function. BGI calls are intercepted and drawn with `quest2/bgi.py`. `draw_tile(floor=…, wall=…, mon=…, item=…, deco=…, gold=…)` runs `clean2()` on one map square. |
 | `sprite_check.py` | Compares every PNG in `sprites/` with what the game draws. It writes `out/sprites/report.txt`, plus an image (original, PNG, diff) for each sprite that differs. |
+| `verify_anims.py` | Runs every animation, jingle and hero drawing in `quest2/anim.py` next to the original (`aflame()`, `ahit()`, `guy2()`, `song_key()` ...) with many arguments and the same `rand()` seed, and checks that both make exactly the same BGI calls, tones and delays. |
 
 ```bash
 pip install unicorn

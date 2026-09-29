@@ -39,6 +39,8 @@ def talk(npc):
         if give(907):
             remove((x - 1) % 10 + 1, (y - 1) % 10 + 1)
             say(10)
+        else:
+            effect('tones', (100, 300))              # no room: a low beep
     elif x == 87 and y == 56:
         say(10)
         remove(7, 6)
@@ -64,4 +66,5 @@ def talk(npc):
 def before_pickup():
     # main2(): taking the 40 gold in the house at (5, 95) is stealing
     if hx == 5 and hy == 95 and room(5, 5).gold == 40:
+        effect('pause', 500)                  # delay(500), then reput(-1)
         change_rep(-1)

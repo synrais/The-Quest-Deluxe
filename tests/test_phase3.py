@@ -9,6 +9,7 @@ from quest2.state import MAGE, ROGUE, KNIGHT, SLOT_WEAPON, SLOT_OFFHAND
 from quest2 import ui
 
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'out')
+os.makedirs(OUT, exist_ok=True)
 random.seed(1)
 
 
