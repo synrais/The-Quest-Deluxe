@@ -69,9 +69,11 @@ class TextScreen(Overlay):
 
     def key(self, g, ev):
         if ev.key == pygame.K_ESCAPE and self.esc:
+            g.tones((500, 50), (600, 50))
             self.close(g)
             self.esc()
-        elif ev.key in CONFIRM or (ev.key == pygame.K_ESCAPE and not self.esc):
+        elif ev.key in CONFIRM:                              # story(): Esc only leaves story 0
+            g.tones((500, 50), (600, 50))                    # a chime as the page closes
             self.close(g)
             if self.then:
                 self.then()
@@ -174,11 +176,11 @@ class TitleScreen(Overlay):
         self._bg = None
 
     def key(self, g, ev):
-        if ev.key == pygame.K_UP and self.i > 0:
-            self.i -= 1
-        elif ev.key == pygame.K_DOWN and self.i < 3:
-            self.i += 1
+        if ev.key in (pygame.K_UP, pygame.K_DOWN):          # title(): the sword wraps around
+            self.i = (self.i + (-1 if ev.key == pygame.K_UP else 1)) % 4
+            g.tones((400, 50), (300, 50))
         elif ev.key in CONFIRM:
+            g.tones((400, 50), (300, 50), (600, 50), (700, 50), (500, 50), (400, 50))
             self.close(g)
             if self.i == 0:
                 g.new_game()
@@ -445,9 +447,12 @@ class Choice(Overlay):
     def key(self, g, ev):
         if ev.key == pygame.K_UP and self.i > 1:
             self.i -= 1
+            g.tones((400, 50), (300, 50))
         elif ev.key == pygame.K_DOWN and self.i < self.count:
             self.i += 1
-        elif ev.key in CONFIRM and self.allowed(self.i):
+            g.tones((400, 50), (300, 50))
+        elif ev.key in CONFIRM and self.allowed(self.i):      # a refused choice is silent
+            g.tones((500, 50), (600, 50))
             self.close(g)
             self.pick(g, self.i)
 
