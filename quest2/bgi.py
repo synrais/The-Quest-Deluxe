@@ -46,6 +46,36 @@ _TEXT_CACHE: dict = {}
 FONT8X8 = os.path.join(os.path.dirname(__file__), 'content', 'font8x8.bin')
 
 
+# The Borland kernel's sine table for its emulated arcs: sin(0..90 degrees) * 32768, rounded down
+_SIN = (
+    0, 571, 1143, 1714, 2285, 2855, 3425, 3993, 4560, 5126, 5690, 6252, 6812, 7371, 7927, 8480,
+    9032, 9580, 10125, 10668, 11207, 11743, 12275, 12803, 13327, 13848, 14364, 14876, 15383, 15886,
+    16384, 16876, 17364, 17846, 18323, 18794, 19260, 19720, 20173, 20621, 21062, 21497, 21926,
+    22347, 22762, 23170, 23571, 23964, 24351, 24730, 25101, 25465, 25821, 26169, 26509, 26841,
+    27165, 27481, 27788, 28087, 28377, 28659, 28932, 29196, 29451, 29697, 29935, 30163, 30381,
+    30591, 30791, 30982, 31164, 31336, 31498, 31651, 31794, 31928, 32051, 32165, 32270, 32364,
+    32449, 32523, 32588, 32643, 32688, 32723, 32748, 32763, 32768,
+)
+
+
+def _bgi_sin(a: int) -> int:
+    """sin(a degrees) as the kernel's 16.16 fixed-point value."""
+    neg = a < 0
+    a = abs(a) % 360
+    if a > 180:
+        a -= 180
+        neg = not neg
+    if a > 90:
+        a = 180 - a
+    v = _SIN[a] * 2
+    return -v if neg else v
+
+
+def _fix_mul(v: int, r: int) -> int:
+    """The integer part of a 16.16 value times r (rounded down, as the kernel's 32-bit multiply)."""
+    return (v * r) >> 16
+
+
 def bresenham(x1, y1, x2, y2):
     """Line pixels as the BGI driver plots them: from the upper end to the lower end, walking the
     major axis and stepping the minor axis on exact ties. Checked against the original's grass,
@@ -280,32 +310,35 @@ class BGI:
         """Outline of an elliptical arc; angles in degrees, counter-clockwise, 0 = right."""
         col = self.rgb
         if self.thick >= 3:
-            for p in self._thick_arc(x, y, start, end, rx, ry):
-                self._set(*p, col)
+            self._thick_arc(x, y, start, end, rx, ry)
             return
         for px, py in self._arc_points(x, y, start, end, rx, ry):
             self._set(px, py, col)
 
     def _thick_arc(self, x, y, start, end, rx, ry):
-        """3-pixel curves, approximated with a 3x3 brush. Borland's own result is a pixel narrower
-        and slightly lopsided (compare the keys in the DOSBox screenshots); not matched yet."""
-        pts = set()
-        for px, py in self._arc_points(x, y, start, end, rx, ry):
-            pts.update((px + a, py + b) for a in (-1, 0, 1) for b in (-1, 0, 1))
-        return pts
-        for px, py in self._arc_points(x, y, start, end, rx, ry):
-            if mode == 'square':
-                pts.update((px + a, py + b) for a in (-1, 0, 1) for b in (-1, 0, 1))
-            elif mode == 'plus':
-                pts.update(((px, py), (px - 1, py), (px + 1, py), (px, py - 1), (px, py + 1)))
-            elif mode in ('hv', 'vh'):
-                # widen across the curve: horizontally where it is steep, vertically where it is flat
-                steep = abs(px - x) * (ry * ry) > abs(py - y) * (rx * rx)
-                if (mode == 'hv') == steep:
-                    pts.update(((px - 1, py), (px, py), (px + 1, py)))
-                else:
-                    pts.update(((px, py - 1), (px, py), (px, py + 1)))
-        return pts
+        """3-pixel curves the way the Borland kernel draws them (its emulated ARC, not the driver):
+        one point per degree from its fixed-point sine table, collected like a polygon and joined
+        by thick line segments. Repeated points still make a zero-length segment, which paints
+        three pixels across. Collecting drops a repeat of the first point while it is the only
+        one, and coming back to the first point closes the path; the next point starts anew."""
+        start, end = int(start), int(end)
+        if start >= end:
+            end += 360
+        paths, first = [], None
+        for a in range(start, end + 1):
+            p = (x + _fix_mul(_bgi_sin(a + 90), rx), y - _fix_mul(_bgi_sin(a), ry))
+            if first is None:
+                first = p
+                paths.append([p])
+            elif p == first:
+                if len(paths[-1]) > 1:
+                    paths[-1].append(p)
+                    first = None
+            else:
+                paths[-1].append(p)
+        for path in paths:
+            for (x1, y1), (x2, y2) in zip(path, path[1:]):
+                self.line(x1, y1, x2, y2)
 
     @staticmethod
     def _quadrant(rx, ry):

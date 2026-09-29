@@ -141,6 +141,18 @@ stroke fonts and the 8×8 ROM font. `quest2/hud.py` ports `stats()`, `dlife2()`,
 Gothic (4) for page titles, Complex (8) for the stat sheet, Simplex (6) for story and talk,
 Triplex (1) for the spellbook, Triplex Script (7) for the message strip, and Sans (3) for gold.
 
+Thick (3-pixel) circles and arcs, such as the key outlines in `dkeys2()`, are not drawn by
+EGAVGA.BGI. Its ARC entry is an "emulate" slot, which the kernel in the exe patches at start-up with a
+far call into its own code (after `__GRP_ovr`). For thickness 3 the kernel takes one point per degree
+from start to end: x = cx + (rx × sin(a + 90)) and y = cy − (ry × sin(a)), with sin from its own table
+of sin × 32768 values (rounded down), and each product rounded down. It collects the points as a
+polygon: a repeat of the first point is dropped while it is still the only point, and returning to
+the first point closes the path. It then draws each segment as a thick line, including
+zero-length ones. So the ring is a pixel narrower than a brushed circle and slightly lopsided, and
+the top of a circle gets one stray pixel above it. `bgi.py` does the same; `tools/re/verify_arcs.py`
+checks it against the kernel code, and the result matches the DOSBox screenshots of the key panel
+exactly. Thin circles keep the midpoint algorithm.
+
 ### Animations and sound
 
 The original has **no combat text**. Hits, misses, blocks, spells and deaths show only as short
