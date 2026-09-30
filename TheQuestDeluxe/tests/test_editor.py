@@ -264,6 +264,20 @@ qt.apply()
 assert 'keys' not in app.project.quest
 print('more key colours: the Quest tab, and the choices for keys and locked doors: ok')
 
+# class changes: the Quest tab's three rules
+qt.load()
+assert qt.reclass.get() == qt.RECLASS[True]
+qt.reclass.set(qt.RECLASS['stats'])
+qt.apply()
+assert app.project.quest['reclass'] == 'stats'
+qt.load()
+assert qt.reclass.get() == qt.RECLASS['stats']
+qt.reclass.set(qt.RECLASS[True])
+qt.apply()
+assert app.project.quest['reclass'] is True
+assert any(f.key == 'reclass' for f in app.classes_tab.fields())
+print('class changes: the Quest tab rules and the class setting: ok')
+
 assert app.dirty
 app.save()
 assert os.path.exists(os.path.join(pack, 'sprites', 'items', '1001.png'))

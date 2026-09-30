@@ -1016,14 +1016,15 @@ def noarrows2(h):
     yield from tones(h, (400, 100), (300, 150), (400, 150))
 
 
-def class_change(h, t):
-    """levelup(): the class follows the stats. Written over the level-up page, then a rising scale."""
+def class_change(h, t, name=None):
+    """levelup(): the class follows the stats. Written over the level-up page, then a rising scale.
+    The Quest Deluxe passes the name of a pack's own class."""
     g = h.g
     g.setfillstyle(1, 0)
     g.bar(0, 410, 399, 500)
     g.settextstyle(7, 0, 2)
     g.setcolor(14)
-    g.outtextxy(9, 413, 'You have become a %s!' % {1: 'Knight', 2: 'Mage', 3: 'Rogue', 4: 'Monk'}[t])
+    g.outtextxy(9, 413, 'You have become a %s!' % (name or {1: 'Knight', 2: 'Mage', 3: 'Rogue', 4: 'Monk'}[t]))
     for f in (300, 400, 500, 600, 700, 800):
         h.asound(f)
         yield 300

@@ -197,11 +197,18 @@ def choices_this_level(p) -> int:
 
 def reclassify(p, pack) -> int | None:
     """End of levelup(): the class follows the stats; innate skills swap. Returns the new class if it
-    changed. Quest I's rule, between its four classes; a pack turns it off with "reclass": false."""
+    changed. quest.json's "reclass": true is Quest I's rule, between its four classes (a hero of a pack's
+    own class keeps it); "stats" picks, among all the pack's classes, the one whose starting stats are
+    most like the hero's; false turns it off. A class with "reclass": false is never left or become."""
     h, sk = p.hero, p.skill
-    if not pack.quest.get('reclass'):
+    mode = pack.quest.get('reclass')
+    if not mode or pack.classes.get(h.type, {}).get('reclass', True) is False:
         return None
-    if h.bdex + h.bacc > h.bstr + h.bintl:
+    if mode == 'stats':
+        new = nearest_class(h, pack)
+    elif h.type not in (1, 2, 3, 4):
+        return None
+    elif h.bdex + h.bacc > h.bstr + h.bintl:
         new = 3
     else:
         new = 4
@@ -209,7 +216,7 @@ def reclassify(p, pack) -> int | None:
             new = 1
         if h.bintl > h.bstr + 3:
             new = 2
-    if new == h.type:
+    if new == h.type or pack.classes.get(new, {}).get('reclass', True) is False:
         return None
     gain, lose = pack.classes[new]['skill'], pack.classes[h.type]['skill']
     if getattr(sk, gain) == 0:
@@ -217,6 +224,24 @@ def reclassify(p, pack) -> int | None:
         setattr(sk, lose, 0)
     h.type = new
     return new
+
+
+def nearest_class(h, pack) -> int:
+    """The class whose starting strength, intelligence, dexterity and accuracy are in the proportions
+    nearest the hero's (the sum of the differences of the shares); the hero's own class wins a tie,
+    then the lowest number."""
+    def shares(v):
+        total = sum(v) or 1
+        return [x / total for x in v]
+    mine = shares([h.bstr, h.bintl, h.bdex, h.bacc])
+
+    def distance(c):
+        theirs = shares([c.get(k, 0) for k in ('str', 'int', 'dex', 'acc')])
+        return round(sum(abs(a - b) for a, b in zip(mine, theirs)), 9)
+    open_ = [c for c in pack.classes.values() if c.get('reclass', True) is not False]
+    best = min(distance(c) for c in open_)
+    ids = [c['id'] for c in open_ if distance(c) == best]
+    return h.type if h.type in ids else min(ids)
 
 
 srand(int(_time.time()))              # randomize()

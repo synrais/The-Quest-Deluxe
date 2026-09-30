@@ -78,6 +78,9 @@ class ClassesTab(TableTab):
             Field('bag', 'Starts with', 'custom', fmt=fmt_bag, parse=parse_bag,
                   hint='item numbers, e.g. weapon: 201; off hand: 301; backpack: 230 620'),
             Field('spells', 'Knows the spells', 'multi', spells),
+            Field('reclass', 'Class changes', 'choice', [(None, 'can be left and become at level-ups'),
+                                                         (False, 'never: kept, and never become')],
+                  hint="the Quest tab says whether classes change at level-ups"),
         ]
 
     def preview(self, row):

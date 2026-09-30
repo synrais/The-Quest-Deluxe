@@ -45,7 +45,7 @@ well. Fields that are left out take the default given below.
 | `potions` | Potions 9 and 10, which the original doesn't have (1-8 are its own): `{"9": {"name": "Elixir", "colour": 10, "life": "full", "mana": 5, "cure_poison": true, "berserk": 5}}`. `life` and `mana` are `"half"`, `"full"` or an amount; `cure_poison` cures (a potion that only cures can only be drunk when poisoned); `berserk` is turns of doubled power and armour, like potion 8. Keys 9 and 0 drink them, the belt shows ten bottles, and items and shops can hold them (`"potion": 9`). Their counts go in the save's DELUXE block. |
 | `keys` | Key colours past the original's yellow, red and blue: `{"green": 10, "purple": 5}`, the name and the EGA colour the key is drawn in. A key item (`"key": "green"`) opens locked walls with the same `key`; like the original's keys, they are lost on a new level. With any extra colour the key panel shows small keys, five to a row, grey until found. They go in the save's DELUXE block. |
 | `story_order` | Which skills and faults story 1 mentions, in order (their `story` lines in skills.json). |
-| `reclass` | `true`: at each level-up the class follows the stats (Quest I's rule, between classes 1-4). |
+| `reclass` | Whether the class follows the stats at each level-up. `true`: Quest I's rule, between classes 1-4 (a hero of a pack's own class keeps it). `"stats"`: among all the classes, the one whose starting strength, intelligence, dexterity and accuracy are in the proportions nearest the hero's (the hero's own class wins a tie). `false` or absent: never. The new class's free skill replaces the old one's, as in the original. |
 
 ## Numbers
 
@@ -140,7 +140,9 @@ A class: `id`, `name`, starting `life`, `mana`, `str`, `int`, `dex`, `acc`; `gro
 gained per level; `skill` = the skill it gets free; `no_fault` = the fault it may not take; `look` =
 how the hero is drawn (`colour`, `shield_and_sword`); `bag` = starting items by bag cell
 `"column,row"` (12,4 weapon, 16,4 off hand, 14,2 helmet, 14,4 armour, 14,6 amulet, 12-15 x 8-11 the
-backpack); `spells` = known from the start, in spell-book order.
+backpack); `spells` = known from the start, in spell-book order; `reclass`: `false` = a hero of this class
+keeps it and no hero becomes it at a level-up. Creation lists every class (more than ten sit closer
+together).
 
 skills.json lists the skills (`kind` `skill`) and faults (`kind` `fault`) in the order creation
 offers them, with the `story` line story 1 prints. `only_free`: only comes free with a class.
@@ -198,4 +200,8 @@ up are said from scripts (`say(n)`).
 character creation, the level's `STORIES` show before it, 8 and 9 end the game.
 
 `questions.txt`: the questionnaire, 8 questions of 9 lines each (question, answers, and the score
-lines).
+lines). A score is the original's number (1000 Knight, 100 Mage, 10 Rogue, 1 Monk; the largest digit
+of the total picks the class, with the original's tie rules) or, for a pack's own classes,
+`class: points, ...` (`5: 2` or `1: 1, 5: 1`). Once any answer given is scored that way, the class
+with the most points wins, the original's scores counting one point per digit, and a tie is drawn at
+random.

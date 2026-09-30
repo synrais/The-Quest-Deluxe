@@ -178,7 +178,8 @@ class TextTab(Editor):
         super().__init__(master, app,
                          'Dialogue: level person number "line 1 (optional "line 2) ending with ; - level 0 lines '
                          'are shared, 1-3 are chit-chat, 10 and up are said by scripts (say). Stories: '
-                         'number and line count, then the lines. The questionnaire: 8 questions of 9 lines. '
+                         'number and line count, then the lines. The questionnaire: 8 questions of 9 lines; a score is 1000 '
+                         '(Knight), 100, 10 or 1 (Monk), or "class: points" (5: 2) for a pack\'s own class. '
                          'Shops: the item numbers a shop sells (up to 40), filling its shelves in order; the '
                          "Map tab's Shop tool says which screen has which shop.")
 

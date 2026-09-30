@@ -822,7 +822,7 @@ class Game:
             new = rules.reclassify(p, self.pack)
             rules.status_update(p, st, self.items)
             if new:
-                self.play('class_change', new)
+                self.play('class_change', new, self.pack.class_name(new))
             self.after_level_spells()
         self.play('alevelup')                         # "Level Up!" in the strip, then song_jazz()
         self.play('song_jazz', redraw=False)

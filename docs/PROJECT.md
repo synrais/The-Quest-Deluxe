@@ -78,7 +78,8 @@ port.
    Deluxe save format (the original's save text, with a `DELUXE` block written only when a game goes
    past the original's limits, so Quest I saves stay identical), a spell book with pages for more than
    20 spells, potions 9 and 10 (keys 9 and 0), and a pack's own key colours
-   (`TheQuestDeluxe/tests/test_limits.py`). Still to do: new classes in job changes and the quiz.
+   and new classes in job changes (`"reclass": "stats"`) and the questionnaire
+   (`TheQuestDeluxe/tests/test_limits.py`).
 2. **Fix the original's bugs as a choice.** `packs/TheQuest` stays exact, so the lockstep test keeps its
    meaning; the fixes (the Shield / Ring of Ice swap and the others in [FINDINGS.md](FINDINGS.md)) switch
    on with a setting in a pack, so a "Quest I Deluxe" pack and new quests can have them.

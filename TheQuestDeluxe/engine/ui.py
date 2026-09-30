@@ -473,18 +473,21 @@ class ClassSelect(Choice):
         r.btext(scr, 'What class do you choose to play as?', (0, 40), 9, SIMPLEX)
         r.btext(scr, '                           Strength   Intelligence   Dexterity   Accuracy', (0, 70), 5, SIMPLEX)
         names = [c['name'] for c in self.classes] + ['Answer questions to determine class (recommended)']
+        step = min(30, 330 // self.count)             # the original's 30; closer for a pack of many classes
         for n, name in enumerate(names):
-            r.btext(scr, name, (150, 100 + 30 * n), 9, SIMPLEX)
+            r.btext(scr, name, (150, 100 + step * n), 9, SIMPLEX)
         for n, c in enumerate(self.classes):
             row = '         '.join(f'{c[k]:<2}' for k in ('str', 'int', 'dex', 'acc'))
-            r.btext(scr, row, (240, 100 + 30 * n), 9, SIMPLEX)
+            r.btext(scr, row, (240, 100 + step * n), 9, SIMPLEX)
         r.btext(scr, 'Press <Enter> to continue', (150, 440), 14, SIMPLEX)
-        plus(r, scr, 129, self.i * 30 + 87)
+        plus(r, scr, 129, 100 + step * (self.i - 1) + 17)
 
 
 class Quiz(Choice):
     """creation(): eight questions from qs.dat. Each answer scores 1000 (Knight), 100 (Mage),
-    10 (Rogue) or 1 (Monk), and the largest digit of the total picks the class."""
+    10 (Rogue) or 1 (Monk), and the largest digit of the total picks the class. The Quest Deluxe: an
+    answer can instead score "class: points, ..." (e.g. "5: 1" for a pack's own class 5); then the
+    class with the most points wins, a tie drawn at random between them."""
     count = 3
 
     def __init__(self, g):
@@ -492,6 +495,7 @@ class Quiz(Choice):
         lines = g.data.src.text('qs.dat').splitlines()
         self.q = [lines[k:k + 9] for k in range(0, 72, 9)]
         self.n, self.total, self.result = 0, 0, 0
+        self.points, self.own = {}, False
 
     def key(self, g, ev):
         if self.result:
@@ -502,10 +506,19 @@ class Quiz(Choice):
         super().key(g, ev)
 
     def pick(self, g, i):
-        self.total += int(self.q[self.n][2 + 2 * i])
+        score = self.q[self.n][2 + 2 * i]
+        if ':' in score:
+            self.own = True
+            for part in score.split(','):
+                if part.strip():
+                    cls, pts = (int(v) for v in part.split(':'))
+                    if cls in g.pack.classes:            # a class the pack doesn't have scores nothing
+                        self.points[cls] = self.points.get(cls, 0) + pts
+        else:
+            self.total += int(score)
         g.overlay = self
-        if self.n == 7:
-            self.result = quiz_class(self.total)     # shown over the last question
+        if self.n == 7:                              # shown over the last question
+            self.result = quiz_best(self.points, self.total) if self.own else quiz_class(self.total)
         else:
             self.n += 1
             self.i = 1
@@ -540,6 +553,20 @@ def quiz_class(total: int) -> int:
     if c2 == c3 and c2 > c1 and c2 > c4:
         return rules.random(2) + 2
     return MONK
+
+
+def quiz_best(points: dict, total: int) -> int:
+    """The Quest Deluxe's questionnaire with a pack's own classes: the original's scores (1000 Knight,
+    100 Mage, 10 Rogue, 1 Monk) count as points too, and the most points win; a tie is drawn at random."""
+    points = dict(points)
+    for cls, value in ((KNIGHT, 1000), (MAGE, 100), (ROGUE, 10), (MONK, 1)):
+        if total // value % 10:
+            points[cls] = points.get(cls, 0) + total // value % 10
+    if not points:
+        return MONK
+    best = max(points.values())
+    tied = sorted(c for c, v in points.items() if v == best)
+    return tied[rules.random(len(tied))] if len(tied) > 1 else tied[0]
 
 
 class SkillSelect(Choice):

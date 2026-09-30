@@ -43,9 +43,10 @@ class QuestTab(ttk.Frame):
             ttk.Entry(self, textvariable=v, width=40).grid(row=i, column=1, sticky='w')
             self.vars[key] = v
         n = len(self.FIELDS)
-        self.reclass = tk.BooleanVar()
-        ttk.Checkbutton(self, text="The hero's class follows the stats at each level-up (Quest I's rule)",
-                        variable=self.reclass).grid(row=n, column=0, columnspan=2, sticky='w', pady=2)
+        ttk.Label(self, text='Class changes').grid(row=n, column=0, sticky='w', pady=2)
+        self.reclass = tk.StringVar()
+        ttk.Combobox(self, textvariable=self.reclass, values=list(self.RECLASS.values()), state='readonly',
+                     width=58).grid(row=n, column=1, sticky='w')
         ttk.Label(self, text='Starting potions').grid(row=n + 1, column=0, sticky='w')
         self.potions = tk.StringVar()
         ttk.Entry(self, textvariable=self.potions, width=40).grid(row=n + 1, column=1, sticky='w')
@@ -78,11 +79,15 @@ class QuestTab(ttk.Frame):
         self.info = ttk.Label(self, text='', foreground='#555', justify='left')
         self.info.grid(row=n + 7, column=0, columnspan=2, sticky='w', pady=12)
 
+    RECLASS = {False: 'none: the hero keeps the class chosen',
+               True: "Quest I's rule: the stats pick Knight, Mage, Rogue or Monk at each level-up",
+               'stats': "by the stats: the class whose starting stats are most like the hero's"}
+
     def load(self):
         q = self.app.project.quest
         for key, _, _ in self.FIELDS:
             self.vars[key].set('' if q.get(key) is None else str(q.get(key)))
-        self.reclass.set(bool(q.get('reclass')))
+        self.reclass.set(self.RECLASS.get(q.get('reclass') or False, self.RECLASS[True]))
         self.potions.set(', '.join(f'{k}: {v}' for k, v in q.get('start_potions', {}).items()))
         for k, v in self.pots.items():
             pot = (q.get('potions') or {}).get(k, {})
@@ -144,7 +149,7 @@ class QuestTab(ttk.Frame):
                                           'colour and berserk turns are numbers, its life and mana half, full or a number; '
                                           'more key colours are like "green: 10" (a new name, colour 0-15).')
             return
-        q['reclass'] = self.reclass.get()
+        q['reclass'] = next(k for k, v in self.RECLASS.items() if v == self.reclass.get())
         self.app.project.touch('quest')
         self.app.changed()
 

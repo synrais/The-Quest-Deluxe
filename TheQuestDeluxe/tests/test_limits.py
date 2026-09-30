@@ -8,6 +8,8 @@
   - Potions 9 and 10: defined in quest.json, started with, drunk with keys 9 and 0, picked up, on a belt
     of ten, saved and loaded.
   - More key colours: defined in quest.json, open their doors, drawn on the key panel, saved and loaded.
+  - New classes: kept under Quest I's class rule, reached by the "stats" rule, never left or become when
+    a class says so, and chosen by the questionnaire.
 
     python tests/test_limits.py
 """
@@ -244,11 +246,79 @@ def keys(shot=None):
           'opened, and gone on a new level: ok')
 
 
+def classes(shot=None):
+    from engine import ui, rules
+
+    def ranger(folder, json):
+        path = os.path.join(folder, 'classes.json')
+        data = json.load(open(path))
+        knight = data['classes'][0]
+        data['classes'].append(dict(knight, id=5, name='Ranger', str=10, int=5, dex=25, acc=20, skill='bar',
+                                    no_fault=None, bag={}))
+        json.dump(data, open(path, 'w'))
+        path = os.path.join(folder, 'text', 'questions.txt')
+        lines = open(path).read().split('\n')
+        for q in range(8):
+            lines[q * 9 + 4] = '5: 2'                     # answer A of every question: 2 points to the Ranger
+        open(path, 'w').write('\n'.join(lines))
+    g = pack_copy(ranger)
+    # Quest I's rule: a Ranger stays a Ranger whatever the stats; a Knight still follows them
+    g.quick_start(5, 1)
+    h = g.player.hero
+    h.bstr, h.bintl, h.bdex, h.bacc = 30, 10, 10, 10
+    assert rules.reclassify(g.player, g.pack) is None and h.type == 5
+    g.quick_start(1, 1)
+    h, sk = g.player.hero, g.player.skill
+    h.bstr, h.bintl, h.bdex, h.bacc = 10, 10, 30, 30
+    assert rules.reclassify(g.player, g.pack) == 3 and h.type == 3
+    # "stats": the nearest class, the Ranger included, and its free skill comes with it
+    g.pack.quest['reclass'] = 'stats'
+    g.quick_start(1, 1)
+    h, sk = g.player.hero, g.player.skill
+    h.bstr, h.bintl, h.bdex, h.bacc = 12, 6, 30, 24
+    assert rules.reclassify(g.player, g.pack) == 5 and h.type == 5 and sk.bar == 1 and sk.amb == 0
+    g.play('class_change', 5, g.pack.class_name(5))
+    h.bstr, h.bintl, h.bdex, h.bacc = 12, 6, 30, 24
+    assert rules.reclassify(g.player, g.pack) is None     # already the nearest
+    h.bstr, h.bintl, h.bdex, h.bacc = 20, 21, 10, 10
+    assert rules.reclassify(g.player, g.pack) == 4        # most like the Monk's 15, 15, 10, 10
+    # a class marked "reclass": false is never become, and a hero of it keeps it
+    g.pack.classes[5]['reclass'] = False
+    h.bstr, h.bintl, h.bdex, h.bacc = 12, 6, 30, 24
+    assert rules.reclassify(g.player, g.pack) == 3
+    h.type = 5
+    h.bstr, h.bintl, h.bdex, h.bacc = 30, 10, 10, 10
+    assert rules.reclassify(g.player, g.pack) is None and h.type == 5
+    del g.pack.classes[5]['reclass']
+    # the questionnaire: answer A each time, 16 points to the Ranger
+    g.overlay = ui.ClassSelect(g.pack)
+    assert g.overlay.count == 6
+    g.renderer.draw(g, present=False)
+    for _ in range(5):
+        press(g, pygame.K_DOWN)
+    press(g, pygame.K_RETURN)
+    assert isinstance(g.overlay, ui.Quiz)
+    for _ in range(8):
+        press(g, pygame.K_RETURN)
+    assert g.overlay.result == 5, g.overlay.result
+    g.renderer.draw(g, present=False)
+    if shot:
+        pygame.image.save(g.renderer.screen, shot)
+    press(g, pygame.K_RETURN)
+    assert isinstance(g.overlay, ui.SkillSelect) and g.overlay.cls == 5 and g.overlay.own == 'bar'
+    # ties between the original's digits and a pack's points are drawn at random between them
+    assert {ui.quiz_best({5: 2}, 2000) for _ in range(40)} == {1, 5}
+    assert ui.quiz_best({5: 1}, 2100) == 1
+    print('new classes: kept under Quest I\'s rule, reached by the stats rule, locked by "reclass": false, '
+          'and chosen by the questionnaire: ok')
+
+
 def main():
     saves()
     spells()
     potions()
     keys(sys.argv[1] if len(sys.argv) > 1 else None)
+    classes(sys.argv[2] if len(sys.argv) > 2 else None)
     print('all limit checks passed')
 
 
