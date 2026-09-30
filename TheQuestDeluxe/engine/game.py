@@ -798,7 +798,8 @@ class Game:
         """main2: advance the spell being learnt, or offer new ones if none is in progress."""
         p = self.player
         finished_or_none = True
-        for s in range(1, 21):
+        count = self.pack.spell_count()
+        for s in range(1, count + 1):
             if p.spells[s] > 1:
                 p.spells[s] -= 1
                 if p.spells[s] != 1:
@@ -806,7 +807,7 @@ class Game:
                 break
         if not finished_or_none:
             return
-        cands = [s for s in range(1, 21) if p.spells[s] == 0 and self.spells.tell(s, SP_INT) <= p.hero.intl
+        cands = [s for s in range(1, count + 1) if p.spells[s] == 0 and self.spells.tell(s, SP_INT) <= p.hero.intl
                  and s in self.spells.rows]
         if cands:
             self.overlay = ui.LearnSpell(cands, lambda: None)
@@ -914,6 +915,7 @@ class Game:
         p.spells += list(d.extra.get('spells', []))          # The Quest Deluxe's block
         p.book += list(d.extra.get('book', []))
         p.more = dict(d.extra.get('more', {}))
+        p.fit_spells(self.pack.spell_count())
         p.X, p.Y = d.X, d.Y
         self.player = p
         self.status = Status(**{f: d.st.get(f, 0) for f in Status.__dataclass_fields__})

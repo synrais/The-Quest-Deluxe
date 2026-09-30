@@ -124,6 +124,10 @@ class Pack:
     def spell(self, s: int) -> dict:
         return self.spells.get(s, {})
 
+    def spell_count(self) -> int:
+        """How many spells the spell book must hold: the highest spell number, at least 20."""
+        return max([20] + list(self.spells))
+
     def spell_name(self, s: int) -> str:
         return self.spells.get(s, {}).get('name', '')
 

@@ -2,7 +2,6 @@
 effect, with the effect's settings and animation)."""
 from __future__ import annotations
 
-from tkinter import messagebox
 
 from .table_tab import TableTab, Field
 
@@ -47,7 +46,7 @@ class SpellsTab(TableTab):
     TABLE = 'spells'
     ICON_LAYER = 'spell'
     PICTURES = [('Spell book icon', 'spells', False)]
-    INTRO = ('The spell book holds spells 1 to 20 (F1-F9 cast the first nine). Range 0 casts on the hero; '
+    INTRO = ('The spell book holds 20 spells a page; more than 20 add pages (the original has one). Range 0 casts on the hero; '
              'otherwise the hero picks a target that many squares away. Animations are the original\'s '
              '(engine/anim.py), with their arguments.')
 
@@ -81,23 +80,13 @@ class SpellsTab(TableTab):
 
     def new_row(self):
         used = {r['id'] for r in self.rows}
-        v = next((n for n in range(1, 21) if n not in used), None)
-        if v is None:
-            messagebox.showinfo('New spell', 'The spell book holds 20 spells and all 20 are taken. Change one of '
-                                             'them, or delete one to make room.')
-            return None
+        v = next(n for n in range(1, len(used) + 2) if n not in used)
         return {'id': v, 'name': 'New spell', 'req_int': 10, 'mana': 5, 'range': 3, 'power': 10, 'duration': 0,
                 'effect': 'bolt', 'anim': ['aflame', 0]}
 
     def duplicate_id(self, row):
         used = {r['id'] for r in self.rows}
-        return next((n for n in range(1, 21) if n not in used), row['id'])
-
-    def duplicate(self):
-        if len(self.rows) >= 20:
-            messagebox.showinfo('Duplicate', 'The spell book holds 20 spells and all 20 are taken.')
-            return
-        super().duplicate()
+        return next(n for n in range(1, len(used) + 2) if n not in used)
 
     def uses(self, row):
         out = [f'class {c["name"]} starts knowing it' for c in self.app.project.tables['classes']

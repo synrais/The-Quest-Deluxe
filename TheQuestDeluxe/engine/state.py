@@ -154,6 +154,15 @@ class Player:
     def item(self, slot) -> int:
         return self.bag.get(slot, 0)
 
+    def fit_spells(self, count: int):
+        """Room for spells 1..count, and a spell book of 20-spell pages for them (Quest I: 20 and one
+        page, the original's)."""
+        if len(self.spells) < count + 1:
+            self.spells += [0] * (count + 1 - len(self.spells))
+        pages = -(-count // 20)
+        if len(self.book) < pages * 20:
+            self.book += [0] * (pages * 20 - len(self.book))
+
     def free_backpack_slot(self):
         return next((s for s in BACKPACK if not self.bag.get(s)), None)
 
@@ -166,6 +175,7 @@ def new_player(cls: int, skill: int = 0, fault: int = 0, pack=None) -> Player:
     pack = pack or default_pack()
     c = pack.classes[cls]
     p = Player()
+    p.fit_spells(pack.spell_count())
     skills, faults = pack.skill_ids('skill'), pack.skill_ids('fault')
     if 1 <= skill <= len(skills):
         setattr(p.skill, skills[skill - 1], 1)

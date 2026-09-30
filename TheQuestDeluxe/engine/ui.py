@@ -636,7 +636,8 @@ class Cursor(Overlay):
 # ── spell book ────────────────────────────────────────────────────────────────
 
 class SpellBook(Overlay):
-    """spellbook(): browse the 2x10 book, cast with Enter, bind F1-F9 by pressing the key."""
+    """spellbook(): browse the 2x10 book, cast with Enter, bind F1-F9 by pressing the key. A pack with
+    more than 20 spells has more pages: Left and Right go on from column to column, page to page."""
 
     def __init__(self, g: 'Game'):
         self.i = 0
@@ -650,7 +651,8 @@ class SpellBook(Overlay):
         elif ev.key == pygame.K_DOWN:
             self.i = self.i + 1 if self.i % 10 != 9 else self.i
         elif ev.key in (pygame.K_LEFT, pygame.K_RIGHT):
-            self.i = (self.i + 10) % 20
+            size = len(g.player.book)                # 20 in Quest I: either key flips the column
+            self.i = (self.i + (10 if ev.key == pygame.K_RIGHT else -10)) % size
         elif pygame.K_F1 <= ev.key <= pygame.K_F9:
             s = self.spell(g)
             if s:
@@ -677,11 +679,14 @@ class SpellBook(Overlay):
         pygame.draw.rect(scr, (0, 0, 0), PANEL)
         pygame.draw.rect(scr, (0, 0, 0), (0, 411, W, 69))
         r.btext(scr, 'Spell Book', (455, 0), 15, GOTHIC)
+        page, pages = self.i // 20, len(p.book) // 20
+        if pages > 1:
+            r.btext(scr, f'Page {page + 1} of {pages}  (Left/Right)', (412, 470), 7, ROM)
         for n in range(20):
             col, row = divmod(n, 10)
             b = 108 * col
             x, y = 440 + b, 45 + 42 * row
-            s = p.book[n]
+            s = p.book[page * 20 + n]
             if s:
                 fk = next((k for k in range(1, 10) if p.fkey[k] == s), 0)
                 if fk:
@@ -696,7 +701,7 @@ class SpellBook(Overlay):
                 req = g.spells.tell(s, SP_INT)
                 r.btext(scr, str(mana), (b + 485, 42 * row + 42), 4 if mana > p.hero.mana else 9, TRIPLEX)
                 r.btext(scr, str(req), (b + 485, 42 * row + 62), 4 if req > p.hero.intl else 15, TRIPLEX)
-            if n == self.i:
+            if page * 20 + n == self.i:
                 pygame.draw.rect(scr, EGA[14], (x - 1, y - 1, 42, 42), 2)
         s = p.book[self.i]
         if s:
@@ -725,8 +730,10 @@ class LearnSpell(Overlay):
     def draw(self, r, scr):
         g = r.game
         panel(r, scr, 'New Spell')
-        for n, s in enumerate(self.c):
-            r.btext(scr, r.pack.spell_name(s), (420, 50 + n * 28), 14 if n == self.i else 7, TRIPLEX)
+        first = 0 if len(self.c) <= 20 else max(0, min(self.i - 6, len(self.c) - 12))   # a long list scrolls
+        shown = self.c if len(self.c) <= 20 else self.c[first:first + 12]
+        for n, s in enumerate(shown):
+            r.btext(scr, r.pack.spell_name(s), (420, 50 + n * 28), 14 if first + n == self.i else 7, TRIPLEX)
         takes = 2 if g.player.skill.mem == 1 else 3
         bottom(r, scr, [(f'Choose a spell to memorise (takes {takes} level-ups).', 14),
                         ('Enter chooses, Esc skips', 7)])

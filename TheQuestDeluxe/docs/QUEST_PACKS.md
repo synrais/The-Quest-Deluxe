@@ -119,7 +119,7 @@ Pictures: `sprites/creatures/<id>.png`.
 
 | Field | Meaning |
 |---|---|
-| `id`, `name` | Spells 1-20 fill the spell book and F-keys. |
+| `id`, `name` | The spell book holds 20 spells a page; a pack with more (ids past 20) gets more pages, and Left/Right in the book go on from page to page. F1-F9 can be bound to any spell. Spells past 20 are saved in the save file's DELUXE block. |
 | `req_int`, `mana`, `range`, `power`, `duration` | `range` 0 = cast on the hero. |
 | `effect` | `heal`, `bolt` (damage at a target), `teleport`, `shield`, `fire_shield`, `freeze`, `ward` (the 8 squares around the hero), `dark_hour` (the same, repeated, mana to 0), `invisibility`, `summon`, `drain`, `earthquake`. |
 | `anim` | `[animation, arguments...]` from `engine/anim.py`. |

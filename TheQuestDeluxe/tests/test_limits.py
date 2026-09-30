@@ -3,6 +3,8 @@
   - The save file: a Quest I game saves exactly as the original does (no DELUXE block); a game with
     more than the original holds keeps the rest in the DELUXE block, and loads back whole; the
     classic part of such a save still loads in the classic port's reader (as in the original's).
+  - More than 20 spells: the spell book grows pages, a level-up offers the new spells, a spell on page
+    2 is shown, chosen and cast, and the lot saves and loads.
 
     python tests/test_limits.py
 """
@@ -71,8 +73,84 @@ def saves():
               'this folder to check its reader)')
 
 
+def pack_copy(change):
+    """A copy of packs/TheQuest, changed by change(folder), and a game playing it."""
+    import json
+    import shutil
+    from engine.formats import GameData
+    from engine.pack import Pack, PackSource
+    folder = os.path.join(tempfile.mkdtemp(), 'pack')
+    shutil.copytree(os.path.join(ROOT, 'packs', 'TheQuest'), folder)
+    change(folder, json)
+    g = Game(pygame.Surface((640, 480)), data=GameData.load(PackSource(Pack(folder))))
+    g.slots = Slots(tempfile.mkdtemp())
+    return g
+
+
+def press(g, k):
+    g.handle(pygame.event.Event(pygame.KEYDOWN, key=k, unicode=''))
+
+
+def spells():
+    from engine import ui, rules
+
+    def more_spells(folder, json):
+        path = os.path.join(folder, 'spells.json')
+        data = json.load(open(path))
+        flame = next(r for r in data['spells'] if r['id'] == 2)
+        for n in range(21, 26):
+            data['spells'].append(dict(flame, id=n, name=f'Spell {n}', req_int=12))
+        json.dump(data, open(path, 'w'))
+    g = pack_copy(more_spells)
+    assert g.pack.spell_count() == 25
+    g.quick_start(2, 1)                                   # a Mage
+    p = g.player
+    assert len(p.spells) == 26 and len(p.book) == 40, (len(p.spells), len(p.book))
+    # a level-up offers the new spells
+    p.hero.bintl = 30
+    rules.status_update(p, g.status, g.items)
+    g.after_level_spells()
+    assert isinstance(g.overlay, ui.LearnSpell) and {21, 25} <= set(g.overlay.c), g.overlay.c
+    g.renderer.draw(g, present=False)                     # a long list scrolls
+    g.overlay = None
+    # a full first page: the next spell learnt goes on page 2
+    for k in range(20):
+        if not p.book[k]:
+            p.book[k] = 99
+    g.learn_spell(23)
+    assert p.book[20] == 23 and p.spells[23] > 1
+    p.spells[23] = 1                                      # learnt
+    p.hero.mana = p.hero.mmana = 50
+    ov = ui.SpellBook(g)
+    g.overlay = ov
+    press(g, pygame.K_RIGHT)
+    press(g, pygame.K_RIGHT)                              # left column of page 2
+    assert ov.i == 20 and ov.spell(g) == 23, ov.i
+    g.renderer.draw(g, present=False)
+    press(g, pygame.K_RETURN)                             # cast it: a bolt, so it asks for a target
+    assert isinstance(g.overlay, ui.Cursor), type(g.overlay).__name__
+    g.overlay = None
+    g.cursor = None
+    # Left from page 1 goes back to the last page's right column
+    ov = ui.SpellBook(g)
+    g.overlay = ov
+    press(g, pygame.K_LEFT)
+    assert ov.i == 30, ov.i
+    g.overlay = None
+    # saved and loaded
+    for k in range(20):
+        if p.book[k] == 99:
+            p.book[k] = 0
+    d = savefile.from_bytes(savefile.to_bytes(g.to_save()))
+    assert d.extra.get('book', [])[:1] == [23] and d.extra['spells'][23 - 21] == 1, d.extra
+    g.from_save(d, 1)
+    assert g.player.book[20] == 23 and g.player.spells[23] == 1 and len(g.player.spells) == 26
+    print('more than 20 spells: a second page, learnt, shown, cast, saved and loaded: ok')
+
+
 def main():
     saves()
+    spells()
     print('all limit checks passed')
 
 
