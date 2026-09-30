@@ -238,7 +238,7 @@ class Combat:
                 g.tones((150, 150))
                 g.report(f'Your {g.item_name(p.item(SLOT_WEAPON)).lower() or "bow"} is no use up close.', 7)
             elif dmg > 0:
-                g.play_at('ahit', e.x, e.y, where, 1)
+                g.play_at('ahit', e.x, e.y, where, 1, in_view=False)     # FPS mode: the weapon shows it
                 e.life -= dmg
                 g.report(f'You hit the {name} for {dmg}.', 14, (e.x, e.y), dmg)
                 q = self.w.sq(e.x, e.y)
@@ -247,10 +247,10 @@ class Combat:
                 if kind == rules.KIND_DOUBLE and random(5) == 1:
                     g.play('pause', 100)
                     e.life -= dmg
-                    g.play_at('ahit', e.x, e.y, where, 1)
+                    g.play_at('ahit', e.x, e.y, where, 1, in_view=False)
                     g.report(f'You strike again for {dmg}!', 14, (e.x, e.y), dmg)
             else:
-                g.play_at('bhit', e.x, e.y, where)
+                g.play_at('bhit', e.x, e.y, where, in_view=False)
                 g.report(f'You miss the {name}.', 7, (e.x, e.y), 'miss')
             if swing == 1:
                 p.bag[SLOT_WEAPON], p.bag[SLOT_OFFHAND] = p.bag.get(SLOT_OFFHAND, 0), p.bag.get(SLOT_WEAPON, 0)

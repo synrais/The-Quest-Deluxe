@@ -64,7 +64,8 @@ class ScreenHost(anim.Host):
     def clean2(self, x, y):
         w, r = self.game.world, self.game.renderer
         ox, oy = w.origin
-        r.draw_tile(r.screen, (x - 1) * TILE, (y - 1) * TILE, w.grid[ox + x - 1][oy + y - 1])
+        r.draw_tile(r.screen, (x - 1) * TILE, (y - 1) * TILE, w.grid[ox + x - 1][oy + y - 1],
+                    on_top=r.on_top(self.game))
 
     def guy2(self, x, y):
         r = self.game.renderer
@@ -220,14 +221,15 @@ class Game:
         self.player.hero.rep += delta
         self.play('reput2', delta)
 
-    def play(self, name: str, *args, on_move=None, redraw=True, raw=False):
+    def play(self, name: str, *args, on_move=None, redraw=True, raw=False, in_view=True):
         """Run one of the original's animations now (engine.anim), blocking like the original.
         Its rand() draws happen even when drawing is skipped, so the random sequence stays the same.
-        redraw=False keeps drawing over what the previous animation left on the screen."""
+        redraw=False keeps drawing over what the previous animation left on the screen. in_view=False:
+        in FPS mode it is heard and waited for but not shown (the weapon in view shows the blow)."""
         self.anim_host.on_move = on_move
         try:
             self.renderer.play(self, getattr(anim, name)(self.anim_host, *args), fast=self.fast, redraw=redraw,
-                               raw=raw)
+                               raw=raw, in_view=in_view)
         finally:
             self.speaker.nosound()
             self.anim_host.on_move = None

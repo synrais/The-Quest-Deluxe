@@ -71,7 +71,10 @@ class Renderer:
         self.anchor = None             # the map square the running animation plays at (FPS mode)
 
     # ── tiles ─────────────────────────────────────────────────────────────────
-    def draw_tile(self, surf, px, py, q, enemy=None):
+    def draw_tile(self, surf, px, py, q, enemy=None, on_top=False):
+        """A square as the original draws it: floor, decoration (blood, remains), wall, then gold and the
+        item, then the creature over them. on_top (settings.ini items_on_top): gold and the item over the
+        creature instead."""
         s = self.sprites
         surf.fill((0, 0, 0), (px, py, TILE, TILE))
         for kind, val, cond in (('floor', q.floor, True), ('extra', q.deco, q.deco), ('wall', q.wall, q.wall)):
@@ -81,6 +84,16 @@ class Renderer:
                     surf.blit(img, (px, py))
                 elif kind == 'wall':
                     pygame.draw.rect(surf, EGA[8], (px + 2, py + 2, TILE - 4, TILE - 4))
+        if on_top:
+            self.draw_creature(surf, px, py, q)
+            self.draw_objects(surf, px, py, q)
+        else:
+            self.draw_objects(surf, px, py, q)
+            self.draw_creature(surf, px, py, q)
+
+    def draw_objects(self, surf, px, py, q):
+        """Gold and the item on a square."""
+        s = self.sprites
         if q.gold > 0 and s.gold:
             surf.blit(s.gold, (px, py))
         if q.item:
@@ -89,12 +102,21 @@ class Renderer:
                 surf.blit(img, (px, py))
             else:
                 pygame.draw.circle(surf, EGA[14], (px + 20, py + 20), 6)
+
+    def draw_creature(self, surf, px, py, q):
+        s = self.sprites
         if q.mon and not self.pack.trait(q.mon, 'invisible'):
             img = s.get('enemy', q.mon)
             if img:
                 surf.blit(img, (px, py))
             else:
                 pygame.draw.circle(surf, EGA[12] if q.mon > 0 else EGA[11], (px + 20, py + 20), 12)
+
+    @staticmethod
+    def on_top(game) -> bool:
+        """settings.ini's items_on_top: gold and items drawn over the creatures and the hero (the
+        original draws them under). Blood, remains and the like stay under, as in the original."""
+        return (getattr(game, 'settings', None) or {}).get('items_on_top') == 'on'
 
     def draw_hero(self, scr, game, hx, hy):
         """guy2(), ported call for call (engine.anim.draw_guy2), at pixel position (hx, hy)."""
@@ -105,7 +127,7 @@ class Renderer:
                        look=self.pack.classes.get(p.hero.type, {}).get('look'))
 
     # ── the original's animations ─────────────────────────────────────────────
-    def play(self, game, gen, fast=False, redraw=True, raw=False):
+    def play(self, game, gen, fast=False, redraw=True, raw=False, in_view=True):
         """Run an animation generator (engine.anim) on top of the current frame, blocking, as the
         original does. Each yielded value is a delay() in ms; time is kept exactly, and frames are
         only shown when there's time (or at least every 1/60 s)."""
@@ -114,6 +136,7 @@ class Renderer:
                 pass
             return
         three_d = self.in_3d(game) and not raw      # raw: drawn on the screen as it is (a wipe)
+        self._anim_shown = in_view                  # FPS mode: False draws nothing of it into the view
         while three_d and self.gliding(game):               # a step or a turn finishes before the animation
             self.draw(game)
             pygame.event.pump()
@@ -164,6 +187,8 @@ class Renderer:
         hero, over the whole view; anywhere else (a flash of the screen), as it is."""
         out = self.screen.copy()
         out.blit(self._anim_view, (0, 0))
+        if not getattr(self, '_anim_shown', True):
+            return out
         area = (0, 0, MAP_PX, MAP_PX)
         drawn, base = self.screen.subsurface(area), self._anim_base.subsurface(area)
         same = pygame.mask.from_threshold(drawn, (0, 0, 0, 255), (1, 1, 1, 255), base)
@@ -262,9 +287,11 @@ class Renderer:
         w, p = game.world, game.player
         ox, oy = w.origin
         for x, y in w.room_tiles():
-            self.draw_tile(scr, (x - ox) * TILE, (y - oy) * TILE, w.grid[x][y])
+            self.draw_tile(scr, (x - ox) * TILE, (y - oy) * TILE, w.grid[x][y], on_top=self.on_top(game))
         hx, hy = (p.X - ox) * TILE, (p.Y - oy) * TILE
         self.draw_hero(scr, game, hx, hy)
+        if self.on_top(game):
+            self.draw_objects(scr, hx, hy, w.grid[p.X][p.Y])     # what the hero stands on, over him
         t = game.target
         if t is not None and t in w.enemies:
             pygame.draw.rect(scr, EGA[12], ((t.x - ox) * TILE, (t.y - oy) * TILE, TILE, TILE), 1)
@@ -414,10 +441,7 @@ class Renderer:
                 k = MAP_PX / view3d.RES
                 sx, sy = int(where[0] * k), int((where[1] - where[2]) * k) - 8 - rise
             tw = g.textwidth(f['text'])
-            for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):     # a black edge, so it reads on any ground
-                g.setcolor(0)
-                g.outtextxy(sx - tw // 2 + dx, sy + dy, f['text'])
-            g.setcolor(f['colour'])
+            g.setcolor(f['colour'])                     # plain, in the ROM font's pixels like the log
             g.outtextxy(sx - tw // 2, sy, f['text'])
         game.floaters = keep
 

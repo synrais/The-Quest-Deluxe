@@ -3,6 +3,7 @@
     [play]
     fixes = on        ; the original's bugs: on = fix them all, off = keep them all, pack = as the quest pack says
     sound = on        ; the PC-speaker tones
+    items_on_top = on ; gold and items drawn over the creatures and the hero (the original: under)
 
 Only a real game reads it (run_deluxe.py); a Game made without settings, as the tests make it, plays
 the pack as it is, so a player's settings can't change what the tests check.
@@ -14,8 +15,8 @@ import os
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))      # the TheQuestDeluxe folder
 PATH = os.path.join(ROOT, 'settings.ini')
-CHOICES = {'fixes': ('on', 'off', 'pack'), 'sound': ('on', 'off')}
-DEFAULTS = {'fixes': 'pack', 'sound': None}          # sound None: as sound.txt says (on without one)
+CHOICES = {'fixes': ('on', 'off', 'pack'), 'sound': ('on', 'off'), 'items_on_top': ('on', 'off')}
+DEFAULTS = {'fixes': 'pack', 'sound': None, 'items_on_top': 'off'}   # sound None: as sound.txt says
 
 
 def load(path: str = PATH) -> dict:

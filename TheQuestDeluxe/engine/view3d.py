@@ -361,12 +361,14 @@ class View3D:
                     continue
                 side = inv * (dy * sx - dx * sy)
                 n = 0
+                # on one square, back to front: what stands there, the creature, then gold and items
+                # in front of it
                 for kind, v, size, cond in (('deco', de, 1.0, de and scene.look('deco', de) == 'billboard'),
                                             ('wall', wa, 1.0, wa and scene.look('wall', wa) == 'billboard'),
+                                            ('mon', mo, 1.0, mo and not scene.hidden(mo)),
                                             ('gold', 0, 0.45, go > 0),
                                             ('item', it, 0.5, it and scene.look('item', it) == 'small'),
-                                            ('item', it, 0.9, it and scene.look('item', it) == 'billboard'),
-                                            ('mon', mo, 1.0, mo and not scene.hidden(mo))):
+                                            ('item', it, 0.9, it and scene.look('item', it) == 'billboard')):
                     if cond:
                         things.append((depth, -n, side, kind, v, size, (x0 + i, y0 + j)))
                         n += 1

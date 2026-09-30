@@ -55,13 +55,16 @@ game:
 - The panel's Map box shows the current screen from above, with an arrow for the way the hero faces
   (M switches it back to the level map); out of FPS mode it is the original's level map.
 - The weapon in hand at the bottom right (`engine/hands.py`): its bag picture, cut out, tilted and
-  scaled up in whole pixels (nothing when the hand is empty). It bobs as the hero steps, and swings, thrusts (spears, pikes, lances) or is drawn and
+  scaled up in whole pixels (nothing when the hand is empty). The original's white attack stroke on
+  the target isn't drawn in FPS mode (it is still heard): the weapon shows the blow. It bobs as the hero steps, and swings, thrusts (spears, pikes, lances) or is drawn and
   let go (bows, slings) as he attacks. Only the picture moves; the rules don't know about it.
 - The hero's bust in the panel, right of the coins and above the right-hand key, with no frame
   (`engine/face.py`, the picture `engine/assets/bust.png`, 11 x 11, drawn 3 times the size; a pack can
   have its own `sprites/bust.png`): the hood in the class colour, the eyes in guy2()'s colours
   (poison, killer, berserk), the necklace in the colour of the amulet worn, only the eyes when
   invisible.
+- On a square, gold and items stand in front of the creature on it; the combat log's rising
+  numbers are plain pixel text, without an edge.
 - Steps and turns glide over 140 ms. Turning is free (not a game action); a step is the classic move,
   so the rules don't change: `tests/test_view3d.py` plays the same random games from above and in FPS
   mode and requires identical game state after every key.

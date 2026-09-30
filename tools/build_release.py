@@ -99,6 +99,7 @@ settings.ini (open it in Notepad):
   fixes = on      the original's bugs are fixed (the title screen says "Bug fixes: on"); off keeps
                   them, exactly as the original plays; pack does what each quest pack says
   sound = on      PC-speaker tones like the original; off for none
+  items_on_top = on   gold and items drawn over whoever stands on them; off as the original
 Saves: saves\\<pack>\\save01.dat to save20.dat.
 {{extra}}""",
 }

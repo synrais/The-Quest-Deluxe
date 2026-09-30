@@ -271,6 +271,59 @@ def face():
     assert colours() == {(0, 0, 0), EGA[4][:3]}                   # only the (killer-red) eyes
     print("the bust: in FPS mode only, the class's hood, the amulet's necklace, guy2()'s eyes, invisible: ok")
 
+
+def drawing_order():
+    """Gold and items over the creatures and the hero (settings.ini items_on_top, and always in FPS
+    mode); blood and remains under them."""
+    from deluxe.render import EGA, TILE
+    g = deluxe.Game(pygame.Surface((640, 480)))
+    g.quick_start(1, 1)
+    r, w, p = g.renderer, g.world, g.player
+    ox, oy = w.origin
+    x, y = p.X + 1, p.Y
+    q = w.sq(x, y)
+    q.wall, q.mon, q.item, q.gold = 0, 24, 15, 0                  # a creature standing on an item
+    box = ((x - ox) * TILE, (y - oy) * TILE, TILE, TILE)
+
+    def square():
+        r.draw(g, present=False)
+        return pygame.image.tobytes(r.screen.subsurface(box), 'RGB')
+    q.mon = 0
+    item_alone = square()
+    q.mon = 24
+    under = square()                                              # the original: the creature over the item
+    g.settings = {'items_on_top': 'on'}
+    over = square()
+    assert over != under
+    q.mon = 0
+    assert square() == item_alone                                 # nothing else changes
+    q.mon = 24
+    # the hero standing on an item
+    here = w.sq(p.X, p.Y)
+    here.item = 15
+    hero_box = ((p.X - ox) * TILE, (p.Y - oy) * TILE, TILE, TILE)
+    r.draw(g, present=False)
+    on_top = pygame.image.tobytes(r.screen.subsurface(hero_box), 'RGB')
+    g.settings = {}
+    r.draw(g, present=False)
+    assert on_top != pygame.image.tobytes(r.screen.subsurface(hero_box), 'RGB')
+    here.item = 0
+    # FPS mode: the item on the creature's square is drawn in front of it
+    g.view3d = True
+    for facing in range(4):
+        g.facing = facing
+        r.draw(g, present=False, flat=False)
+        if (x, y) in r.v3d.sprite_rects:
+            break
+    rect = r.v3d.sprite_rects[(x, y)]
+    k = 2
+    view = pygame.image.tobytes(r.screen.subsurface((rect.x * k, rect.y * k, rect.w * k, rect.h * k)), 'RGB')
+    q.item = 0
+    r.draw(g, present=False)
+    assert view != pygame.image.tobytes(r.screen.subsurface((rect.x * k, rect.y * k, rect.w * k, rect.h * k)), 'RGB')
+    print('the drawing order: gold and items over creatures and the hero (items_on_top, and FPS mode): ok')
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--runs', type=int, default=12)
@@ -282,6 +335,7 @@ def main():
     map_box()
     weapon_in_view()
     face()
+    drawing_order()
     bad = same_games(a.runs, a.keys)
     sys.exit(1 if bad else 0)
 

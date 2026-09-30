@@ -56,6 +56,7 @@ The player's settings, in this folder:
 |---|---|
 | `fixes` | `on` (shipped): the original's bugs are fixed in every pack, and the title screen says "Bug fixes: on". `off`: every bug kept, exactly as the original plays. `pack`: as each quest pack says (the editor's Quest tab). |
 | `sound` | `on` or `off`: the PC-speaker tones. Without it, a `sound.txt` holding `0` turns them off, as in the original. |
+| `items_on_top` | `on` (shipped): gold and items are drawn over a creature or the hero standing on them. `off`: under them, as the original draws them. Blood, remains and footprints stay underneath either way. In FPS mode they are always in front. |
 
 `run_deluxe.py --fixes on|off|pack` and `--sound on|off` override them for one game. The tests never
 read this file: they play each pack as it is.
