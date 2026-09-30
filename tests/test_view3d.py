@@ -232,6 +232,19 @@ def weapon_in_view():
     g.swing = ('thrust', now - ATTACK_MS['thrust'] // 2)
     dx, dy, da = hands.pose(g, now)
     assert dy < -60 and da == 0                                  # mid-thrust: forward
+    # swing and a miss: further across, and it takes longer
+    hit = hands.pose(g, now)
+    g.swing = ('swing', now - ATTACK_MS['swing'] // 2, True)
+    missed = min(hands.pose(g, now - d)[0] for d in range(0, 400, 10))
+    assert missed < hit[0] - 40, (missed, hit)
+    g.swing = ('thrust', now - 5000)
+    # a creature's blow on the hero, as he sees it: from in front it rises from the bottom (2), from his
+    # right it comes from the left (3), from behind from the top (4), from his left from the right (1)
+    from deluxe.state import Enemy
+    p = g.player
+    g.facing = 1                                                 # east
+    sides = [g.fps_side(Enemy(type=1, x=p.X + dx, y=p.Y + dy)) for dx, dy in ((1, 0), (0, 1), (-1, 0), (0, -1))]
+    assert sides == [2, 3, 4, 1], sides
     g.swing = ('swing', now - 5000)
     assert hands.pose(g, now)[:2] == (0, 0) or r._cam            # long over: back at rest
     g.swing = None

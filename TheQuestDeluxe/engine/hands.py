@@ -7,7 +7,8 @@ to stand it up; a pack can also draw its own: sprites/hands/<item>.png (upright,
 bottom). With nothing in hand, nothing shows.
 
 It moves with the hero: a bob as he steps, and when he attacks a swing (swords, axes, clubs...), a
-thrust (spears, pikes, lances: kind 3) or a draw and release (bows and slings). An item's
+thrust (spears, pikes, lances: kind 3) or a draw and release (bows and slings). A miss swings or
+thrusts too far, holds there a moment and comes back. An item's
 "fps_attack" ("swing", "thrust" or "shoot") overrides that. Only the picture moves: the rules don't
 know about it.
 """
@@ -23,6 +24,7 @@ SCALE = 5                 # whole pixels: the view is 400 x 400, a 40-pixel pict
 GRIP = (300, 405)         # where the grip sits: the bottom right, just below the view's edge
 TILT = -22                # degrees; a melee weapon leans in toward the middle
 ATTACK_MS = {'swing': 280, 'thrust': 240, 'shoot': 320}
+MISS_REACH, MISS_TIME = 1.6, 1.6    # a miss carries the blow this much further, and takes this much longer
 STEP_BOB = 7              # pixels up at the middle of a step
 BAG_GREY = (84, 84, 84)
 
@@ -84,10 +86,13 @@ class Hands:
                 dx += math.sin(t * 2 * math.pi) * 3
         swing = getattr(game, 'swing', None)
         if swing:
-            kind, t0 = swing
-            u = (now - t0) / ATTACK_MS[kind]
+            kind, t0, missed = (tuple(swing) + (False,))[:3]
+            u = (now - t0) / (ATTACK_MS[kind] * (MISS_TIME if missed and kind != 'shoot' else 1))
             if 0 <= u < 1:
                 s = math.sin(u * math.pi)
+                if missed and kind != 'shoot':              # swing and a miss: too far, a moment, back
+                    s = (MISS_REACH * math.sin(u / 0.4 * math.pi / 2) if u < 0.4 else MISS_REACH if u < 0.65
+                         else MISS_REACH * math.cos((u - 0.65) / 0.35 * math.pi / 2))
                 if kind == 'swing':
                     da, dx, dy = da - 50 * s, dx - 120 * s, dy - 30 * s
                 elif kind == 'thrust':

@@ -200,6 +200,23 @@ class Game:
             item = self.pack.item(self.player.bag.get((12, 4), 0)) if self.player.bag.get((12, 4)) else {}
             self.swing = (attack_kind(item), pygame.time.get_ticks())
 
+    def swing_missed(self):
+        """FPS mode: the blow in progress missed (engine.hands carries it too far)."""
+        if getattr(self, 'swing', None):
+            self.swing = (self.swing[0], self.swing[1], True)
+
+    def fps_side(self, e) -> int:
+        """FPS mode: the side a blow on the hero comes from, as ahit()/bhit2() take it (1 right, 2 below,
+        3 left, 4 above), for the stroke drawn over the view: from the way the hero faces, and turned
+        around so that one from in front rises from the bottom."""
+        p = self.player
+        dx, dy = (e.x > p.X) - (e.x < p.X), (e.y > p.Y) - (e.y < p.Y)
+        if dx and dy:
+            dy = 0                                       # a diagonal: by its side
+        absolute = {(0, -1): 0, (1, 0): 1, (0, 1): 2, (-1, 0): 3}.get((dx, dy), 0)
+        rel = (absolute - self.facing) % 4               # 0 in front, 1 right, 2 behind, 3 left
+        return (2, 3, 4, 1)[rel]
+
     def key_name(self, colour: str) -> str:
         """The key of a colour, by its item's name ('gold key' for the yellow one in Quest I)."""
         for v, row in self.pack.items.items():

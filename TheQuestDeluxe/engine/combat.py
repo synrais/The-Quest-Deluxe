@@ -250,6 +250,7 @@ class Combat:
                     g.play_at('ahit', e.x, e.y, where, 1, in_view=False)
                     g.report(f'You strike again for {dmg}!', 14, (e.x, e.y), dmg)
             else:
+                g.swing_missed()                          # FPS mode: swing and a miss
                 g.play_at('bhit', e.x, e.y, where, in_view=False)
                 g.report(f'You miss the {name}.', 7, (e.x, e.y), 'miss')
             if swing == 1:
@@ -346,6 +347,11 @@ class Combat:
             else:
                 self.enemy_cast(e, name)
 
+    def side_seen(self, e: Enemy) -> int:
+        """side(), or in FPS mode the side as the hero sees it (Game.fps_side): only the stroke's
+        picture differs."""
+        return self.g.fps_side(e) if self.g.renderer.in_3d(self.g) else self.side(e)
+
     def side(self, e: Enemy) -> int:
         """Which side of the hero e attacks from, as ahit()/bhit2() draw it."""
         p = self.p
@@ -369,14 +375,14 @@ class Combat:
             (p.skill.amb == 1 and items.tell(p.item(SLOT_OFFHAND), IT_KIND) in (2, 6))
         if parry and random(5) == 1:
             dmg = 0
-            g.play_at('bhit2', p.X, p.Y, self.side(e))
+            g.play_at('bhit2', p.X, p.Y, self.side_seen(e))
             g.report(f"You parry the {name}'s blow.", 11)
         elif dmg <= 0 and not shielded:
             g.report(f'The {name} misses you.', 7, (p.X, p.Y), 'miss')
         if dmg > 0:
             h.life -= dmg
             g.report(f'The {name} hits you for {dmg}.', 12, (p.X, p.Y), dmg)
-            g.play_at('ahit', p.X, p.Y, self.side(e), 2)
+            g.play_at('ahit', p.X, p.Y, self.side_seen(e), 2)
             self.bleed_hero()
             n = g.pack.trait(e.type, 'poison_melee')
             if n and random(n) == 1 and not h.poisoned:

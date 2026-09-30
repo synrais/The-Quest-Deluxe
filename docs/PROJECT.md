@@ -56,7 +56,9 @@ game:
   (M switches it back to the level map); out of FPS mode it is the original's level map.
 - The weapon in hand at the bottom right (`engine/hands.py`): its bag picture, cut out, tilted and
   scaled up in whole pixels (nothing when the hand is empty). The original's white attack stroke on
-  the target isn't drawn in FPS mode (it is still heard): the weapon shows the blow. It bobs as the hero steps, and swings, thrusts (spears, pikes, lances) or is drawn and
+  the target isn't drawn in FPS mode (it is still heard): the weapon shows the blow, and a miss
+  carries it too far. A creature's stroke on the hero is drawn as he sees it: from in front it rises
+  from the bottom of the view, from his right it comes from the left. It bobs as the hero steps, and swings, thrusts (spears, pikes, lances) or is drawn and
   let go (bows, slings) as he attacks. Only the picture moves; the rules don't know about it.
 - The hero's bust in the panel, right of the coins and above the right-hand key, with no frame
   (`engine/face.py`, the picture `engine/assets/bust.png`, 11 x 11, drawn 3 times the size; a pack can
