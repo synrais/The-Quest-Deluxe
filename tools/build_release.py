@@ -91,7 +91,8 @@ To make quests (full zip): double-click "The Quest Deluxe Editor.bat" - see docs
 
 The Quest Deluxe adds:
   F               FPS mode: the world through the hero's eyes. Up/Down walk, Left/Right turn,
-                  Q/E or , and . step sideways, M shows or hides the map in the corner
+                  Q/E or , and . step sideways; the Map box shows this screen from
+                  above, M switches it to the level map
   D               the combat log: who hit whom for how much, what you pick up, locked doors
 
 settings.ini (open it in Notepad):

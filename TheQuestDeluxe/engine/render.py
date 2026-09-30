@@ -1,7 +1,6 @@
 """pygame renderer: 640x480 logical screen laid out like the original, scaled to the window."""
 from __future__ import annotations
 
-import copy
 import math
 import os
 
@@ -15,6 +14,7 @@ from . import anim, view3d
 W, H = 640, 480
 TILE = 40
 MAP_PX = ROOM * TILE          # 400
+MAP_BOX = (480, 276)          # the inside of the panel's Map box (hud.dmap), 100 x 100
 STEP_MS = 140                 # FPS mode: how long a step or a turn takes to glide
 
 # the EGA palette as the game shows it (see bgi.EGA)
@@ -231,6 +231,8 @@ class Renderer:
             self.draw_map(game, scr)
         self.draw_combat_log(game, scr, three_d)
         self.hud.draw(game)
+        if self.in_3d(game) and getattr(game, 'minimap', True):
+            self.map_box(game, scr)
         self.draw_message(scr, game)
         if game.overlay:
             game.overlay.draw(self, scr)
@@ -322,69 +324,28 @@ class Renderer:
             r = self.v3d.sprite_rects.get((t.x, t.y))
             if r:
                 pygame.draw.rect(scr, EGA[12], (r.x * k, r.y * k, r.w * k, r.h * k), 1)
-        # the compass, the hero's portrait, and the screen from above in the corner
+        # the compass (the screen from above is in the panel's Map box: map_box)
         self.btext(scr, view3d.FACING_NAMES[game.facing % 4], (MAP_PX // 2, 2), 15, style=(8, 1), center=True)
-        self.draw_status_3d(game, scr)
-        if getattr(game, 'minimap', True):
-            n = 100
-            w, p, st, h = game.world, game.player, game.status, game.player.hero
-            key = (tuple((q.floor, q.wall, q.item, q.mon, q.gold, q.deco) for q in
-                         (w.grid[x][y] for x, y in w.room_tiles())), p.X, p.Y, p.hero.type, h.invisible,
-                   h.poisoned, st.killer, st.powboost, st.Shield, st.fShield, t and (t.x, t.y))
-            if key != getattr(self, '_mini_key', None):
-                small = pygame.Surface((MAP_PX, MAP_PX))
-                self.draw_map(game, small)
-                self._mini, self._mini_key = pygame.transform.scale(small, (n, n)), key
-            mini = self._mini
-            x0 = MAP_PX - n - 4
-            scr.blit(mini, (x0, 4))
-            pygame.draw.rect(scr, EGA[7], (x0 - 1, 3, n + 2, n + 2), 1)
-            ox, oy = game.world.origin
-            cx = x0 + (game.player.X - ox) * n // 10 + n // 20
-            cy = 4 + (game.player.Y - oy) * n // 10 + n // 20
-            dx, dy = view3d.FACINGS[game.facing % 4]
-            pygame.draw.line(scr, EGA[14], (cx, cy), (cx + dx * 7, cy + dy * 7), 2)
 
-    def draw_status_3d(self, game, scr):
-        """FPS mode's status frame, top left: the hero as guy2() draws him on his square, twice the size,
-        so what his eyes and rings say can be seen (poison, the killer switch, a Berserker potion, the
-        Shield spells, invisibility), and the same in words below."""
-        p, st, h = game.player, game.status, game.player.hero
-        w = game.world
-        states = []
-        if h.invisible > 0:
-            states.append(('Invisible', 7))
-        if h.poisoned:
-            states.append(('Poisoned', 10))
-        if st.killer:
-            states.append(('Killer', 12))
-        if st.powboost > 0:
-            states.append(('Berserk', 13))
-        if st.Shield > 0:
-            states.append(('Shield', 14))
-        if st.fShield > 0:
-            states.append(('Fire Shield', 12))
-        q = w.grid[p.X][p.Y]
-        key = (q.floor, q.deco, p.hero.type, h.invisible, h.poisoned, st.killer, st.powboost, st.Shield,
-               st.fShield)
-        if key != getattr(self, '_portrait_key', None):
-            tile = pygame.Surface((TILE, TILE))
-            tile.fill((0, 0, 0))
-            ground = copy.copy(q)
-            ground.item = ground.gold = ground.mon = 0            # only what the hero stands on
-            self.draw_tile(tile, 0, 0, ground)
-            self.draw_hero(tile, game, 0, 0)
-            self._portrait, self._portrait_key = pygame.transform.scale(tile, (2 * TILE, 2 * TILE)), key
-        pygame.draw.rect(scr, EGA[6], (2, 2, 2 * TILE + 4, 2 * TILE + 4), 2)
-        scr.blit(self._portrait, (4, 4))
-        g = self.bgi
-        g.s = scr
-        g.settextstyle(0, 0, 1)
-        for n, (text, colour) in enumerate(states):
-            y = 2 * TILE + 10 + 10 * n
-            pygame.draw.rect(scr, (0, 0, 0), (2, y - 1, 8 * len(text) + 4, 10))
-            g.setcolor(colour)
-            g.outtextxy(4, y, text)
+    def map_box(self, game, scr):
+        """FPS mode: the panel's Map box shows the current screen from above, with the hero's facing,
+        instead of the level map (M switches between them)."""
+        n = 100
+        w, p, st, h, t = game.world, game.player, game.status, game.player.hero, game.target
+        key = (tuple((q.floor, q.wall, q.item, q.mon, q.gold, q.deco) for q in
+                     (w.grid[x][y] for x, y in w.room_tiles())), p.X, p.Y, p.hero.type, h.invisible,
+               h.poisoned, st.killer, st.powboost, st.Shield, st.fShield, t and (t.x, t.y))
+        if key != getattr(self, '_mini_key', None):
+            small = pygame.Surface((MAP_PX, MAP_PX))
+            self.draw_map(game, small)
+            self._mini, self._mini_key = pygame.transform.scale(small, (n, n)), key
+        x0, y0 = MAP_BOX
+        scr.blit(self._mini, (x0, y0))
+        ox, oy = w.origin
+        cx = x0 + (p.X - ox) * n // 10 + n // 20
+        cy = y0 + (p.Y - oy) * n // 10 + n // 20
+        dx, dy = view3d.FACINGS[game.facing % 4]
+        pygame.draw.line(scr, EGA[14], (cx, cy), (cx + dx * 7, cy + dy * 7), 2)
 
     # ── the combat log (Deluxe) ───────────────────────────────────────────────
     LOG_LINES = 6

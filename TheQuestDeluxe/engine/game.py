@@ -171,7 +171,7 @@ class Game:
         self.running = True
         self.view3d = False                # FPS mode: the world through the hero's eyes (F)
         self.facing = 0                    # which way the hero looks: 0 north, 1 east, 2 south, 3 west
-        self.minimap = True                # FPS mode: the screen from above in the corner (M)
+        self.minimap = True                # FPS mode: the Map box shows this screen from above (M: the level map)
         # the combat log (Deluxe, D): who hit whom for how much, over the bottom of the map, and the
         # damage rising off whoever took it. Off in scripted runs, which compare screens with classic.
         self.combat_log = not self.fast
@@ -422,7 +422,7 @@ class Game:
         elif k == pygame.K_f:
             self.view3d = not self.view3d            # FPS mode (Deluxe)
         elif k == pygame.K_m and self.view3d:
-            self.minimap = not self.minimap
+            self.minimap = not self.minimap          # the Map box: this screen from above, or the level map
         elif k == pygame.K_d:
             self.combat_log = not self.combat_log        # the combat log (Deluxe)
             self.log_lines, self.floaters = [], []

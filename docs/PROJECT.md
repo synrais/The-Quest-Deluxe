@@ -52,8 +52,8 @@ game:
   get a roof. Tiles and items can say how they look (`view3d`, `roof`), otherwise opaque wall pictures
   become blocks and the rest billboards.
 - Distance fades out in a 4×4 ordered dither, in the EGA colours.
-- A status frame, top left: the hero as the map draws him, twice the size, so his eyes (poison, the
-  killer switch, a Berserker potion) and the Shield rings show, with those states in words below.
+- The panel's Map box shows the current screen from above, with an arrow for the way the hero faces
+  (M switches it back to the level map); out of FPS mode it is the original's level map.
 - Steps and turns glide over 140 ms. Turning is free (not a game action); a step is the classic move,
   so the rules don't change: `tests/test_view3d.py` plays the same random games from above and in FPS
   mode and requires identical game state after every key.
@@ -92,9 +92,12 @@ port.
    on the title screen), or `off`, or `pack` to leave it to each pack. The tests never read it, so
    they still play `packs/TheQuest` exactly as the original. New packs made in the editor start with
    every fix on. [FINDINGS.md](FINDINGS.md) says which bug each fix covers.
-3. **A status frame in FPS mode**, since the hero's eye colours (killer, berserk, poison) and shield
-   rings can't be seen in 3D. **Done**: the hero's portrait, twice the size, top left, with his states
-   in words below it (`tests/test_view3d.py`).
+3. **FPS mode, in stages.** The hero's eye colours (killer, berserk, poison) and Shield rings can't be
+   seen in 3D. A first try, a portrait of the hero top left, was dropped. Stage 1 (**done**): the
+   screen from above moved from the view's corner into the panel's Map box. Stage 2: the weapon in
+   view, bottom right, bobbing as the hero walks and swinging, thrusting or drawing as he attacks.
+   Stage 3: a Doom-style face to the right of the coins: hurt as life drops, the eyes in the state
+   colours, a rim for the Shields, faded when invisible, in the class colour.
 
 ## Sharing
 

@@ -165,8 +165,8 @@ Scholar; Cowardice, Rashness, Honor).
 
 Pictures: `sprites/floors/<id>.png`, `sprites/walls/<id>.png`, `sprites/decos/<id>.png`.
 
-**FPS mode (the 3D view).** Deluxe draws the same grid through the hero's eyes (F in the game; M
-shows or hides the screen from above in the corner). These fields say how things look there; all
+**FPS mode (the 3D view).** Deluxe draws the same grid through the hero's eyes (F in the game; the
+panel's Map box shows the screen from above, M switches it to the level map). These fields say how things look there; all
 are optional, so packs without them still work:
 
 | Field | Meaning |
