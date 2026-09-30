@@ -163,13 +163,26 @@ def talk():
           'line says nothing: ok')
 
 
-def marksmanship():
-    for fixes, can in ((None, False), (['marksmanship'], True)):
-        g = game(fixes)
-        sel = ui.SkillSelect(1, g.pack)                               # a Knight
-        k = next(n + 1 for n, s in enumerate(sel.skills) if s['id'] == 'mar')
-        assert sel.allowed(k) == can, fixes
-    print('Marksmanship: a choice for every class with the fix: ok')
+def skill_list():
+    from engine.state import new_player
+    g = game(None)
+    sel = ui.SkillSelect(1, g.pack)                                   # a Knight: five rows, one of them blank
+    assert [s['id'] for s in sel.skills] == ['bar', 'amb', 'mem', 'mar', 'sch'] and not sel.allowed(4)
+    g = game(['skill_list'])
+    sel = ui.SkillSelect(1, g.pack)                                   # four rows, no blank
+    assert [s['id'] for s in sel.skills] == ['bar', 'amb', 'mem', 'sch']
+    assert not any(sel.allowed(i) and sel.skills[i - 1]['id'] == 'mar' for i in range(1, 5))
+    g.overlay = sel
+    for _ in range(3):
+        g.handle(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_DOWN, unicode=''))
+    assert sel.i == 4
+    g.handle(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RETURN, unicode=''))
+    assert isinstance(g.overlay, ui.FaultSelect) and g.overlay.skill == 5, g.overlay.skill   # Scholar
+    p = new_player(1, 5, 1, pack=g.pack)
+    assert p.skill.sch == 1 and p.skill.mar == 0
+    rogue = ui.SkillSelect(3, g.pack)                                 # the Rogue keeps Marksmanship's row
+    assert [s['id'] for s in rogue.skills] == ['bar', 'amb', 'mem', 'mar', 'sch'] and not rogue.allowed(4)
+    print("the skill list: no blank row with the fix; Marksmanship stays the Rogues' own: ok")
 
 
 def map_corrections():
@@ -217,7 +230,7 @@ def main():
     dead_scan()
     load_gaps()
     talk()
-    marksmanship()
+    skill_list()
     map_corrections()
     player_settings()
     print('all fix checks passed')

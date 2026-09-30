@@ -86,7 +86,7 @@ port.
    keeps its meaning; quest.json's `fixes` (the editor's Quest tab) switches on seven fixes (the Shield /
    Ring of Ice swap, questionnaire ties, fault colours, the shop memory, the death scan, Load Game's
    gaps and the dialogue reader), so a "Quest I Deluxe" pack and new quests can have them
-   (`TheQuestDeluxe/tests/test_fixes.py`), plus Marksmanship for every class and a pack's own map
+   (`TheQuestDeluxe/tests/test_fixes.py`), plus no blank row in the skill list and a pack's own map
    corrections (Quest I's item in a tree and missing shield). The player decides in
    `TheQuestDeluxe/settings.ini`: shipped with `fixes = on` (every fix, every pack, and "Bug fixes: on"
    on the title screen), or `off`, or `pack` to leave it to each pack. The tests never read it, so

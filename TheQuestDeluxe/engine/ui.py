@@ -583,27 +583,31 @@ def quiz_best(points: dict, total: int) -> int:
 class SkillSelect(Choice):
     """creation(): choose one extra skill. A second '+' marks the class's own free skill, which can't be
     chosen again. A skill that only comes free with a class (Marksmanship) is only listed for that
-    class and can never be chosen."""
+    class and can never be chosen; for the other classes the original leaves its row blank, and the
+    '+' can still stop there. The "skill_list" fix leaves the row out."""
 
     def __init__(self, cls, pack):
         super().__init__()
         self.cls, self.pack = cls, pack
-        self.skills = [pack.skill(s) for s in pack.skill_ids('skill')]
-        self.count = len(self.skills)
         self.own = pack.classes[cls]['skill']
+        every = [pack.skill(s) for s in pack.skill_ids('skill')]
+        self.rows = [n for n, s in enumerate(every)                 # which of them are rows here
+                     if not (pack.fixed('skill_list') and s.get('only_free') and s['id'] != self.own)]
+        self.skills = [every[n] for n in self.rows]
+        self.count = len(self.skills)
 
     def allowed(self, i):
         s = self.skills[i - 1]
-        return s['id'] != self.own and (not s.get('only_free') or self.pack.fixed('marksmanship'))
+        return s['id'] != self.own and not s.get('only_free')
 
     def pick(self, g, i):
-        g.overlay = FaultSelect(self.cls, i, self.pack)
+        g.overlay = FaultSelect(self.cls, self.rows[i - 1] + 1, self.pack)
 
     def draw(self, r, scr):
         creation_page(r, scr)
         r.btext(scr, 'Choose a skill:', (50, 60), 9, SIMPLEX)
         for n, s in enumerate(self.skills):
-            if not s.get('only_free') or s['id'] == self.own or self.pack.fixed('marksmanship'):
+            if not s.get('only_free') or s['id'] == self.own:
                 r.btext(scr, s['name'], (100, 100 + 40 * n), 9, SIMPLEX)
         own = next((n + 1 for n, s in enumerate(self.skills) if s['id'] == self.own), 0)
         plus(r, scr, 79, own * 40 + 77)

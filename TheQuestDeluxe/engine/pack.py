@@ -135,8 +135,7 @@ class Pack:
         'load_gaps': 'Load Game lists every saved game, past a missing or reserved slot',
         'talk': 'dialogue entries are found by their lines, one-line messages sit in the strip like '
                 'two-line ones, and a missing line shows nothing (the original hangs)',
-        'marksmanship': 'Marksmanship can be chosen as the extra skill (the original only lists it for Rogues, '
-                        'who have it)',
+        'skill_list': "the skill list has no blank row where Marksmanship is hidden (it stays the Rogues' own)",
         'map': 'the pack\'s map corrections are made (quest.json "map_fixes": in Quest I, the item in a tree '
                'and the shield that doesn\'t exist)',
     }
