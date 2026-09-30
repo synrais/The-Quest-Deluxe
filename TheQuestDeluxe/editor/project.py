@@ -303,10 +303,15 @@ class Project:
     def create(dest: str, template: str, blank: bool) -> 'Project':
         """A new pack at dest: a copy of template (a pack folder), or with blank=True, the template's
         things (items, creatures, spells, classes, tiles, pictures, fonts) but one empty level, no
-        story and only the everyday chatter."""
+        story and only the everyday chatter. A new pack fixes all the original's bugs unless its template
+        says otherwise (the Quest tab unticks them)."""
         if os.path.exists(dest):
             raise FileExistsError(dest)
         shutil.copytree(template, dest)
+        q = packio.read_json(os.path.join(dest, 'quest.json'))
+        if 'fixes' not in q:
+            q['fixes'] = True
+            packio.write_json(os.path.join(dest, 'quest.json'), q)
         if blank:
             for f in os.listdir(os.path.join(dest, 'levels')):
                 p = os.path.join(dest, 'levels', f)
@@ -321,6 +326,7 @@ class Project:
             packio.write_text(os.path.join(dest, 'text', 'stories.txt'), '')
             q = packio.read_json(os.path.join(dest, 'quest.json'))
             q.update({'title': os.path.basename(dest), 'author': '', 'year': None, 'levels': 1, 'first_level': 1})
+            q.pop('map_fixes', None)                     # its levels are gone
             packio.write_json(os.path.join(dest, 'quest.json'), q)
             p = Project(dest)
             p.grids[1] = Grid()

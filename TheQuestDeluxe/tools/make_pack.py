@@ -421,6 +421,11 @@ def main():
         'start_potions': {'6': 1},
         'story_order': ['amb', 'sch', 'mar', 'mem', 'bar', 'ras', 'cow', 'hon'],
         'reclass': True,
+        # the original's map slips, corrected only when a player or pack fixes the bugs ("map")
+        'map_fixes': [
+            {'level': 6, 'x': 24, 'y': 82, 'item': 0, 'why': 'a decayed tree holding item -5, which is not an item'},
+            {'level': 7, 'x': 45, 'y': 65, 'item': 0, 'why': 'item 311, a shield with no stats, picture or price'},
+        ],
     })
     print(f'{OUT}: {len(items)} items, {len(spells)} spells, {len(creatures)} creatures, {level - 1} levels')
 

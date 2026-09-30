@@ -28,16 +28,18 @@ discoveries, the original's bugs, and the corrections they led to.
 ## The original's bugs
 
 The classic edition keeps all of these on purpose, and so does The Quest Deluxe's `packs/TheQuest` (it
-must play exactly like the original). A Deluxe pack can have them fixed: quest.json's `fixes` (the
-Quest tab in the editor) names the fixes in the last column, or `true` for all of them; the others are
-in a pack's own data, where the editor can change them. `TheQuestDeluxe/tests/test_fixes.py` checks
+must play exactly like the original, so the tests can hold it to that). The Quest Deluxe fixes them as
+it is shipped: its `settings.ini` says `fixes = on`, which fixes those with a name in the last column
+in every pack. `off` keeps them; `pack` leaves it to each pack's quest.json `fixes` (the editor's
+Quest tab), picked one by one. The rest are in a pack's own scripts or data, where the editor can
+change them, or are kept. `TheQuestDeluxe/tests/test_fixes.py` checks
 each fix with and without it.
 
 | Bug | What happens | Fixed in a Deluxe pack by |
 |---|---|---|
 | **Shield and Ring of Ice swapped** | The Shield spell (4) absorbs blows up to the power of spell 5, and the Ring of Ice (5) freezes if the power of spell 4 beats the target's magic armour. Both spells have power 10, so in Quest I it never shows. | `shield_ice` |
-| **An item in a tree** | Level 6, square (24,82): a decayed tree holding item −5, which isn't an item. | the map |
-| **A shield that doesn't exist** | Level 7, square (45,65): item 311, which has no stats, no picture and no price (the shields are 301-306). | the map |
+| **An item in a tree** | Level 6, square (24,82): a decayed tree holding item −5, which isn't an item. | `map` (`map_fixes`: removed) |
+| **A shield that doesn't exist** | Level 7, square (45,65): item 311, which has no stats, no picture and no price (the shields are 301-306). | `map` (`map_fixes`: removed) |
 | **`Talk.dat` reading** | To skip a line it counts two `"` or `;` characters, but two-line entries have three, so the reader can fall out of step. One-line messages are drawn 3 pixels off the left edge, quote marks and all. A line that is never found hangs the game. | `talk` |
 | **Shops remember the last shop** | `peddler()` never clears its file-name buffer: on a screen without a shop of its own, a shopkeeper sells the last shop's stock, even from an earlier level. | `shop_memory` |
 | **Dead creatures skip a neighbour** | `deadenemycheck()` removes the dead in place, so the creature that slides into the gap isn't checked until next time; some scripted scenes only fire while a creature is on the screen. | `dead_scan` |
@@ -45,7 +47,7 @@ each fix with and without it.
 | **The current screen's map is stale** | The screen is copied out on arrival and written back on leaving, so quest checks that read the map see the screen as it was on arrival. | kept |
 | **Conversations move the hero through walls** | The level 1 farmer and the level 6 father move the hero without checking walls. | the level scripts |
 | **Quiz ties favour the Monk** | A tie involving the Monk, or any three- or four-way tie, gives a Monk. | `quiz_ties` |
-| **Marksmanship can't be chosen** | It is only offered to Rogues, who already have it. | skills.json (`only_free`) |
+| **Marksmanship can't be chosen** | It is only offered to Rogues, who already have it. | `marksmanship` |
 | **Fault colours** | With Cowardice active, the lines below it on the character sheet stay yellow instead of red. | `fault_colours` |
 | **Invisible wraiths are never drawn** | `clean2()` has no case for them, even when they should show. | kept |
 | **Items never raise max life or mana** | `inventory()` gets the hero by value, so what it adds is thrown away. | kept |

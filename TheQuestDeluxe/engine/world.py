@@ -42,6 +42,14 @@ class World:
         self.level = level
         st.level = level
         self.grid = self.data.load_level(level)
+        pack = self.data.src.pack
+        if pack.fixed('map'):                              # the pack's corrections to its own maps
+            for fix in pack.quest.get('map_fixes') or []:
+                if fix.get('level') == level and self.in_map(fix.get('x', 0), fix.get('y', 0)):
+                    q = self.grid[fix['x']][fix['y']]
+                    for f in ('floor', 'wall', 'mon', 'item', 'gold', 'deco'):
+                        if f in fix:
+                            setattr(q, f, fix[f])
         self.visited = set()
         player.X, player.Y = start
         st.mission1 = st.mission2 = 0

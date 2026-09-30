@@ -35,7 +35,7 @@ PY_VERSIONS = ('3.12', '3.13')         # 3.12 is what the launcher installs; oth
 EDITIONS = {
     'classic': ('TheQuestClassic', 'TheQuestClassic', ['run_quest2.py'], ['engine', 'sprites', 'packs'], [], {
         'Play The Quest.bat': ('The Quest', 'run_quest2.py', False)}),
-    'deluxe': ('TheQuestDeluxe', 'TheQuestDeluxe', ['run_deluxe.py'], ['engine', 'packs'], ['run_editor.py', 'editor', 'docs'], {
+    'deluxe': ('TheQuestDeluxe', 'TheQuestDeluxe', ['run_deluxe.py', 'settings.ini'], ['engine', 'packs'], ['run_editor.py', 'editor', 'docs'], {
         'Play The Quest Deluxe.bat': ('The Quest Deluxe', 'run_deluxe.py', False),
         'The Quest Deluxe Editor.bat': ('The Quest Deluxe Editor', 'run_editor.py', True)}),
 }
@@ -94,8 +94,11 @@ The Quest Deluxe adds:
                   Q/E or , and . step sideways, M shows or hides the map in the corner
   D               the combat log: who hit whom for how much, what you pick up, locked doors
 
-Sound: PC-speaker tones like the original. To turn them off, create sound.txt in this folder
-containing 0. Saves: saves\\<pack>\\save01.dat to save20.dat.
+settings.ini (open it in Notepad):
+  fixes = on      the original's bugs are fixed (the title screen says "Bug fixes: on"); off keeps
+                  them, exactly as the original plays; pack does what each quest pack says
+  sound = on      PC-speaker tones like the original; off for none
+Saves: saves\\<pack>\\save01.dat to save20.dat.
 {{extra}}""",
 }
 

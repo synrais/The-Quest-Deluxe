@@ -162,7 +162,9 @@ class QuestTab(ttk.Frame):
             return
         q['reclass'] = next(k for k, v in self.RECLASS.items() if v == self.reclass.get())
         fixes = [name for name, v in self.fixes.items() if v.get()]
-        if fixes:
+        if len(fixes) == len(self.fixes):
+            q['fixes'] = True                        # all, including fixes a later engine adds
+        elif fixes:
             q['fixes'] = fixes
         else:
             q.pop('fixes', None)

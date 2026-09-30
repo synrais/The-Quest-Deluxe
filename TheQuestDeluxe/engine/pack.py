@@ -135,12 +135,20 @@ class Pack:
         'load_gaps': 'Load Game lists every saved game, past a missing or reserved slot',
         'talk': 'dialogue entries are found by their lines, one-line messages sit in the strip like '
                 'two-line ones, and a missing line shows nothing (the original hangs)',
+        'marksmanship': 'Marksmanship can be chosen as the extra skill (the original only lists it for Rogues, '
+                        'who have it)',
+        'map': 'the pack\'s map corrections are made (quest.json "map_fixes": in Quest I, the item in a tree '
+               'and the shield that doesn\'t exist)',
     }
 
     def fixed(self, name: str) -> bool:
         """Does this pack fix the original's bug `name` (FIXES)?"""
+        if self.fix_override is not None:              # the player's settings.ini: fixes = on / off
+            return self.fix_override and name in self.FIXES
         f = self.quest.get('fixes')
         return f is True or (isinstance(f, list) and name in f)
+
+    fix_override = None
 
     ORIGINAL_KEYS = {'yellow': 14, 'red': 4, 'blue': 1}      # the original's three: gold, red, blue
 

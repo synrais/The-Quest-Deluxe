@@ -57,6 +57,7 @@ print('settings: START and PEACEFUL_SCREENS written, comments kept')
 # a blank pack, and a level added to it
 blank = Project.create(os.path.join(tmp, 'blank'), TheQuest, blank=True)
 assert blank.levels == 1 and len(blank.tables['items']) == len(p.tables['items'])
+assert blank.quest.get('fixes') is True and 'map_fixes' not in blank.quest   # a new pack fixes the bugs
 g = blank.grid(1)
 assert all(g.get(x, y) == [1, 0, 0, 0, 0, 0] for x in (1, 50, 100) for y in (1, 50, 100))
 g.get(8, 5)[3] = 1                                       # a monster to meet

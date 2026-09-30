@@ -1,4 +1,5 @@
-"""The original's bugs, fixed when a pack asks (quest.json's "fixes"), and kept when it doesn't.
+"""The original's bugs, fixed when a pack asks (quest.json's "fixes") or the player does (settings.ini),
+and kept when neither does.
 
 packs/TheQuest asks for none, so it plays exactly as the original (the lockstep test holds it to that);
 each check here runs the same thing without and with the fix.
@@ -162,6 +163,51 @@ def talk():
           'line says nothing: ok')
 
 
+def marksmanship():
+    for fixes, can in ((None, False), (['marksmanship'], True)):
+        g = game(fixes)
+        sel = ui.SkillSelect(1, g.pack)                               # a Knight
+        k = next(n + 1 for n, s in enumerate(sel.skills) if s['id'] == 'mar')
+        assert sel.allowed(k) == can, fixes
+    print('Marksmanship: a choice for every class with the fix: ok')
+
+
+def map_corrections():
+    for fixes, tree, shield in ((None, -5, 311), (['map'], 0, 0)):
+        g = game(fixes)
+        g.goto_level(6)
+        assert g.world.sq(24, 82).item == tree, (fixes, g.world.sq(24, 82).item)
+        g.goto_level(7)
+        assert g.world.sq(45, 65).item == shield
+    print("the map: the item in a tree and the shield that doesn't exist are gone with the fix: ok")
+
+
+def player_settings():
+    from engine import settings
+    from engine.formats import GameData
+    from engine.game import Game
+    path = os.path.join(tempfile.mkdtemp(), 'settings.ini')
+    assert settings.load(path) == settings.DEFAULTS                  # no file
+    open(path, 'w').write('[play]\nfixes = ON ; a comment\nsound = maybe\n')
+    assert settings.load(path) == {'fixes': 'on', 'sound': None}     # not a choice: the default
+    shipped = settings.load()
+    assert shipped['fixes'] == 'on', shipped                          # the folder's settings.ini
+    # the player's choice beats the pack's, both ways; without settings the pack's own stands
+    g = game(['talk'])
+    data = GameData.load(g.data.src)
+    for s, talk, gaps in (({'fixes': 'on'}, True, True), ({'fixes': 'off'}, False, False),
+                          ({'fixes': 'pack'}, True, False), (None, True, False)):
+        g2 = Game(pygame.Surface((640, 480)), data=data, settings=s)
+        assert (g2.pack.fixed('talk'), g2.pack.fixed('load_gaps')) == (talk, gaps), s
+    g3 = Game(pygame.Surface((640, 480)), data=data, settings={'fixes': 'on'})
+    g3.renderer.draw(g3, present=False)                               # the title says so
+    assert any(g3.renderer.screen.get_at((x, y))[:3] == EGA[15][:3] for x in range(4, 110) for y in range(470, 478))
+    g4 = Game(pygame.Surface((640, 480)), data=data)
+    g4.renderer.draw(g4, present=False)
+    assert not any(g4.renderer.screen.get_at((x, y))[:3] == EGA[15][:3] for x in range(4, 110) for y in range(470, 478))
+    print("settings.ini: fixes on / off / pack over the pack's own, and the title's note: ok")
+
+
 def main():
     none_in_quest_i()
     shield_ice()
@@ -171,6 +217,9 @@ def main():
     dead_scan()
     load_gaps()
     talk()
+    marksmanship()
+    map_corrections()
+    player_settings()
     print('all fix checks passed')
 
 

@@ -229,6 +229,12 @@ class TitleScreen(Overlay):
                 g.outtextxy(10, 150 + 40 * k, left[k])
                 g.outtextxy(480, 150 + 40 * k, right[k])
         scr.blit(self._bg, (0, 0))
+        fixes = (getattr(r, 'game', None) and r.game.settings or {}).get('fixes')
+        if fixes in ('on', 'off'):                    # the player's settings.ini, bottom left
+            g = bgi_on(r, scr)
+            g.settextstyle(0, 0, 1)
+            g.setcolor(15)
+            g.outtextxy(4, 470, f'Bug fixes: {fixes}')
         _title_cursor(bgi_on(r, scr), self.i)
 
 
@@ -588,7 +594,7 @@ class SkillSelect(Choice):
 
     def allowed(self, i):
         s = self.skills[i - 1]
-        return s['id'] != self.own and not s.get('only_free')
+        return s['id'] != self.own and (not s.get('only_free') or self.pack.fixed('marksmanship'))
 
     def pick(self, g, i):
         g.overlay = FaultSelect(self.cls, i, self.pack)
@@ -597,7 +603,7 @@ class SkillSelect(Choice):
         creation_page(r, scr)
         r.btext(scr, 'Choose a skill:', (50, 60), 9, SIMPLEX)
         for n, s in enumerate(self.skills):
-            if not s.get('only_free') or s['id'] == self.own:
+            if not s.get('only_free') or s['id'] == self.own or self.pack.fixed('marksmanship'):
                 r.btext(scr, s['name'], (100, 100 + 40 * n), 9, SIMPLEX)
         own = next((n + 1 for n, s in enumerate(self.skills) if s['id'] == self.own), 0)
         plus(r, scr, 79, own * 40 + 77)

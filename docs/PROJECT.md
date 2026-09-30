@@ -86,8 +86,12 @@ port.
    keeps its meaning; quest.json's `fixes` (the editor's Quest tab) switches on seven fixes (the Shield /
    Ring of Ice swap, questionnaire ties, fault colours, the shop memory, the death scan, Load Game's
    gaps and the dialogue reader), so a "Quest I Deluxe" pack and new quests can have them
-   (`TheQuestDeluxe/tests/test_fixes.py`). The rest are in a pack's data; [FINDINGS.md](FINDINGS.md)
-   says which.
+   (`TheQuestDeluxe/tests/test_fixes.py`), plus Marksmanship for every class and a pack's own map
+   corrections (Quest I's item in a tree and missing shield). The player decides in
+   `TheQuestDeluxe/settings.ini`: shipped with `fixes = on` (every fix, every pack, and "Bug fixes: on"
+   on the title screen), or `off`, or `pack` to leave it to each pack. The tests never read it, so
+   they still play `packs/TheQuest` exactly as the original. New packs made in the editor start with
+   every fix on. [FINDINGS.md](FINDINGS.md) says which bug each fix covers.
 3. **A status frame in FPS mode**, since the hero's eye colours (killer, berserk, poison) and shield
    rings can't be seen in 3D. **Done**: the hero's portrait, twice the size, top left, with his states
    in words below it (`tests/test_view3d.py`).

@@ -288,6 +288,8 @@ assert app.project.quest['fixes'] == ['load_gaps', 'talk'], app.project.quest['f
 app.project.quest['fixes'] = True
 qt.load()
 assert all(v.get() for v in qt.fixes.values())
+qt.apply()
+assert app.project.quest['fixes'] is True
 for v in qt.fixes.values():
     v.set(False)
 qt.apply()

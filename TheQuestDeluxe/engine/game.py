@@ -30,6 +30,7 @@ from .ai import monsmove
 from .events import Events
 from .render import Renderer, TILE
 from .speaker import Speaker, sound_setting
+from .settings import fix_override
 from . import anim
 from . import invshop
 from . import ui
@@ -134,9 +135,12 @@ class Msg(str):
 
 
 class Game:
-    def __init__(self, window, data: GameData | None = None, start_level: int = 1):
+    def __init__(self, window, data: GameData | None = None, start_level: int = 1, settings: dict | None = None):
         self.data = data or GameData.load()
         self.pack = self.data.src.pack
+        # the player's settings.ini (run_deluxe.py); without them, the pack plays as it is
+        self.settings = settings or {}
+        self.pack.fix_override = fix_override(settings)
         self.items = rules.ItemTable(self.data.items, self.pack)
         self.spells = rules.SpellTable(self.data.spells)
         self.rewards = self.pack.rewards()
@@ -145,7 +149,8 @@ class Game:
         self.slots = Slots(os.path.join(ROOT, 'saves', os.path.basename(self.pack.root)))
         # scripted runs (tests, the dummy video driver) play animations instantly and silently
         self.fast = os.environ.get('SDL_VIDEODRIVER') == 'dummy'
-        self.speaker = Speaker(enabled=not self.fast and sound_setting(self.data.src))
+        sound = self.settings.get('sound')
+        self.speaker = Speaker(enabled=not self.fast and (sound == 'on' if sound else sound_setting(self.data.src)))
         self.anim_host = ScreenHost(self)
         self.world = World(self.data)
         self.status = Status()
