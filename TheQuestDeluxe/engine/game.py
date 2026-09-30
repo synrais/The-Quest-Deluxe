@@ -890,9 +890,17 @@ class Game:
         d.bag = {c: p.bag.get(c, 0) for c in savefile.BAG_CELLS}
         d.book = {(13, 2 + k): p.book[k] for k in range(10)}
         d.book.update({(16, 2 + k): p.book[10 + k] for k in range(10)})
-        d.spells = list(p.spells)
+        d.spells = list(p.spells[:21])
         d.carta = {(sx + 1, sy + 1): 1 for sx, sy in w.visited}
         d.fkey = list(p.fkey)
+        # past the original's structures: the DELUXE block, only when there is something in it
+        if any(p.spells[21:]):
+            d.extra['spells'] = list(p.spells[21:])
+        if any(p.book[20:]):
+            d.extra['book'] = list(p.book[20:])
+        more = {k: v for k, v in p.more.items() if v}
+        if more:
+            d.extra['more'] = more
         return d
 
     def from_save(self, d: SaveData, slot: int):
@@ -903,6 +911,9 @@ class Game:
         p.bag = {c: v for c, v in d.bag.items() if v}
         p.book = [d.book.get((13, 2 + k), 0) for k in range(10)] + [d.book.get((16, 2 + k), 0) for k in range(10)]
         p.spells, p.fkey = list(d.spells), list(d.fkey)
+        p.spells += list(d.extra.get('spells', []))          # The Quest Deluxe's block
+        p.book += list(d.extra.get('book', []))
+        p.more = dict(d.extra.get('more', {}))
         p.X, p.Y = d.X, d.Y
         self.player = p
         self.status = Status(**{f: d.st.get(f, 0) for f in Status.__dataclass_fields__})

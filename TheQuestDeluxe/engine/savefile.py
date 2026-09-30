@@ -24,12 +24,23 @@ rebuilds them. Because code() copies the file one character at a time until the 
 is set, the last character (a newline) is written twice, so every save ends with a blank line.
 
 newsave() gives each new game the first free slot 01..20 and reserves it with a file holding -1.
+TheQuestClassic/The Quest Deluxe adds one thing: a game that goes past what the original's structures hold (more than
+20 spells, potions 9 and 10, a pack's own key colours ...) keeps the rest in a last line,
+
+    DELUXE {"spells": [...], "book": [...], "more": {...}}
+
+written only when there is something to keep, so a Quest I game saves exactly as the original does.
+The original's load2() reads a fixed count of numbers and never gets that far, and neither does
+from_text() below: the classic part of such a save still loads in both.
+
 TheQuestClassic/tools/re/verify_saves.py (QUEST_ENGINE=deluxe) checks this module against the exe's own save() and load2().
 """
 from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field
+
+import json
 
 from .formats import decode_bytes, encode_text
 
@@ -64,6 +75,10 @@ class SaveData:
     spells: list = field(default_factory=lambda: [0] * 21)
     carta: dict = field(default_factory=dict)         # (i, ii) 1..10 -> 0/1
     fkey: list = field(default_factory=lambda: [0] * 10)
+    extra: dict = field(default_factory=dict)         # The Quest Deluxe's block (see the top of this file)
+
+
+EXTRA = 'DELUXE '
 
 
 # ── writing: save() ─────────────────────────────────────────────────────────────
@@ -92,6 +107,8 @@ def to_text(d: SaveData) -> str:
     out.append(f"{d.hero.get('invisible', 0)} {d.hero.get('poisoned', 0)} {d.st.get('mission2', 0)} "
                f"{d.st.get('fShield', 0)}\n")
     out.append(f"{d.st.get('p1', 0)} {d.st.get('p2', 0)} {d.st.get('p3', 0)}\n")
+    if d.extra:
+        out.append(EXTRA + json.dumps(d.extra, sort_keys=True, separators=(',', ':'), ensure_ascii=True) + '\n')
     return ''.join(out)
 
 
@@ -103,7 +120,17 @@ def to_bytes(d: SaveData) -> bytes:
 
 # ── reading: load2() ────────────────────────────────────────────────────────────
 def from_text(text: str) -> SaveData:
-    """load2(): fscanf %d after %d, so only the order of the numbers matters, not the lines."""
+    """load2(): fscanf %d after %d, so only the order of the numbers matters, not the lines. Then The
+    Quest Deluxe's block, if there is one."""
+    extra = {}
+    at = text.find('\n' + EXTRA)
+    if at >= 0:
+        line = text[at + 1 + len(EXTRA):].split('\n', 1)[0]
+        try:
+            extra = json.loads(line)
+        except ValueError:
+            extra = {}
+        text = text[:at + 1]
     nums = iter(int(t) for t in text.split())
     nxt = lambda: next(nums, 0)
     d = SaveData()
@@ -134,6 +161,7 @@ def from_text(text: str) -> SaveData:
     d.hero['invisible'], d.hero['poisoned'] = nxt(), nxt()
     d.st['mission2'], d.st['fShield'] = nxt(), nxt()
     d.st['p1'], d.st['p2'], d.st['p3'] = nxt(), nxt(), nxt()
+    d.extra = extra if isinstance(extra, dict) else {}
     return d
 
 

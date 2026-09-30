@@ -146,6 +146,10 @@ class Player:
     fkey: list = field(default_factory=lambda: [0] * 10)     # F1..F9 -> spell id (index 1..9)
     X: int = 5          # absolute map position 1..100
     Y: int = 5
+    # The Quest Deluxe's own state, past what the original's structures hold (potions 9 and 10, key
+    # colours of a pack's own ...). spells and book above may also grow past 20. Saved in the save
+    # file's DELUXE block (savefile.py).
+    more: dict = field(default_factory=dict)
 
     def item(self, slot) -> int:
         return self.bag.get(slot, 0)
