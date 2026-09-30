@@ -254,8 +254,10 @@ class Renderer:
     # ── FPS mode ──────────────────────────────────────────────────────────────
     @staticmethod
     def in_3d(game) -> bool:
-        """The 3D view shows unless the game asks for a square on the map (a target, a spell's aim)."""
-        return getattr(game, 'view3d', False) and game.cursor is None
+        """The 3D view shows unless the game asks for a square on the map (a target, a spell's aim), no
+        level is loaded (the title), or a screen covers the map (the bag, a story)."""
+        return (getattr(game, 'view3d', False) and game.cursor is None and bool(game.world.grid)
+                and not (game.overlay and game.overlay.covers_map))
 
     def scene3d(self, game) -> view3d.Scene:
         w, pack = game.world, self.pack
@@ -297,7 +299,9 @@ class Renderer:
 
     @staticmethod
     def _pose(cam, now):
-        t = min(1.0, (now - cam['t0']) / STEP_MS)
+        t = (now - cam['t0']) / STEP_MS
+        if t >= 1:
+            return cam['goal']            # arrived: exactly the goal (west is +pi there, -pi on the way)
         (x0, y0, a0), (x1, y1, a1) = cam['from'], cam['goal']
         da = (a1 - a0 + math.pi) % (2 * math.pi) - math.pi
         return x0 + (x1 - x0) * t, y0 + (y1 - y0) * t, a0 + da * t

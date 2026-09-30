@@ -144,6 +144,33 @@ def fight():
     print(f'a fight in FPS mode: {len(composed)} animation frames carried into the view: ok')
 
 
+def real_time():
+    """With the steps gliding and the animations timed (not a scripted run): facing each way, a step
+    ends its glide and the turn goes on (facing west once never arrived: +pi against -pi), and an
+    animation with no level loaded (the title) doesn't reach for the 3D view."""
+    import signal
+
+    def stuck(*a):
+        raise AssertionError('a key took over 10 seconds: FPS mode hangs')
+    signal.signal(signal.SIGALRM, stuck)
+    g = deluxe.Game(pygame.Surface((640, 480)))
+    g.quick_start(1, 1, (10, 10))
+    g.view3d, g.fast = True, False
+    g.speaker.enabled = False
+    g.renderer.draw(g, present=False)
+    for k in [K.K_LEFT, K.K_UP, K.K_LEFT, K.K_UP, K.K_LEFT, K.K_UP, K.K_LEFT, K.K_UP, K.K_RIGHT, K.K_DOWN]:
+        signal.alarm(10)
+        press(g, k)
+        g.renderer.draw(g, present=False)
+        signal.alarm(0)
+    g.world.grid = []                                 # back at the title: no level
+    signal.alarm(10)
+    g.tones((400, 50))
+    g.renderer.draw(g, present=False)
+    signal.alarm(0)
+    print('in real time: steps and turns every way, and no level loaded: ok')
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--runs', type=int, default=12)
@@ -151,6 +178,7 @@ def main():
     a = ap.parse_args()
     looks()
     fight()
+    real_time()
     bad = same_games(a.runs, a.keys)
     sys.exit(1 if bad else 0)
 
