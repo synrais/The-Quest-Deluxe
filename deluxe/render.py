@@ -102,7 +102,7 @@ class Renderer:
                        look=self.pack.classes.get(p.hero.type, {}).get('look'))
 
     # ── the original's animations ─────────────────────────────────────────────
-    def play(self, game, gen, fast=False, redraw=True):
+    def play(self, game, gen, fast=False, redraw=True, raw=False):
         """Run an animation generator (deluxe.anim) on top of the current frame, blocking, as the
         original does. Each yielded value is a delay() in ms; time is kept exactly, and frames are
         only shown when there's time (or at least every 1/60 s)."""
@@ -110,7 +110,7 @@ class Renderer:
             for _ in gen:
                 pass
             return
-        three_d = self.in_3d(game)
+        three_d = self.in_3d(game) and not raw      # raw: drawn on the screen as it is (a wipe)
         while three_d and self.gliding(game):               # a step or a turn finishes before the animation
             self.draw(game)
             pygame.event.pump()

@@ -262,8 +262,14 @@ class Game:
                 lines.append(text)
         return lines
 
+    def story_wipe(self):
+        """story()'s black circle, drawn over whatever the screen shows."""
+        self.play('story_circle', redraw=False)
+
     def show_story(self, sid: int, then=None, header=None, esc=None):
         if sid in self.data.story:
+            if sid not in (10, 11):                  # story() opens with the black circle (not 10 and 11)
+                self.story_wipe()
             self.overlay = ui.TextScreen('', self.data.story[sid], then, header=header, esc=esc)
         elif then:
             then()

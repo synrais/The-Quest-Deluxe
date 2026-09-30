@@ -68,10 +68,12 @@ class TextScreen(Overlay):
     def key(self, g, ev):
         if ev.key == pygame.K_ESCAPE and self.esc:
             g.tones((500, 50), (600, 50))
+            g.story_wipe()
             self.close(g)
             self.esc()
         elif ev.key in CONFIRM:                              # story(): Esc only leaves story 0
             g.tones((500, 50), (600, 50))                    # a chime as the page closes
+            g.story_wipe()                                   # and the black circle
             self.close(g)
             if self.then:
                 self.then()

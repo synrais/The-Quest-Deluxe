@@ -14,6 +14,11 @@ from __future__ import annotations
 from . import rules
 
 
+class Pace(int):
+    """A wait the original doesn't have: some of its wipes draw as fast as the PC could, so their speed
+    was the machine's. The port paces them (the verifier leaves these out of the delay() record)."""
+
+
 class Host:
     """What an animation needs from the game. The game's own host draws on the screen and plays
     the speaker; the verifier's host records calls."""
@@ -812,8 +817,18 @@ def death_wipe(h):
     g.setfillstyle(1, 0)
     for i in range(350):
         g.bar(320 - i, 250 - i, 320 + i, 250 + i)
-    return
-    yield
+        yield Pace(2)                                   # about 0.7 s
+
+
+def story_circle(h):
+    """story(): a black circle grows from the middle of the screen until everything is black, before
+    a story page shows and again as it closes."""
+    g = h.g
+    g.setcolor(0)
+    g.setfillstyle(1, 0)
+    for i in range(410):
+        g.fillellipse(320, 250, i, i)
+        yield Pace(1)                                   # with the drawing, about 0.9 s
 
 
 # ── the jingles (song_key(), song_jazz(), song_bevcop()) ────────────────────────

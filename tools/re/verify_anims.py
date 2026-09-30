@@ -115,7 +115,8 @@ def port_trace(fname, *args, seed=1):
     host = TraceHost(rec)
     rules.srand(seed & 0xFFFF)
     for ms in getattr(anim, fname)(host, *args):
-        rec.calls.append(('delay', [ms]))
+        if not isinstance(ms, anim.Pace):          # the port's own pacing, not a delay() of the original
+            rec.calls.append(('delay', [ms]))
     return rec.calls
 
 

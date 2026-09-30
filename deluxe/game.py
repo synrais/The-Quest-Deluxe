@@ -178,13 +178,14 @@ class Game:
         self.player.hero.rep += delta
         self.play('reput2', delta)
 
-    def play(self, name: str, *args, on_move=None, redraw=True):
+    def play(self, name: str, *args, on_move=None, redraw=True, raw=False):
         """Run one of the original's animations now (deluxe.anim), blocking like the original.
         Its rand() draws happen even when drawing is skipped, so the random sequence stays the same.
         redraw=False keeps drawing over what the previous animation left on the screen."""
         self.anim_host.on_move = on_move
         try:
-            self.renderer.play(self, getattr(anim, name)(self.anim_host, *args), fast=self.fast, redraw=redraw)
+            self.renderer.play(self, getattr(anim, name)(self.anim_host, *args), fast=self.fast, redraw=redraw,
+                               raw=raw)
         finally:
             self.speaker.nosound()
             self.anim_host.on_move = None
@@ -288,8 +289,14 @@ class Game:
                 lines.append(pk.skill(sid).get('story', ''))
         return lines
 
+    def story_wipe(self):
+        """story()'s black circle, drawn over whatever the screen shows (the 3D view too)."""
+        self.play('story_circle', redraw=False, raw=True)
+
     def show_story(self, sid: int, then=None, header=None, esc=None):
         if sid in self.data.story:
+            if sid not in (10, 11):                  # story() opens with the black circle (not 10 and 11)
+                self.story_wipe()
             self.overlay = ui.TextScreen('', self.data.story[sid], then, header=header, esc=esc)
         elif then:
             then()
