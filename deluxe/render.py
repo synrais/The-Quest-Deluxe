@@ -344,17 +344,17 @@ class Renderer:
             pygame.draw.line(scr, EGA[14], (cx, cy), (cx + dx * 7, cy + dy * 7), 2)
 
     # ── the combat log (Deluxe) ───────────────────────────────────────────────
-    LOG_LINES = 4
+    LOG_LINES = 6
     FLOAT_MS = 900
 
     def draw_combat_log(self, game, scr, three_d):
-        """The last lines of the combat log over the bottom of the map, and the damage numbers rising
-        off the squares that took it."""
+        """The last lines of the combat log over the bottom of the map, and in FPS mode the damage
+        numbers rising off the squares that took it."""
         if not getattr(game, 'combat_log', False):
             return
         g = self.bgi
         g.s = scr
-        lines = [ln for ln in game.log_lines if ln[2] >= game.log_key - 1][-self.LOG_LINES:]
+        lines = [ln for ln in game.log_lines if ln[2] == game.log_key][-self.LOG_LINES:]
         g.settextstyle(0, 0, 1)
         y = MAP_PX - 4 - 10 * len(lines)
         for text, colour, _ in lines:
@@ -362,14 +362,18 @@ class Renderer:
             g.setcolor(colour)
             g.outtextxy(4, y, text)
             y += 10
+        if not three_d:                             # the rising numbers are FPS mode's; from above, the log
+            game.floaters = [f for f in game.floaters if f.get('key') == game.log_key]
+            return
         now = pygame.time.get_ticks()
-        w, p = game.world, game.player
-        ox, oy = w.origin
+        p = game.player
         g.settextstyle(0, 0, 2)
         keep, last = [], {}
         for f in game.floaters:
+            if f.get('key') != game.log_key:        # a new key: the last action's numbers are done
+                continue
             if f['t0'] is None:                     # one after another off the same square
-                f['t0'] = max(now, last.get(f['at'], now - 300) + 300)
+                f['t0'] = max(now, last.get(f['at'], now - 150) + 150)
             last[f['at']] = f['t0']
             age = now - f['t0']
             if age > self.FLOAT_MS:
@@ -379,19 +383,14 @@ class Renderer:
                 continue
             x, y = f['at']
             rise = age * 30 // self.FLOAT_MS
-            if three_d:
-                if (x, y) == (p.X, p.Y):
-                    sx, sy = MAP_PX // 2, MAP_PX - 60 - rise
-                else:
-                    where = self.v3d.project(self.camera(game), x + 0.5, y + 0.5)
-                    if where is None:
-                        continue
-                    k = MAP_PX / view3d.RES
-                    sx, sy = int(where[0] * k), int((where[1] - where[2]) * k) - 8 - rise
+            if (x, y) == (p.X, p.Y):
+                sx, sy = MAP_PX // 2, MAP_PX - 60 - rise
             else:
-                if not w.in_room(x, y):
+                where = self.v3d.project(self.camera(game), x + 0.5, y + 0.5)
+                if where is None:
                     continue
-                sx, sy = (x - ox) * TILE + TILE // 2, (y - oy) * TILE + 4 - rise
+                k = MAP_PX / view3d.RES
+                sx, sy = int(where[0] * k), int((where[1] - where[2]) * k) - 8 - rise
             tw = g.textwidth(f['text'])
             for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):     # a black edge, so it reads on any ground
                 g.setcolor(0)

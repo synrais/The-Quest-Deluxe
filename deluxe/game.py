@@ -179,6 +179,21 @@ class Game:
         if text:
             self.messages.append(Msg(text, colour))
 
+    def a_name(self, it: int) -> str:
+        """'a healing potion', 'an axe': an item as the combat log names it."""
+        row = self.pack.item(it)
+        name = (row.get('name') or self.item_name(it)).lower() or 'something'
+        if row.get('type') == 'ammo':                    # 'Arrows-12': 12 arrows
+            return f'{row.get("count", 1)} {name.split("-")[0].strip()}'
+        return f'{"an" if name[0] in "aeiou" else "a"} {name}'
+
+    def key_name(self, colour: str) -> str:
+        """The key of a colour, by its item's name ('gold key' for the yellow one in Quest I)."""
+        for v, row in self.pack.items.items():
+            if row.get('type') == 'key' and row.get('key') == colour:
+                return (row.get('name') or self.item_name(v)).lower()
+        return f'{colour} key'
+
     def report(self, text: str, colour: int = 15, at=None, amount=None):
         """A combat log line, and the amount rising off the square at (Deluxe; changes nothing)."""
         if not self.combat_log:
@@ -186,7 +201,7 @@ class Game:
         self.log_lines = self.log_lines[-40:] + [(text, colour, self.log_key)]
         if at is not None and amount is not None:
             shown = amount if isinstance(amount, str) else f'-{amount}' if amount else '0'
-            self.floaters.append({'at': tuple(at), 'text': shown, 'colour': colour, 't0': None})
+            self.floaters.append({'at': tuple(at), 'text': shown, 'colour': colour, 't0': None, 'key': self.log_key})
 
     def change_rep(self, delta: int):
         """hero.rep += delta, then reput()'s message."""
@@ -364,7 +379,7 @@ class Game:
         if self.view3d and k in TURNS:
             self.facing = (self.facing + TURNS[k]) % 4    # FPS mode: turning is free, and not an action
             return
-        self.log_key += 1                                # the log shows this key's lines and the last's
+        self.log_key += 1                                # the log shows only what this key brought
         self.messages = []
         acted = False
         if self.view3d and (k in DIRS or k in STRAFE):
@@ -438,8 +453,13 @@ class Game:
         if door in ('plain', 'fake') or (door == 'locked' and getattr(p.inv, KEY_FIELDS[wall['key']])):
             q.wall, q.deco = 0, self.pack.deco('open_door')
             self.tones((400, 100))
+            if door == 'locked':
+                self.report(f'You unlock the door with the {self.key_name(wall["key"])}.', 14)
+            elif door == 'fake':
+                self.report('The wall gives way: a secret passage!', 14)
             return True
         if door == 'locked':                         # locked: the original just doesn't move
+            self.report(f'The door is locked. You need the {self.key_name(wall["key"])}.', 12)
             return True
         if q.mon < 0 and q.mon > -100:
             if p.hero.invisible == -1:
@@ -514,18 +534,23 @@ class Game:
         self.events.run('before_pickup')
         pk = self.pack
         if pk.item_type(q.item) == 'chest':
-            p.inv.coins += rules.random(40) + 80
+            found = rules.random(40) + 80
+            p.inv.coins += found
             q.item, q.deco = 0, pk.deco('open_chest')
+            self.report(f'You open the chest: {found} gold.', 14)
             self.events.run('opened_chest')
         if q.gold > 0:
             p.inv.coins += q.gold
+            self.report(f'You pick up {q.gold} gold.', 14)
             q.gold = 0
         if pk.item_type(q.item) == 'potion':
             f = POTION_FIELDS[pk.item(q.item)['potion']]
             setattr(p.inv, f, getattr(p.inv, f) + 1)
+            self.report(f'You pick up {self.a_name(q.item)}.', 15)
             q.item = 0
         if pk.item_type(q.item) == 'key':
             setattr(p.inv, KEY_FIELDS[pk.item(q.item)['key']], 1)
+            self.report(f'You pick up the {self.key_name(pk.item(q.item)["key"])}.', 15)
             q.item = 0
             self.play('song_key')
         free = p.free_backpack_slot()
@@ -534,9 +559,12 @@ class Game:
                 it = q.item
                 p.bag[free] = it
                 q.item = 0
+                self.report(f'You pick up {self.a_name(it)}.', 15)
                 self.events.run('took', it)
         elif q.item:
             self.tones((150, 150))                   # no room in the backpack
+            if pk.item_type(q.item) != 'exit':
+                self.report(f'Your backpack is full: you leave {self.a_name(q.item)}.', 12)
         return turn
 
     def drink(self, n: int) -> bool:
