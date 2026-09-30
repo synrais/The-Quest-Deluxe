@@ -32,7 +32,7 @@ DIV = [1, 5, 3, 4, 1, 3, 3, 1, 2, 1, 1]
 # setfillstyle() patterns (rows of 8 pixels, MSB = left). 6 (LTBKSLASH) is the game's hatched frame.
 FILL_PATTERNS = {
     1: [0xFF] * 8,
-    2: [0xFF, 0xFF, 0, 0, 0, 0, 0, 0],
+    2: [0xFF, 0xFF, 0, 0, 0xFF, 0xFF, 0, 0],       # LINE_FILL: EGAVGA.BGI's table (2 rows on, 2 off)
     3: [0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80],
     4: [0xE0, 0xC1, 0x83, 0x07, 0x0E, 0x1C, 0x38, 0x70],
     5: [0xF0, 0x78, 0x3C, 0x1E, 0x0F, 0x87, 0xC3, 0xE1],
@@ -649,9 +649,17 @@ class BGI:
             hit = _TEXT_CACHE[key] = self._render_text(s)
             if len(_TEXT_CACHE) > 4000:
                 _TEXT_CACHE.clear()
-        surf, dx, dy = hit
-        if surf is not None:
-            self.s.blit(surf, (x + dx, y + dy))
+        surf, dx, dy, segments = hit
+        if surf is None:
+            return
+        w, h = self.s.get_size()
+        if segments and not (0 <= x + dx and 0 <= y + dy and x + dx + surf.get_width() <= w
+                             and y + dy + surf.get_height() <= h):
+            # partly off the screen: the kernel clips every pen stroke before drawing it
+            for (x1, y1), (x2, y2) in segments:
+                self._line1(x + x1, y + y1, x + x2, y + y2, self.rgb)
+            return
+        self.s.blit(surf, (x + dx, y + dy))
 
     def _scaled(self, v):
         """A font coordinate scaled by the charsize the way Borland does it: integer multiply and
@@ -663,10 +671,10 @@ class BGI:
     def _render_text(self, s: str):
         font_no, _, size = self.text_style
         f = self.font(font_no) if font_no else None
-        pts = []
+        pts, segments = [], []
         if f is None:
             if not self._rom:
-                return None, 0, 0
+                return None, 0, 0, None
             for i, ch in enumerate(s):
                 c = ord(ch) & 0xFF
                 for row in range(8):
@@ -686,10 +694,11 @@ class BGI:
                     p = (pen + self._scaled(gx), base - self._scaled(gy))
                     if op == 3 and last is not None:
                         pts.extend(bresenham(*last, *p))
+                        segments.append((last, p))
                     last = p
                 pen += self._scaled(width)
         if not pts:
-            return None, 0, 0
+            return None, 0, 0, None
         x0 = min(p[0] for p in pts)
         y0 = min(p[1] for p in pts)
         w = max(p[0] for p in pts) - x0 + 1
@@ -701,4 +710,4 @@ class BGI:
         col = self.rgb
         for px, py in pts:
             surf.set_at((px - x0, py - y0), col)
-        return surf, x0, y0
+        return surf, x0, y0, segments

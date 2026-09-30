@@ -6,7 +6,9 @@ thin ones, and the driver's "emulate" slots are patched with a far call back int
 (offset 0x348 there), which draws arcs, ellipses, sectors, polygons and bar3d. This runs that
 kernel code in Unicorn with a recording stand-in for the driver, replays what the driver was asked
 to draw (pixels, 1-pixel lines, bars, colours, fill styles) with bgi.py's own primitives, and
-compares the picture, pixel for pixel, with bgi.py drawing the same call.
+compares the picture, pixel for pixel, with bgi.py drawing the same call. The stroked text of the
+.CHR fonts is the kernel's too (settextstyle() and outtextxy() at every size), so it is checked the
+same way, with every font the game ships.
 
     python verify_bgi.py              # every shape, random cases
     python verify_bgi.py --cases 20   # fewer cases per shape
@@ -36,7 +38,7 @@ KERNEL = 0x2210                 # the kernel pseudo-driver, right after __GRP_ov
 KERNEL_END = 0x3b80             # the next segment
 EMULATE = 0x348                 # what the kernel patches into the driver's emulate slots
 DRIVER_EMULATES = (0x0e, 0x10, 0x14, 0x16, 0x18, 0x2a)   # EGAVGA.BGI entries that are that slot
-K, DRV, SS, BUF, PTS = 0x2000, 0x3000, 0x4000, 0x5000, 0x6000
+K, DRV, SS, BUF, PTS, FONT, STR = 0x2000, 0x3000, 0x4000, 0x5000, 0x6000, 0x7000, 0x8000
 REGS = dict(ax=UC_X86_REG_AX, bx=UC_X86_REG_BX, cx=UC_X86_REG_CX, dx=UC_X86_REG_DX,
             si=UC_X86_REG_SI, es=UC_X86_REG_ES)
 
@@ -142,6 +144,21 @@ class Kernel:
     def fillpoly(self, pts):
         self._poly(7, pts)
 
+    def settextstyle(self, font, direction, size):
+        """The .CHR file loaded as settextstyle() leaves it: its stroke table (from the '+') at FONT:0."""
+        from quest2.bgi import FONT_FILES
+        from quest2.formats import DataSource
+        raw = DataSource().read(FONT_FILES[font])
+        hsize = struct.unpack_from('<H', raw, raw.index(b'\x1a') + 1)[0]
+        self.uc.mem_write(FONT * 16, raw[hsize:])
+        self.call(0x2a, ax=(0 << 8) | 2)                   # LEFT_TEXT, TOP_TEXT (graphdefaults())
+        self.call(0x24, ax=(direction << 8) | font, bx=size, cx=size, dx=FONT)
+
+    def outtextxy(self, x, y, s):
+        self.call(8, x, y)
+        self.uc.mem_write(STR * 16, s.encode('latin-1'))
+        self.call(0x26, bx=0, cx=len(s), es=STR)
+
 
 def replay(prims):
     """Draw what the driver was asked for, with bgi.py's pixel, line and bar."""
@@ -165,6 +182,9 @@ def replay(prims):
         elif si == 0x30:
             g.putpixel(ax, bx, dx & 0xff)
     return s
+
+
+TEXT = 'AaBbGgHhJjKkMmQqWwYyZz0123456789 .,:;!?<>()-+=/\'"'
 
 
 def cases(rnd, n):
@@ -205,13 +225,32 @@ def cases(rnd, n):
             ('sector', lambda g, v=(x, y, st, en, rx, ry), th=th, pat=pat: (style(g, th, pat), g.sector(*v))),
             ('drawpoly', lambda g, p=pts, th=th: (style(g, th, 1), g.drawpoly(p))),
             ('fillpoly', lambda g, p=pts, th=th, pat=pat: (style(g, th, pat), g.fillpoly(p))),
+            ('text', lambda g, f=rnd.randrange(1, 11), sz=rnd.choice((1, 1, 2, 3, 4, 6, 10)), c=rnd.randrange(1, 16),
+             s=''.join(rnd.choice(TEXT) for _ in range(rnd.randrange(1, 16))), x=x, y=y, th=th:
+             (style(g, th, 1), g.setcolor(c), g.settextstyle(f, 0, sz), g.outtextxy(x, y, s))),
         ]
     return out
+
+
+def check_fill_patterns() -> int:
+    """The fill patterns are the driver's (EGAVGA.BGI), not the kernel's, so both sides of the shape
+    checks use bgi.py's table: compare that table with the driver's own (patterns 2-11 lie in order;
+    1 is solid)."""
+    import zipfile
+    from quest2.bgi import FILL_PATTERNS
+    drv = zipfile.ZipFile(os.path.join(HERE, '..', '..', 'TheQuest.zip')).read('TheQuest/bgi/EGAVGA.BGI')
+    at = drv.find(bytes([0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80])) - 8     # pattern 3 is the diagonal
+    theirs = {k: list(drv[at + (k - 2) * 8: at + (k - 1) * 8]) for k in range(2, 12)}
+    theirs[1] = [0xFF] * 8
+    bad = [k for k in theirs if FILL_PATTERNS[k] != theirs[k]]
+    print(f'fill patterns {11 - len(bad)}/11 identical to EGAVGA.BGI' + (f' (differ: {bad})' if bad else ''))
+    return len(bad)
 
 
 def main():
     n = int(sys.argv[sys.argv.index('--cases') + 1]) if '--cases' in sys.argv else 100
     pygame.init()
+    wrong_patterns = check_fill_patterns()
     from quest2.bgi import BGI
     from quest2.formats import DataSource
     base = qdis.BASE + GRSEG * 16
@@ -235,7 +274,7 @@ def main():
     for name in total:
         print(f'{name:12s} {total[name] - bad.get(name, 0)}/{total[name]} identical to the kernel')
     print(f'\n{sum(total.values()) - sum(bad.values())} of {sum(total.values())} shapes identical')
-    sys.exit(1 if bad else 0)
+    sys.exit(1 if bad or wrong_patterns else 0)
 
 
 if __name__ == '__main__':
