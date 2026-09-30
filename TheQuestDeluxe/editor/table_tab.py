@@ -201,7 +201,7 @@ class TableTab(ttk.Frame):
             var = None
         elif f.kind == 'multi':
             w = ttk.Frame(self.form)
-            chosen = set(value or ())
+            chosen = {value} if isinstance(value, str) else set(value or ())   # one: a plain name
             for i, (v, lab) in enumerate(f.choices):
                 var = tk.BooleanVar(value=v in chosen)
                 ttk.Checkbutton(w, text=lab, variable=var,
@@ -244,13 +244,17 @@ class TableTab(ttk.Frame):
         self._set(f, value)
 
     def _toggle(self, f: Field, v, on):
-        cur = list(self.get(self.row, f.key) or [])
+        cur = self.get(self.row, f.key)
+        cur = [cur] if isinstance(cur, str) else list(cur or [])
         if on and v not in cur:
             cur.append(v)
         elif not on and v in cur:
             cur.remove(v)
         order = [c for c, _ in f.choices]
-        self._set(f, sorted(cur, key=lambda c: order.index(c) if c in order else 99))
+        cur = sorted(cur, key=lambda c: order.index(c) if c in order else 99)
+        if getattr(f, 'one_as_name', False):          # a list of one is kept as the name (Quest I's no_fault)
+            cur = cur[0] if len(cur) == 1 else cur or None
+        self._set(f, cur)
 
     def _set(self, f: Field, value):
         row = self.row

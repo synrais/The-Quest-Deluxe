@@ -583,22 +583,23 @@ def quiz_best(points: dict, total: int) -> int:
 class SkillSelect(Choice):
     """creation(): choose one extra skill. A second '+' marks the class's own free skill, which can't be
     chosen again. A skill that only comes free with a class (Marksmanship) is only listed for that
-    class and can never be chosen; for the other classes the original leaves its row blank, and the
-    '+' can still stop there. The "skill_list" fix leaves the row out."""
+    class and can never be chosen; a class's no_skill aren't offered either. The original leaves a hidden
+    skill's row blank, and the '+' can still stop there; the "blank_rows" fix leaves the row out."""
 
     def __init__(self, cls, pack):
         super().__init__()
         self.cls, self.pack = cls, pack
         self.own = pack.classes[cls]['skill']
+        self.hidden = pack.hidden_from(cls, 'skill')
         every = [pack.skill(s) for s in pack.skill_ids('skill')]
         self.rows = [n for n, s in enumerate(every)                 # which of them are rows here
-                     if not (pack.fixed('skill_list') and s.get('only_free') and s['id'] != self.own)]
+                     if not (pack.fixed('blank_rows') and s['id'] in self.hidden)]
         self.skills = [every[n] for n in self.rows]
         self.count = len(self.skills)
 
     def allowed(self, i):
         s = self.skills[i - 1]
-        return s['id'] != self.own and not s.get('only_free')
+        return s['id'] != self.own and s['id'] not in self.hidden
 
     def pick(self, g, i):
         g.overlay = FaultSelect(self.cls, self.rows[i - 1] + 1, self.pack)
@@ -607,7 +608,7 @@ class SkillSelect(Choice):
         creation_page(r, scr)
         r.btext(scr, 'Choose a skill:', (50, 60), 9, SIMPLEX)
         for n, s in enumerate(self.skills):
-            if not s.get('only_free') or s['id'] == self.own:
+            if s['id'] not in self.hidden:
                 r.btext(scr, s['name'], (100, 100 + 40 * n), 9, SIMPLEX)
         own = next((n + 1 for n, s in enumerate(self.skills) if s['id'] == self.own), 0)
         plus(r, scr, 79, own * 40 + 77)
@@ -617,26 +618,29 @@ class SkillSelect(Choice):
 
 class FaultSelect(Choice):
     """creation(): choose a fault. Each class may forbid one (Knights can't be cowards, Mages can't be
-    rash, Rogues can't be honorable); it isn't listed."""
+    rash, Rogues can't be honorable); its name isn't drawn, but the original leaves its row, blank, for
+    the '+' to stop on. The "blank_rows" fix leaves the row out."""
 
     def __init__(self, cls, skill, pack):
         super().__init__()
         self.cls, self.skill = cls, skill
-        self.faults = [pack.skill(s) for s in pack.skill_ids('fault')]
+        self.banned = pack.hidden_from(cls, 'fault')
+        every = [pack.skill(s) for s in pack.skill_ids('fault')]
+        self.rows = [n for n, f in enumerate(every) if not (pack.fixed('blank_rows') and f['id'] in self.banned)]
+        self.faults = [every[n] for n in self.rows]
         self.count = len(self.faults)
-        self.banned = pack.classes[cls].get('no_fault')
 
     def allowed(self, i):
-        return self.faults[i - 1]['id'] != self.banned
+        return self.faults[i - 1]['id'] not in self.banned
 
     def pick(self, g, i):
-        g.start_new(self.cls, self.skill, i)
+        g.start_new(self.cls, self.skill, self.rows[i - 1] + 1)
 
     def draw(self, r, scr):
         creation_page(r, scr)
         r.btext(scr, 'Choose a fault:', (50, 60), 9, SIMPLEX)
         for n, f in enumerate(self.faults):
-            if f['id'] != self.banned:
+            if f['id'] not in self.banned:
                 r.btext(scr, f['name'], (100, 100 + 40 * n), 9, SIMPLEX)
         plus(r, scr, 59, self.i * 40 + 77)
         r.btext(scr, 'Press <Enter> to continue', (150, 440), 14, SIMPLEX)

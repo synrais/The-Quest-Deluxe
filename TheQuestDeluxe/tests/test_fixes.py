@@ -163,12 +163,14 @@ def talk():
           'line says nothing: ok')
 
 
-def skill_list():
+def blank_rows():
     from engine.state import new_player
     g = game(None)
     sel = ui.SkillSelect(1, g.pack)                                   # a Knight: five rows, one of them blank
     assert [s['id'] for s in sel.skills] == ['bar', 'amb', 'mem', 'mar', 'sch'] and not sel.allowed(4)
-    g = game(['skill_list'])
+    faults = ui.FaultSelect(1, 1, g.pack)                             # and three faults, Cowardice blank
+    assert [f['id'] for f in faults.faults] == ['cow', 'ras', 'hon'] and not faults.allowed(1)
+    g = game(['blank_rows'])
     sel = ui.SkillSelect(1, g.pack)                                   # four rows, no blank
     assert [s['id'] for s in sel.skills] == ['bar', 'amb', 'mem', 'sch']
     assert not any(sel.allowed(i) and sel.skills[i - 1]['id'] == 'mar' for i in range(1, 5))
@@ -182,7 +184,21 @@ def skill_list():
     assert p.skill.sch == 1 and p.skill.mar == 0
     rogue = ui.SkillSelect(3, g.pack)                                 # the Rogue keeps Marksmanship's row
     assert [s['id'] for s in rogue.skills] == ['bar', 'amb', 'mem', 'mar', 'sch'] and not rogue.allowed(4)
-    print("the skill list: no blank row with the fix; Marksmanship stays the Rogues' own: ok")
+    # the faults: a Knight is offered Rashness and Honor, in rows 1 and 2
+    faults = ui.FaultSelect(1, 5, g.pack)
+    assert [f['id'] for f in faults.faults] == ['ras', 'hon'] and faults.allowed(1) and faults.allowed(2)
+    g.overlay = faults
+    g.handle(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_DOWN, unicode=''))
+    g.handle(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RETURN, unicode=''))
+    assert g.player.skill.hon == 1 and g.player.skill.cow == 0 and g.player.skill.sch == 1 and g.player.skill.amb == 1
+    assert [f['id'] for f in ui.FaultSelect(4, 1, g.pack).faults] == ['cow', 'ras', 'hon']   # the Monk: all three
+    # a class can hide more: a list of skills and faults
+    g.pack.classes[4]['no_skill'] = ['bar', 'mem']
+    g.pack.classes[4]['no_fault'] = ['cow', 'hon']
+    assert [s['id'] for s in ui.SkillSelect(4, g.pack).skills] == ['amb', 'sch']
+    assert [f['id'] for f in ui.FaultSelect(4, 1, g.pack).faults] == ['ras']
+    print("creation's lists: no blank rows with the fix, for skills and faults; Marksmanship stays the Rogues' "
+          'own, and a class can hide more: ok')
 
 
 def map_corrections():
@@ -230,7 +246,7 @@ def main():
     dead_scan()
     load_gaps()
     talk()
-    skill_list()
+    blank_rows()
     map_corrections()
     player_settings()
     print('all fix checks passed')

@@ -49,6 +49,12 @@ def parse_growth(text: str) -> list:
     return [a, b]
 
 
+def one_as_name(f: Field) -> Field:
+    """A list field that keeps a single choice as the plain name, as Quest I's classes.json has it."""
+    f.one_as_name = True
+    return f
+
+
 class ClassesTab(TableTab):
     TABLE = 'classes'
     INTRO = ('The classes a new hero can choose. Character creation lists them in this order, then the '
@@ -58,7 +64,7 @@ class ClassesTab(TableTab):
     def fields(self):
         p = self.app.project
         skills = [(s['id'], s['name']) for s in p.tables['skills'] if s['kind'] == 'skill']
-        faults = [(None, '(none)')] + [(s['id'], s['name']) for s in p.tables['skills'] if s['kind'] == 'fault']
+        faults = [(s['id'], s['name']) for s in p.tables['skills'] if s['kind'] == 'fault']
         spells = [(s['id'], f'{s["id"]} {s["name"]}') for s in sorted(p.tables['spells'], key=lambda s: s['id'])]
         return [
             Field('id', 'Number', 'readonly'),
@@ -72,7 +78,10 @@ class ClassesTab(TableTab):
             Field('growth', 'Gains per level', 'custom', fmt=fmt_growth, parse=parse_growth,
                   hint='life, mana (the Knight: 7, 3)'),
             Field('skill', 'Free skill', 'choice', skills),
-            Field('no_fault', "Can't have the fault", 'choice', faults),
+            one_as_name(Field('no_skill', 'Not offered the skills', 'multi', skills,
+                              hint='hidden from this class at creation (as Marksmanship is from all but Rogues)')),
+            one_as_name(Field('no_fault', 'Not offered the faults', 'multi', faults,
+                              hint="hidden from this class at creation (a Knight can't be a coward)")),
             Field('look.colour', 'Colour', 'choice', list(enumerate(EGA_NAMES)), default=0),
             Field('look.shield_and_sword', 'Shield and sword', 'bool'),
             Field('bag', 'Starts with', 'custom', fmt=fmt_bag, parse=parse_bag,

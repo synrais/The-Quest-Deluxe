@@ -296,6 +296,21 @@ qt.apply()
 assert 'fixes' not in app.project.quest
 print("the original's bugs: fixes ticked and saved: ok")
 
+# a class's hidden skills and faults: one stays a plain name (as Quest I has it), more make a list
+ct = app.classes_tab
+ct._show(next(r for r in ct.rows if r['id'] == 1))                   # the Knight: no_fault "cow"
+f = next(f for f in ct.fields() if f.key == 'no_fault')
+ct._toggle(f, 'ras', True)
+assert ct.row['no_fault'] == ['cow', 'ras'], ct.row['no_fault']
+ct._toggle(f, 'ras', False)
+assert ct.row['no_fault'] == 'cow'
+f = next(f for f in ct.fields() if f.key == 'no_skill')
+ct._toggle(f, 'bar', True)
+assert ct.row['no_skill'] == 'bar'
+ct._toggle(f, 'bar', False)
+assert 'no_skill' not in ct.row
+print("classes: skills and faults hidden from a class: ok")
+
 assert app.dirty
 app.save()
 assert os.path.exists(os.path.join(pack, 'sprites', 'items', '1001.png'))

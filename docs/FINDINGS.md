@@ -47,7 +47,7 @@ each fix with and without it.
 | **The current screen's map is stale** | The screen is copied out on arrival and written back on leaving, so quest checks that read the map see the screen as it was on arrival. | kept |
 | **Conversations move the hero through walls** | The level 1 farmer and the level 6 father move the hero without checking walls. | the level scripts |
 | **Quiz ties favour the Monk** | A tie involving the Monk, or any three- or four-way tie, gives a Monk. | `quiz_ties` |
-| **A blank row in the skill list** | Marksmanship is meant to be the Rogues' own: its name is only drawn for Rogues, who get it free. For the other classes its row is left blank, but the cursor still stops there, and Enter does nothing. | `skill_list` (the row is left out; Marksmanship stays the Rogues') |
+| **Blank rows in character creation** | Marksmanship is meant to be the Rogues' own: its name is only drawn for Rogues, who get it free. For the other classes its row is left blank, but the cursor still stops there, and Enter does nothing. The fault list does the same with the fault a class can't have (Cowardice for Knights, Rashness for Mages, Honor for Rogues). | `blank_rows` (the rows are left out; what is hidden stays hidden) |
 | **Fault colours** | With Cowardice active, the lines below it on the character sheet stay yellow instead of red. | `fault_colours` |
 | **Invisible wraiths are never drawn** | `clean2()` has no case for them, even when they should show. | kept |
 | **Items never raise max life or mana** | `inventory()` gets the hero by value, so what it adds is thrown away. | kept |

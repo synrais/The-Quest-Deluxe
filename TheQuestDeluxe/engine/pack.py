@@ -135,7 +135,8 @@ class Pack:
         'load_gaps': 'Load Game lists every saved game, past a missing or reserved slot',
         'talk': 'dialogue entries are found by their lines, one-line messages sit in the strip like '
                 'two-line ones, and a missing line shows nothing (the original hangs)',
-        'skill_list': "the skill list has no blank row where Marksmanship is hidden (it stays the Rogues' own)",
+        'blank_rows': "character creation's skill and fault lists have no blank row where one is hidden from a "
+                      'class (Marksmanship, the fault a class can\'t have); what is hidden stays hidden',
         'map': 'the pack\'s map corrections are made (quest.json "map_fixes": in Quest I, the item in a tree '
                'and the shield that doesn\'t exist)',
     }
@@ -196,6 +197,18 @@ class Pack:
 
     def skill(self, sid: str) -> dict:
         return next((s for s in self.skills if s['id'] == sid), {})
+
+    def hidden_from(self, cls: int, kind: str) -> set:
+        """The skills (kind 'skill') or faults ('fault') creation doesn't offer class cls: its no_skill /
+        no_fault (a name or a list; Quest I's Knight has no_fault "cow"), and a skill that only comes free
+        with another class (Marksmanship). The class's own free skill is always shown."""
+        c = self.classes.get(cls, {})
+        v = c.get('no_skill' if kind == 'skill' else 'no_fault')
+        out = set([v] if isinstance(v, str) else (v or []))
+        if kind == 'skill':
+            out |= {s for s in self.skill_ids('skill') if self.skill(s).get('only_free')}
+            out.discard(c.get('skill'))
+        return out
 
     def class_name(self, cls: int) -> str:
         return self.classes.get(cls, {}).get('name', '')
