@@ -7,7 +7,7 @@ import argparse
 
 import pygame
 
-from quest2.game import Game
+from engine.game import Game
 
 
 def main():

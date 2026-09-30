@@ -1,4 +1,4 @@
-"""Check quest2/savefile.py against the exe's own save() and load2().
+"""Check engine/savefile.py against the exe's own save() and load2().
 
 For many random game states:
   - save(): the state is put into the emulated game and the original save() runs; the text it
@@ -22,14 +22,14 @@ os.environ.setdefault('SDL_VIDEODRIVER', 'dummy')
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.dirname(os.path.dirname(HERE)))
-import engine                                       # noqa: E402,F401  (QUEST_ENGINE=deluxe checks Deluxe)
+import port                                         # noqa: E402,F401  (QUEST_ENGINE=deluxe checks Deluxe)
 
 import pygame                                       # noqa: E402
 
 from emu import STACKSEG                            # noqa: E402
 from emu_game import GameEmu, HERO, INV, SKILL, STATUS, ENEMY, FILESEG   # noqa: E402
 
-from quest2 import savefile                         # noqa: E402
+from engine import savefile                         # noqa: E402
 
 WRITESEG = 0xFD00                                   # fake FILE* handles for files opened for writing
 SQ_ORDER = ['floor', 'wall', 'item', 'mon', 'gold', 'deco']       # the order save() prints a square in
@@ -143,7 +143,7 @@ def random_state(rng: random.Random, grid) -> savefile.SaveData:
 
 
 def put_state(emu: SaveEmu, d: savefile.SaveData):
-    from quest2.formats import Square
+    from engine.formats import Square
     grid = [[Square() for _ in range(101)] for _ in range(101)]
     for (x, y), t in d.map.items():
         grid[x][y] = Square(**dict(zip(SQ_ORDER, t)))
@@ -259,7 +259,7 @@ def compare_load(got: dict, d: savefile.SaveData, want_st_slot: int) -> list[str
 def main():
     pygame.init()
     n = int(sys.argv[sys.argv.index('--cases') + 1]) if '--cases' in sys.argv else 40
-    from quest2.formats import GameData
+    from engine.formats import GameData
     data = GameData.load()
     emu = SaveEmu()
     rng = random.Random(7)

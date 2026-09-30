@@ -4,9 +4,9 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import pygame
 pygame.init()
 win = pygame.display.set_mode((640, 480))
-from quest2.game import Game
-from quest2.state import MAGE, ROGUE, KNIGHT, SLOT_WEAPON, SLOT_OFFHAND
-from quest2 import ui
+from engine.game import Game
+from engine.state import MAGE, ROGUE, KNIGHT, SLOT_WEAPON, SLOT_OFFHAND
+from engine import ui
 
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'out')
 os.makedirs(OUT, exist_ok=True)
@@ -119,7 +119,7 @@ print('level', g.player.hero.level, 'exp', g.player.hero.exper, 'str', g.player.
 
 # 6. save / load (the original's save file, in a temporary folder)
 import tempfile
-from quest2.savefile import Slots
+from engine.savefile import Slots
 g.overlay = None
 g.slots = Slots(tempfile.mkdtemp())
 g.status.saveslot = g.slots.new()

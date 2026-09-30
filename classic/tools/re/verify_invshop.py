@@ -1,4 +1,4 @@
-"""Check quest2/invshop.py (the inventory and shop pages) against the exe's own inventory() and
+"""Check engine/invshop.py (the inventory and shop pages) against the exe's own inventory() and
 peddler().
 
 For many random bags, heroes and shops, both are fed the same key presses (getch()). They must make
@@ -21,7 +21,7 @@ os.environ.setdefault('SDL_VIDEODRIVER', 'dummy')
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.dirname(os.path.dirname(HERE)))
-import engine                                       # noqa: E402,F401  (QUEST_ENGINE=deluxe checks Deluxe)
+import port                                         # noqa: E402,F401  (QUEST_ENGINE=deluxe checks Deluxe)
 
 import pygame                                       # noqa: E402
 
@@ -136,8 +136,8 @@ def exe_run(emu, fn, s):
 
 class PortHost:
     def __init__(self, rec, s, data):
-        from quest2 import rules
-        from quest2.state import Hero, Skills, Inventory, Status, Player
+        from engine import rules
+        from engine.state import Hero, Skills, Inventory, Status, Player
         self.g = rec
         self.calls = rec.calls
         self.bag = {k: v for k, v in s['bag'].items() if v}
@@ -178,8 +178,8 @@ class PortHost:
 
 
 def port_run(fn, s, data):
-    from quest2 import invshop
-    from quest2.bgi import BGI
+    from engine import invshop
+    from engine.bgi import BGI
     rec = Recorder(BGI(pygame.Surface((640, 480))))
     h = PortHost(rec, s, data)
     h.recompute()
@@ -269,7 +269,7 @@ def main():
     n = int(sys.argv[sys.argv.index('--cases') + 1]) if '--cases' in sys.argv else 60
     verbose = '-v' in sys.argv
     only = [a for a in sys.argv[1:] if a in ('inventory', 'peddler')]
-    from quest2.formats import GameData
+    from engine.formats import GameData
     data = GameData.load()
     emu = ShopEmu()
     load_tables(emu, data)

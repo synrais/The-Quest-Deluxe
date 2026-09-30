@@ -1,4 +1,4 @@
-"""Check the Quest II port of the original's animations (quest2/anim.py) against TheQuest.exe.
+"""Check the Quest II port of the original's animations (engine/anim.py) against TheQuest.exe.
 
 Each animation (aflame(), ahit(), asskeleton(), death2() ...) is run twice with the same arguments and
 the same rand() seed: once in the emulator, as the original code, and once as the port. Both record
@@ -18,7 +18,7 @@ os.environ.setdefault('SDL_VIDEODRIVER', 'dummy')
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.dirname(os.path.dirname(HERE)))
-import engine                                       # noqa: E402,F401  (QUEST_ENGINE=deluxe checks Deluxe)
+import port                                         # noqa: E402,F401  (QUEST_ENGINE=deluxe checks Deluxe)
 
 import pygame                                       # noqa: E402
 
@@ -69,7 +69,7 @@ class AnimEmu(GameEmu):
 
 
 class Recorder:
-    """Stands in for quest2.anim's screen: records calls in the emulator's format."""
+    """Stands in for engine.anim's screen: records calls in the emulator's format."""
 
     def __init__(self, bgi):
         self.g = bgi
@@ -109,8 +109,8 @@ class TraceHost:
 
 
 def port_trace(fname, *args, seed=1):
-    from quest2 import anim, rules
-    from quest2.bgi import BGI
+    from engine import anim, rules
+    from engine.bgi import BGI
     rec = Recorder(BGI(pygame.Surface((640, 480))))
     host = TraceHost(rec)
     rules.srand(seed & 0xFFFF)

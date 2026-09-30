@@ -1,15 +1,16 @@
 """Build the Windows release zips: one for each edition, each standing on its own.
 
     python tools/build_release.py 7            ->  dist/TheQuest-Classic-7.zip   (the faithful port)
-                                                   dist/QuestDeluxe-7.zip         (engine, editor, packs, docs)
+                                                   dist/TheQuestDeluxe-7.zip      (engine, editor, packs, docs)
     python tools/build_release.py 7 --play     ->  dist/TheQuest-Classic-7.zip
-                                                   dist/QuestDeluxe-7-play.zip    (engine and packs only)
+                                                   dist/TheQuestDeluxe-7-play.zip (engine and packs only)
     python tools/build_release.py 7 notes.txt  ->  the same, with "what is new" in each READ ME FIRST.txt
     --classic / --deluxe                           only that edition
 
-Each zip holds one folder: TheQuest-Classic/ (run_quest2.py, quest2/, sprites/, TheQuest.zip) or
-QuestDeluxe/ (run_deluxe.py, deluxe/, packs/, and in the full zip run_editor.py, editor/, docs/).
-Quest Deluxe needs nothing of the classic edition. Double-clicking a launcher finds Python (or
+Each zip holds one folder: TheQuest-Classic/ (run_quest2.py, engine/, sprites/, packs/TheQuest/, the
+original as released) or TheQuestDeluxe/ (run_deluxe.py, deluxe/, packs/, and in the full zip
+run_editor.py, editor/, docs/).
+The Quest Deluxe needs nothing of the classic edition. Double-clicking a launcher finds Python (or
 offers to install it with winget), sets up pygame-ce from the bundled wheels the first time, and
 starts the program. The wheels are downloaded from PyPI once and cached in build/wheels/.
 """
@@ -28,11 +29,11 @@ PY_VERSIONS = ('3.12', '3.13')         # 3.12 is what the launcher installs; oth
 
 # edition: (source folder, zip folder, files, dirs, files and dirs of the full zip only, launchers)
 EDITIONS = {
-    'classic': ('classic', 'TheQuest-Classic', ['run_quest2.py', 'TheQuest.zip'], ['quest2', 'sprites'], [], {
+    'classic': ('classic', 'TheQuest-Classic', ['run_quest2.py'], ['engine', 'sprites', 'packs'], [], {
         'Play The Quest.bat': ('The Quest', 'run_quest2.py', False)}),
-    'deluxe': ('deluxe', 'QuestDeluxe', ['run_deluxe.py'], ['deluxe', 'packs'], ['run_editor.py', 'editor', 'docs'], {
-        'Play Quest Deluxe.bat': ('Quest Deluxe', 'run_deluxe.py', False),
-        'Quest Editor.bat': ('Quest Editor', 'run_editor.py', True)}),
+    'deluxe': ('TheQuestDeluxe', 'TheQuestDeluxe', ['run_deluxe.py'], ['deluxe', 'packs'], ['run_editor.py', 'editor', 'docs'], {
+        'Play The Quest Deluxe.bat': ('The Quest Deluxe', 'run_deluxe.py', False),
+        'The Quest Deluxe Editor.bat': ('The Quest Deluxe Editor', 'run_editor.py', True)}),
 }
 TK_CHECK = '''%PY% -c "import tkinter" >nul 2>&1
 if errorlevel 1 (
@@ -68,22 +69,23 @@ The original game, remade exactly: double-click "Play The Quest.bat".
 Sound: PC-speaker tones like the original. To turn them off, create sound.txt in this folder
 containing 0.
 
-Saves are the original's own files, data\\save01.dat to save20.dat, so saves from the original
-The Quest load here too (copy them into the data folder). The game reads the original's data
-from TheQuest.zip.
+The original game is in packs\\TheQuest, as it was released (TheQuest.exe, data, bgi, the manual);
+the port reads its files from there. Saves go where the original keeps them, in
+packs\\TheQuest\\data (save01.dat to save20.dat, the original's own format), so saves from the
+original The Quest load here too.
 {{extra}}""",
-    'deluxe': f"""QUEST DELUXE
+    'deluxe': f"""THE QUEST DELUXE
 ============
 
-To play: double-click "Play Quest Deluxe.bat". It plays a quest pack; packs\\quest1 is the original
+To play: double-click "Play The Quest Deluxe.bat". It plays a quest pack; packs\\TheQuest is the original
 quest, converted, and it plays the same as the original.
-To make quests (full zip): double-click "Quest Editor.bat" - see docs\\QUEST_PACKS.md.
+To make quests (full zip): double-click "The Quest Deluxe Editor.bat" - see docs\\QUEST_PACKS.md.
 
 {SETUP}
 
 {KEYS}
 
-Quest Deluxe adds:
+The Quest Deluxe adds:
   F               FPS mode: the world through the hero's eyes. Up/Down walk, Left/Right turn,
                   Q/E or , and . step sideways, M shows or hides the map in the corner
   D               the combat log: who hit whom for how much, what you pick up, locked doors
@@ -135,7 +137,8 @@ def build(edition: str, name: str, notes: str = '', play: bool = False) -> str:
             for base, subdirs, names in os.walk(os.path.join(src, d)):
                 subdirs[:] = [s for s in subdirs if s not in ('__pycache__', 'out')]
                 for f in names:
-                    if not f.endswith('.pyc'):
+                    saved = f.lower().startswith(('save', 'trash')) and f.lower().endswith('.dat')
+                    if not f.endswith('.pyc') and not saved:                # nobody's saves in a release
                         p = os.path.join(base, f)
                         z.write(p, f'{top}/{os.path.relpath(p, src)}'.replace(os.sep, '/'))
         for bat, (title, program, tk) in launchers.items():

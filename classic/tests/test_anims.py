@@ -1,4 +1,4 @@
-"""Runs every place the game plays one of the original's animations or sounds (quest2/anim.py), in
+"""Runs every place the game plays one of the original's animations or sounds (engine/anim.py), in
 the dummy video mode (animations run instantly but in full, including their rand() draws).
 Each check prints a line; an exception fails the run. The drawing itself is checked against the exe
 by tools/re/verify_anims.py."""
@@ -12,9 +12,9 @@ import pygame  # noqa: E402
 
 pygame.init()
 win = pygame.display.set_mode((640, 480))
-from quest2.game import Game  # noqa: E402
-from quest2.state import KNIGHT, MAGE, ROGUE, SLOT_WEAPON, SLOT_OFFHAND  # noqa: E402
-from quest2 import anim, ui  # noqa: E402
+from engine.game import Game  # noqa: E402
+from engine.state import KNIGHT, MAGE, ROGUE, SLOT_WEAPON, SLOT_OFFHAND  # noqa: E402
+from engine import anim, ui  # noqa: E402
 
 played = []
 _orig = Game.play

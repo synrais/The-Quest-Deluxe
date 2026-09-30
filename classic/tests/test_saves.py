@@ -13,9 +13,9 @@ import pygame  # noqa: E402
 
 pygame.init()
 win = pygame.display.set_mode((640, 480))
-from quest2.game import Game  # noqa: E402
-from quest2.savefile import Slots  # noqa: E402
-from quest2 import ui  # noqa: E402
+from engine.game import Game  # noqa: E402
+from engine.savefile import Slots  # noqa: E402
+from engine import ui  # noqa: E402
 
 tmp = tempfile.mkdtemp()
 

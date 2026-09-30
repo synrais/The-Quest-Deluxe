@@ -134,9 +134,9 @@ is columns 12–15 of rows 8–11.
 
 ## Screen drawing
 
-Everything is drawn with BGI calls. `quest2/bgi.py` emulates the ones the game uses: Bresenham lines
+Everything is drawn with BGI calls. `engine/bgi.py` emulates the ones the game uses: Bresenham lines
 (the pixels match the original), Borland's fill patterns, flood fill, and text in the shipped `.CHR`
-stroke fonts and the 8×8 ROM font. `quest2/hud.py` ports `stats()`, `dlife2()`, `dmana2()`,
+stroke fonts and the 8×8 ROM font. `engine/hud.py` ports `stats()`, `dlife2()`, `dmana2()`,
 `dcoins()`, `dmoney()`, `dkeys2()`, `dmap()` and `dpotions2()` call for call. The fonts the game uses:
 Gothic (4) for page titles, Complex (8) for the stat sheet, Simplex (6) for story and talk,
 Triplex (1) for the spellbook, Triplex Script (7) for the message strip, and Sans (3) for gold.
@@ -177,7 +177,7 @@ panel matches the DOSBox screenshots exactly, and every sprite matches what the 
 
 The original has **no combat text**. Hits, misses, blocks, spells and deaths show only as short
 animations drawn over the map, with PC-speaker tones. They block the game while they play, like
-everything in the original. `quest2/anim.py` ports all of them call for call as generators that yield
+everything in the original. `engine/anim.py` ports all of them call for call as generators that yield
 each `delay()`, and `tools/re/verify_anims.py` checks each one against the exe: the same BGI calls,
 tones and delays, in the same order, with the same `rand()` draws.
 
@@ -205,10 +205,10 @@ tones and delays, in the same order, with the same `rand()` draws.
   drawn**. The eyes are green when poisoned, red with the killer switch, and light red under a
   Berserker potion. The Shield spell adds a yellow triple ring, Shield of Fire a red one.
 - **Sound on/off:** `asound()` reads `sound.txt` on every call and beeps only if it holds 1 (the
-  manual: "1=sound, 0=no sound"). Quest II reads `sound.txt` from the game folder, then `data/`, then
-  `TheQuest.zip` (which ships 1).
+  manual: "1=sound, 0=no sound"). The port reads `sound.txt` from its folder, else the original's
+  (`packs/TheQuest/Sound.txt`, which holds 1).
 - **Kills (`monsdeath2`):** the hero's remaining exp-to-level goes down by the monster's
-  experience value, and the loot table is rolled. Both are now in `quest2/content/monsters.json`.
+  experience value, and the loot table is rolled. Both are now in `engine/content/monsters.json`.
 - **Reputation:** killing an NPC while at least one other NPC is on the screen costs 3 reputation
   (the victim counts as a witness, so the check is `witness > 1`), and every NPC on the screen
   turns hostile. Killing a monster in front of NPCs while at reputation ≤ −4 wins back 1. At
@@ -224,7 +224,7 @@ tones and delays, in the same order, with the same `rand()` draws.
 
 ## The inventory and the shops
 
-`inventory()` and `peddler()` are ported call for call in `quest2/invshop.py`, and
+`inventory()` and `peddler()` are ported call for call in `engine/invshop.py`, and
 `tools/re/verify_invshop.py` runs them next to the exe with random bags, shops and key presses.
 The drawing, tones, drops, prices and resulting bag all match.
 
@@ -250,7 +250,7 @@ The drawing, tones, drops, prices and resulting bag all match.
 ## Saving and loading
 
 The original keeps **one save file per game**: `data\saveNN.dat`, NN = 01..20. Quest II uses the same
-files, so saves from the original load in Quest II and the other way round (`quest2/savefile.py`;
+files, so saves from the original load in Quest II and the other way round (`engine/savefile.py`;
 `tools/re/verify_saves.py` checks it against the exe's own `save()` and `load2()`).
 
 - **New game (`newgame()`):** after story 0, `newsave()` takes the first slot with no file and reserves
@@ -274,7 +274,7 @@ files, so saves from the original load in Quest II and the other way round (`que
   mission1`, `invisible poisoned mission2 fShield`, and `p1 p2 p3`. The derived stats (dex, acc, intl,
   str, def, atk, power, warm, marm) are rebuilt on load. `save()` hands `fprintf` five numbers for
   four `%d`s, so `st.saveslot` is never written. `code()` writes the last newline twice, so every
-  save ends with a blank line. The full layout is at the top of `quest2/savefile.py`.
+  save ends with a blank line. The full layout is at the top of `engine/savefile.py`.
 
 ## How levels and events work
 

@@ -19,7 +19,7 @@ os.environ.setdefault('SDL_VIDEODRIVER', 'dummy')
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.dirname(os.path.dirname(HERE)))
-import engine                                       # noqa: E402,F401  (QUEST_ENGINE=deluxe checks Deluxe)
+import port                                         # noqa: E402,F401  (QUEST_ENGINE=deluxe checks Deluxe)
 
 import pygame  # noqa: E402
 
@@ -31,7 +31,7 @@ HOTSPOTS = {1: [(85, 95)], 2: [(5, 75)], 3: [(5, 75)], 4: [(75, 5)], 6: [(75, 55
 
 
 def run_case(emu, g, level, grid0, hero, state, dead, killer, seed):
-    from quest2 import rules
+    from engine import rules
     hx, hy = hero
     g.world.level = level
     g.status.level = level
@@ -117,8 +117,8 @@ def main(levels, cases):
     pygame.init()
     win = pygame.display.set_mode((640, 480))
     from emu_game import GameEmu
-    from quest2.game import Game
-    from quest2.formats import GameData
+    from engine.game import Game
+    from engine.formats import GameData
     data = GameData.load()
     g = Game(win, data)
     g.overlay = None

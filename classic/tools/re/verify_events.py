@@ -19,7 +19,7 @@ os.environ.setdefault('SDL_VIDEODRIVER', 'dummy')
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.dirname(os.path.dirname(HERE)))
-import engine                                       # noqa: E402,F401  (QUEST_ENGINE=deluxe checks Deluxe)
+import port                                         # noqa: E402,F401  (QUEST_ENGINE=deluxe checks Deluxe)
 
 import pygame  # noqa: E402
 
@@ -41,8 +41,8 @@ def enemies_for_screen(g):
 
 
 def run_case(emu, g, level, grid0, npc_pos, hero_pos, state, seed, npc=None):
-    from quest2 import rules
-    from quest2.formats import Square
+    from engine import rules
+    from engine.formats import Square
     (nx, ny), (hx, hy) = npc_pos, hero_pos
     # ── engine ──
     g.world.level = level
@@ -149,8 +149,8 @@ def main(levels, cases):
     pygame.init()
     win = pygame.display.set_mode((640, 480))
     from emu_game import GameEmu
-    from quest2.game import Game
-    from quest2.formats import GameData
+    from engine.game import Game
+    from engine.formats import GameData
     data = GameData.load()
     g = Game(win, data)
     g.overlay = None

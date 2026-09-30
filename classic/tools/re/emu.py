@@ -3,7 +3,7 @@
 TheQuest.exe draws every sprite with Borland BGI calls. This loads the exe image (with its
 relocations), runs a chosen game function, and intercepts every call into the BGI library and a few
 runtime helpers (delay, sound). The BGI calls are replayed on a pygame surface through
-quest2/bgi.py, so getpixel() sees real pixels. Everything else (the game's own code, the LVP
+engine/bgi.py, so getpixel() sees real pixels. Everything else (the game's own code, the LVP
 matrix/vector classes, rand()) runs natively.
 
     from emu import Emu
@@ -50,8 +50,8 @@ INTERCEPT = {
 class Emu:
     def __init__(self, surface=None, source=None):
         import pygame
-        from quest2.bgi import BGI
-        from quest2.formats import DataSource
+        from engine.bgi import BGI
+        from engine.formats import DataSource
         self.pygame = pygame
         if surface is None:
             surface = pygame.Surface((640, 480))

@@ -21,17 +21,17 @@ from dataclasses import asdict
 os.environ['SDL_VIDEODRIVER'] = 'dummy'
 os.environ.setdefault('SDL_AUDIODRIVER', 'dummy')
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path[:0] = [os.path.join(REPO, 'classic'), os.path.join(REPO, 'deluxe')]      # quest2 and deluxe
+sys.path[:0] = [os.path.join(REPO, 'classic'), os.path.join(REPO, 'TheQuestDeluxe')]     # engine and deluxe
 import pygame  # noqa: E402
 
 pygame.init()
 pygame.display.set_mode((640, 480))
 
-import quest2.game as classic  # noqa: E402
-import quest2.rules as classic_rules  # noqa: E402
+import engine.game as classic  # noqa: E402
+import engine.rules as classic_rules  # noqa: E402
 import deluxe.game as deluxe  # noqa: E402
 import deluxe.rules as deluxe_rules  # noqa: E402
-from quest2.savefile import Slots as ClassicSlots  # noqa: E402
+from engine.savefile import Slots as ClassicSlots  # noqa: E402
 from deluxe.savefile import Slots as DeluxeSlots  # noqa: E402
 
 K = pygame

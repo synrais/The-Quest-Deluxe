@@ -31,7 +31,7 @@ CELL = pygame.Rect(450, 290, 40, 40)                # backpack cell (12, 8)
 
 def main():
     pygame.init()
-    from quest2.formats import GameData
+    from engine.formats import GameData
     data = GameData.load()
     items = sorted({r[0] for r in data.items if r} | set(range(1, 10)) | {11, 16, 17, 907} | set(range(601, 681)))
     emu = GameEmu()

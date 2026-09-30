@@ -1,0 +1,59 @@
+	        List of Spells	
+
+(Use this txt if you don't have Excel and can't open the Spells.xls file.)
+
+(Best viewed without Word Wrap.)				
+
+						
+Int=intelligence needed to learn and cast the spell						
+Mana= mana needed to cast the spell						
+Range= maximum range; if 0, then is cast on caster					
+P= power of the spell (damage dealt or hit points healed)						
+&= duration of the spell						
+						
+						
+Name	        Int	Mana	Range	P	&	Effects
+
+Heal	         10	10	0	30		Life+30
+
+Flame	         15	5	3	11		Casts a fireball
+
+Teleport         15	10	3			The caster selects a square to teleport to
+
+Shield	         20	8	0	10	10	Can't be hit by attacks with power less than or equal to 10
+
+Ring of Ice 	 20	5	3	10	10	Enemy can't move for 10 turns, works if the enemy's ma (magic armor) is less than 10; dispelled when the enemy is attacked
+
+Black Ward	 25	9	0	12		Hurts everyone in the 8 squares around caster
+
+Invisibility	 25	7	0		30	Makes the caster invisible, disappears when an action is made, will not work with shield spells, has a 50% chance of fizzling
+
+Summon Skeleton	 30	8	4			Summons a skeleton
+
+Inferno	         30	10	3	25		Casts a fire attack 
+
+Restore	         30	20	0	70		Life+70
+
+Life Drain	 35	13	1	20		For every point of damage done by this spell, the caster gains 1 hp
+
+Thunder Bolt	 35	25	4	40		Casts a powerful lightning attack
+
+Shield of Fire	 35	15	0	 8	10	Hurts the 4 squares (up, down, left, right) near the caster every turn.
+
+Deteriorate	 40	ALL	1	100		Takes all of the caster's mana, does 100 damage to an enemy
+
+S. Stone Knight	 40	18	4			Summons a stone knight
+
+Earthquake	 45	20	5	25		Select a square, the earthquake does damage in the form of a cross around that square, 33%chance that the spell does damage more than once to the center square
+
+Cure	         50	30	0	120		Life+120
+
+Sum. Scorpion	 55	25	4			Summons a scorpion
+
+Meteor	         60	35	9	60		Makes a meteor fall on a target
+
+Dark Hour	 60	ALL	0	25*6		Takes all mana, this spell does 25 damage 6 times to all monsters in the 8 squares around the caster
+
+						
+Note: you will also see the intelligence requirement and mana cost of each spell in the spell book.						
+						

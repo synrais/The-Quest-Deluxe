@@ -47,7 +47,7 @@ SKIP = {'save', 'load2', 'newsave', 'cantsave', 'asound', 'dpotions', 'dpotions2
 class GameEmu(Emu):
     def __init__(self, source=None):
         super().__init__(source=source)
-        from quest2.formats import DataSource, decode_bytes
+        from engine.formats import DataSource, decode_bytes
         self.src = source or DataSource()
         self._decode = decode_bytes
         self.keys: list[int] = []
@@ -276,7 +276,7 @@ class GameEmu(Emu):
             self.uc.mem_write(self.gaddr('_enemies') + 24 * k, struct.pack('<12h', *[e.get(f, 0) for f in ENEMY]))
 
     def load_map(self, grid):
-        """grid[x][y] -> quest2.formats.Square, 1-based, into the game's map matrix."""
+        """grid[x][y] -> engine.formats.Square, 1-based, into the game's map matrix."""
         buf = bytearray(101 * 101 * 12)
         for x in range(1, 101):
             for y in range(1, 101):

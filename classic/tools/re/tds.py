@@ -3,22 +3,19 @@
 The exe ships with its full debug symbols: every function, global, local
 variable, struct type/field and source line.  This module reads the tables.
 """
-import struct, os, zipfile
+import struct, os
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 PROJECT = os.path.dirname(os.path.dirname(HERE))
-GAME_ZIP = os.path.join(PROJECT, 'TheQuest.zip')
+GAME_EXE = os.path.join(PROJECT, 'packs', 'TheQuest', 'TheQuest.exe')
 
 HDR_FMT = '<HHIIIIIIIIIIIIIIIBHHBH'
 
 
 def load_exe(path=None) -> bytes:
-    """TheQuest.exe bytes: an explicit path, else read straight out of TheQuest.zip."""
-    if path and os.path.exists(path):
-        return open(path, 'rb').read()
-    with zipfile.ZipFile(GAME_ZIP) as z:
-        name = next(n for n in z.namelist() if n.lower().endswith('thequest.exe'))
-        return z.read(name)
+    """TheQuest.exe bytes: an explicit path, else the original's, in packs/TheQuest."""
+    with open(path if path and os.path.exists(path) else GAME_EXE, 'rb') as fh:
+        return fh.read()
 
 
 class TDS:

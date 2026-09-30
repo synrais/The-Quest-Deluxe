@@ -4,7 +4,7 @@
 symbols**: every function name, global, local variable, struct layout and
 source-line table. These scripts use them to produce readable output.
 
-All scripts read the exe straight out of `../../TheQuest.zip`. They need
+All scripts read the exe from `../../packs/TheQuest/TheQuest.exe`. They need
 Python 3.10+ and `pip install capstone`.
 
 | Script | What it does |
@@ -47,12 +47,12 @@ matching `.asm` file.
 
 | Script | What it does |
 |---|---|
-| `emu.py` | Loads the exe into the Unicorn x86 emulator and calls any game function. BGI calls are intercepted and drawn with `quest2/bgi.py`. `draw_tile(floor=…, wall=…, mon=…, item=…, deco=…, gold=…)` runs `clean2()` on one map square. |
+| `emu.py` | Loads the exe into the Unicorn x86 emulator and calls any game function. BGI calls are intercepted and drawn with `engine/bgi.py`. `draw_tile(floor=…, wall=…, mon=…, item=…, deco=…, gold=…)` runs `clean2()` on one map square. |
 | `sprite_check.py` | Compares every PNG in `sprites/` with what the game draws. It writes `out/sprites/report.txt`, plus an image (original, PNG, diff) for each sprite that differs. |
-| `verify_anims.py` | Runs every animation, jingle and hero drawing in `quest2/anim.py` next to the original (`aflame()`, `ahit()`, `guy2()`, `song_key()` ...) with many arguments and the same `rand()` seed, and checks that both make exactly the same BGI calls, tones and delays. |
-| `verify_saves.py` | Runs the exe's own `save()` and `load2()` on random game states next to `quest2/savefile.py`: the saved text must match character for character, and the loaded values must match. Also round-trips `data/SAVE01.DAT`. |
-| `verify_bgi.py` | Runs the Borland graphics kernel inside the exe (it clips lines, draws thick lines, and does the arcs, ellipses, sectors, polygons and `bar3d` that EGAVGA.BGI leaves to it) with a recording stand-in for the driver, and compares the result pixel for pixel with `quest2/bgi.py` for random lines, rectangles, bars, `bar3d`, ellipses and arcs (1 and 3 pixels), `fillellipse`, `sector`, `drawpoly` and `fillpoly`. |
-| `verify_invshop.py` | Runs the exe's `inventory()` and `peddler()` next to `quest2/invshop.py` with random bags, shops and key presses: the same drawing, tones, drops, purchases and resulting bag. |
+| `verify_anims.py` | Runs every animation, jingle and hero drawing in `engine/anim.py` next to the original (`aflame()`, `ahit()`, `guy2()`, `song_key()` ...) with many arguments and the same `rand()` seed, and checks that both make exactly the same BGI calls, tones and delays. |
+| `verify_saves.py` | Runs the exe's own `save()` and `load2()` on random game states next to `engine/savefile.py`: the saved text must match character for character, and the loaded values must match. Also round-trips `data/SAVE01.DAT`. |
+| `verify_bgi.py` | Runs the Borland graphics kernel inside the exe (it clips lines, draws thick lines, and does the arcs, ellipses, sectors, polygons and `bar3d` that EGAVGA.BGI leaves to it) with a recording stand-in for the driver, and compares the result pixel for pixel with `engine/bgi.py` for random lines, rectangles, bars, `bar3d`, ellipses and arcs (1 and 3 pixels), `fillellipse`, `sector`, `drawpoly` and `fillpoly`. |
+| `verify_invshop.py` | Runs the exe's `inventory()` and `peddler()` next to `engine/invshop.py` with random bags, shops and key presses: the same drawing, tones, drops, purchases and resulting bag. |
 | `bag_icons.py` | Renders the item pictures `bagdraw()` uses in the bag and the shop into `sprites/bag/`. |
 
 ```bash

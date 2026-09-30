@@ -1,4 +1,4 @@
-"""Check quest2/bgi.py's shapes against the Borland graphics kernel inside TheQuest.exe.
+"""Check engine/bgi.py's shapes against the Borland graphics kernel inside TheQuest.exe.
 
 EGAVGA.BGI draws only pixels, lines and bars. Everything else is done by the kernel: the
 pseudo-driver the library calls (right after __GRP_ovr) clips lines, draws thick lines as three
@@ -146,8 +146,8 @@ class Kernel:
 
     def settextstyle(self, font, direction, size):
         """The .CHR file loaded as settextstyle() leaves it: its stroke table (from the '+') at FONT:0."""
-        from quest2.bgi import FONT_FILES
-        from quest2.formats import DataSource
+        from engine.bgi import FONT_FILES
+        from engine.formats import DataSource
         raw = DataSource().read(FONT_FILES[font])
         hsize = struct.unpack_from('<H', raw, raw.index(b'\x1a') + 1)[0]
         self.uc.mem_write(FONT * 16, raw[hsize:])
@@ -162,8 +162,8 @@ class Kernel:
 
 def replay(prims):
     """Draw what the driver was asked for, with bgi.py's pixel, line and bar."""
-    from quest2.bgi import BGI
-    from quest2.formats import DataSource
+    from engine.bgi import BGI
+    from engine.formats import DataSource
     s = pygame.Surface((640, 480))
     g = BGI(s, DataSource())
     for p in prims:
@@ -236,9 +236,9 @@ def check_fill_patterns() -> int:
     """The fill patterns are the driver's (EGAVGA.BGI), not the kernel's, so both sides of the shape
     checks use bgi.py's table: compare that table with the driver's own (patterns 2-11 lie in order;
     1 is solid)."""
-    import zipfile
-    from quest2.bgi import FILL_PATTERNS
-    drv = zipfile.ZipFile(os.path.join(HERE, '..', '..', 'TheQuest.zip')).read('TheQuest/bgi/EGAVGA.BGI')
+    from engine.bgi import FILL_PATTERNS
+    with open(os.path.join(HERE, '..', '..', 'packs', 'TheQuest', 'bgi', 'EGAVGA.BGI'), 'rb') as fh:
+        drv = fh.read()
     at = drv.find(bytes([0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80])) - 8     # pattern 3 is the diagonal
     theirs = {k: list(drv[at + (k - 2) * 8: at + (k - 1) * 8]) for k in range(2, 12)}
     theirs[1] = [0xFF] * 8
@@ -251,8 +251,8 @@ def main():
     n = int(sys.argv[sys.argv.index('--cases') + 1]) if '--cases' in sys.argv else 100
     pygame.init()
     wrong_patterns = check_fill_patterns()
-    from quest2.bgi import BGI
-    from quest2.formats import DataSource
+    from engine.bgi import BGI
+    from engine.formats import DataSource
     base = qdis.BASE + GRSEG * 16
     code = qdis.exe[base + KERNEL: base + KERNEL_END]
     total, bad = {}, {}
