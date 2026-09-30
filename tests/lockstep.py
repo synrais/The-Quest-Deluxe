@@ -21,17 +21,32 @@ from dataclasses import asdict
 os.environ['SDL_VIDEODRIVER'] = 'dummy'
 os.environ.setdefault('SDL_AUDIODRIVER', 'dummy')
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path[:0] = [os.path.join(REPO, 'classic'), os.path.join(REPO, 'TheQuestDeluxe')]     # engine and deluxe
 import pygame  # noqa: E402
+
+
+def load_edition(alias: str, folder: str):
+    """Both editions call their code engine/: import each under its own name, so they can run side by
+    side (the engines import their own modules relatively, so any name works)."""
+    import importlib.util
+    package_dir = os.path.join(REPO, folder, 'engine')
+    spec = importlib.util.spec_from_file_location(alias, os.path.join(package_dir, '__init__.py'),
+                                                  submodule_search_locations=[package_dir])
+    module = sys.modules[alias] = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+load_edition('classic', 'classic')             # classic.game, classic.rules ...: The Quest, the faithful port
+load_edition('deluxe', 'TheQuestDeluxe')       # deluxe.game, deluxe.rules ...: The Quest Deluxe
 
 pygame.init()
 pygame.display.set_mode((640, 480))
 
-import engine.game as classic  # noqa: E402
-import engine.rules as classic_rules  # noqa: E402
+import classic.game as classic  # noqa: E402
+import classic.rules as classic_rules  # noqa: E402
 import deluxe.game as deluxe  # noqa: E402
 import deluxe.rules as deluxe_rules  # noqa: E402
-from engine.savefile import Slots as ClassicSlots  # noqa: E402
+from classic.savefile import Slots as ClassicSlots  # noqa: E402
 from deluxe.savefile import Slots as DeluxeSlots  # noqa: E402
 
 K = pygame

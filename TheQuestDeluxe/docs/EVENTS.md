@@ -84,7 +84,7 @@ PEACEFUL_SCREENS = [(1, 1)]    # Deluxe: screens where people and allies don't a
 | `change_rep(d)` | Reputation plus or minus, with the original message. |
 | `hero_step(dx, dy)`, `poison()`, `hurt_hero(power, kind, w)` | Move the hero, poison them, or hurt them. |
 | `autosave(slot)`, `next_level()` | Save the game, or go to the next level. |
-| `effect(name, ...)` | Play one of the original's animations from `deluxe/anim.py`, at 1-based screen squares: `effect('dcast2', e.x, e.y)`, `effect('asskeleton', 4, 1, 3)`, `effect('screen_flash', 2)`. It has no game effect. |
+| `effect(name, ...)` | Play one of the original's animations from `engine/anim.py`, at 1-based screen squares: `effect('dcast2', e.x, e.y)`, `effect('asskeleton', 4, 1, 3)`, `effect('screen_flash', 2)`. It has no game effect. |
 | `range()`, `len()`, `min()`, `max()`, `abs()` | As in Python. |
 
 ### Things the original does that scripts keep

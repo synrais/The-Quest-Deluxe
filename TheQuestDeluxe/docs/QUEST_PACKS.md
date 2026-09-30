@@ -122,7 +122,7 @@ Pictures: `sprites/creatures/<id>.png`.
 | `id`, `name` | Spells 1-20 fill the spell book and F-keys. |
 | `req_int`, `mana`, `range`, `power`, `duration` | `range` 0 = cast on the hero. |
 | `effect` | `heal`, `bolt` (damage at a target), `teleport`, `shield`, `fire_shield`, `freeze`, `ward` (the 8 squares around the hero), `dark_hour` (the same, repeated, mana to 0), `invisibility`, `summon`, `drain`, `earthquake`. |
-| `anim` | `[animation, arguments...]` from `deluxe/anim.py`. |
+| `anim` | `[animation, arguments...]` from `engine/anim.py`. |
 | `repeat` | How many times the animation (or the ward) repeats. |
 | `creature` | What a `summon` brings. |
 | `fizzle` | % chance the spell fails (Invisibility also fails under a shield). |

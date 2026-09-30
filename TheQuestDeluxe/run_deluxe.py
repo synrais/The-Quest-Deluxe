@@ -25,7 +25,7 @@ def main():
         os.environ['QUEST_PACK'] = args.pack          # before the engine loads the pack
 
     import pygame
-    from deluxe.game import Game
+    from engine.game import Game
 
     pygame.init()
     window = pygame.display.set_mode((640 * args.scale, 480 * args.scale), pygame.RESIZABLE)

@@ -8,7 +8,7 @@ from tkinter import ttk, messagebox
 
 import pygame
 
-from deluxe.events import talk_text
+from engine.events import talk_text
 from . import dialogue
 from .art import photo
 
@@ -219,8 +219,8 @@ class DialogueTab(ttk.Frame):
             font = pygame.font.Font(None, 20)
             s.blit(font.render('(the game would not find this line)', True, (255, 80, 80)), (8, 8))
         else:
-            from deluxe.bgi import BGI
-            from deluxe.pack import Pack, PackSource
+            from engine.bgi import BGI
+            from engine.pack import Pack, PackSource
             if getattr(self, '_src_root', None) != self.app.project.root:
                 self._src = PackSource(Pack(self.app.project.root))
                 self._src_root = self.app.project.root

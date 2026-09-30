@@ -1,5 +1,5 @@
 """The editor's model of a quest pack: everything in memory, saved back in the pack's own format
-(deluxe/packio.py), only the parts that changed."""
+(engine/packio.py), only the parts that changed."""
 from __future__ import annotations
 
 import ast
@@ -8,8 +8,8 @@ import os
 import re
 import shutil
 
-from deluxe import packio
-from deluxe.pack import PACKS_DIR
+from engine import packio
+from engine.pack import PACKS_DIR
 
 TABLES = {'items': 'items.json', 'creatures': 'creatures.json', 'spells': 'spells.json',
           'classes': 'classes.json', 'skills': 'skills.json'}

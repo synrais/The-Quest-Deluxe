@@ -92,7 +92,7 @@ import pygame  # noqa: E402
 
 pygame.init()
 pygame.display.set_mode((640, 480))
-from deluxe.game import Game  # noqa: E402
+from engine.game import Game  # noqa: E402
 
 game = Game(pygame.Surface((640, 480)))
 assert game.pack.root == blank.root

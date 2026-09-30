@@ -185,7 +185,7 @@ class StoriesTab(ttk.Frame):
         if self.story is None:
             return
         r = self._game_renderer()
-        from deluxe.ui import TextScreen
+        from engine.ui import TextScreen
         screen = pygame.Surface((640, 480))
         TextScreen('', '\n'.join(self.story.lines)).draw(r, screen)
         self._img = photo(pygame.transform.smoothscale(screen, (480, 360)))
@@ -194,8 +194,8 @@ class StoriesTab(ttk.Frame):
     def _game_renderer(self):
         root = self.app.project.root
         if self._renderer is None or self._renderer[0] != root:
-            from deluxe.pack import Pack, PackSource
-            from deluxe.render import Renderer
+            from engine.pack import Pack, PackSource
+            from engine.render import Renderer
             if pygame.display.get_surface() is None:
                 pygame.display.set_mode((640, 480))       # the dummy video driver: nothing shows
             pack = Pack(root)

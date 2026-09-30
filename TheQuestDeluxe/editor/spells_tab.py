@@ -49,7 +49,7 @@ class SpellsTab(TableTab):
     PICTURES = [('Spell book icon', 'spells', False)]
     INTRO = ('The spell book holds spells 1 to 20 (F1-F9 cast the first nine). Range 0 casts on the hero; '
              'otherwise the hero picks a target that many squares away. Animations are the original\'s '
-             '(deluxe/anim.py), with their arguments.')
+             '(engine/anim.py), with their arguments.')
 
     def fields(self):
         opt = lambda k, label, hint='', when=None: Field(k, label, 'custom', fmt=opt_int(k), parse=parse_opt,

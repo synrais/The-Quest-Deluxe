@@ -18,11 +18,24 @@ import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))                     # TheQuestDeluxe/
 CLASSIC = os.path.join(os.path.dirname(ROOT), 'classic')      # the original's data and the port's sprites
-sys.path[:0] = [ROOT, CLASSIC]
+sys.path.insert(0, ROOT)                                      # engine: The Quest Deluxe's
 
-from engine.formats import DataSource, level_filename  # noqa: E402
-from engine.bgi import FONT_FILES  # noqa: E402
-from deluxe.packio import write_text, write_json, write_table, tiles_text, map_text  # noqa: E402
+
+def _load_as(alias: str, package_dir: str):
+    """Import a package under another name (both editions call their code engine/)."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(alias, os.path.join(package_dir, '__init__.py'),
+                                                  submodule_search_locations=[package_dir])
+    module = sys.modules[alias] = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+_load_as('classic', os.path.join(CLASSIC, 'engine'))           # classic: the faithful port's engine
+
+from classic.formats import DataSource, level_filename  # noqa: E402
+from classic.bgi import FONT_FILES  # noqa: E402
+from engine.packio import write_text, write_json, write_table, tiles_text, map_text  # noqa: E402
 
 OUT = os.path.join(ROOT, 'packs', 'TheQuest')
 SPRITES = os.path.join(CLASSIC, 'sprites')
@@ -100,7 +113,7 @@ AMMO_GROUPS = {0: 'pebbles', 1: 'arrows', 2: 'poison arrows', 3: 'bolts'}
 def item_traits(i: int) -> dict:
     """What the original decides from an item's number (the hundreds, 230+, 600+, 900+), as named
     fields. Deluxe reads these, so new items can have any number."""
-    from engine.invshop import item_name
+    from classic.invshop import item_name
     t = {}
     if 0 < i < 9:
         t['type'], t['potion'] = 'potion', i          # drunk with key i; goes on the belt
@@ -277,7 +290,7 @@ def main():
                  'sprites/items/<id>.png on the map, sprites/bag/<id>.png in the bag and shops.')
 
     # ── spells ───────────────────────────────────────────────────────────────
-    from engine.rules import SPELL_NAMES
+    from classic.rules import SPELL_NAMES
     spells = [{'id': r[0], 'name': SPELL_NAMES.get(r[0], ''), **dict(zip(SPELL_COLUMNS, r[1:])),
                **spell_traits(r[0])} for r in src.numbers('Spells.dat')]
     compact_json(os.path.join(OUT, 'spells.json'), 'spells', spells,

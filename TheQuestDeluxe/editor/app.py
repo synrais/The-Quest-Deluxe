@@ -12,7 +12,7 @@ import sys
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox, simpledialog
 
-from deluxe.pack import PACKS_DIR, DEFAULT_PACK, ROOT
+from engine.pack import PACKS_DIR, DEFAULT_PACK, ROOT
 from .project import Project
 from .map_tab import MapTab
 from .text_tabs import EventsTab, TextTab

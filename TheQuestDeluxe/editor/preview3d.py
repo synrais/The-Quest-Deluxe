@@ -9,8 +9,8 @@ from tkinter import ttk
 
 import pygame
 
-from deluxe import view3d
-from deluxe.formats import MAP_SIZE
+from engine import view3d
+from engine.formats import MAP_SIZE
 from .art import photo
 
 FOLDERS = {'floor': 'floors', 'wall': 'walls', 'deco': 'decos', 'item': 'items', 'mon': 'creatures'}

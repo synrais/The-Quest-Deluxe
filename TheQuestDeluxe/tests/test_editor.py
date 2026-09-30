@@ -161,7 +161,7 @@ dt._typed()
 assert 'taken two days ago' in app.project.texts['talk']
 dt.new()
 assert dt.entry.key == (1, -6, 18)
-from deluxe.events import talk_text  # noqa: E402
+from engine.events import talk_text  # noqa: E402
 assert talk_text(app.project.texts['talk'], 1, -6, 18)[0] == ' "Hello there."'   # as the game reads one-liners
 st = app.stories_tab
 app.tabs.select(st)
@@ -170,7 +170,7 @@ st.new()
 st.text.delete('1.0', 'end')
 st.text.insert('1.0', 'A new tale begins.\nThe hero wakes.')
 st._typed()
-from deluxe.formats import parse_story  # noqa: E402
+from engine.formats import parse_story  # noqa: E402
 assert parse_story(app.project.texts['stories'])[st.story.number] == 'A new tale begins.\nThe hero wakes.'
 sh = app.shops_tab
 app.tabs.select(sh)

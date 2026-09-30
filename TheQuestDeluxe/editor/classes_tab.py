@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pygame
 
-from deluxe.state import BACKPACK
+from engine.state import BACKPACK
 from .table_tab import TableTab, Field
 
 EGA_NAMES = ['black', 'blue', 'green', 'cyan', 'red', 'magenta', 'brown', 'light grey', 'dark grey', 'light blue',
@@ -81,8 +81,8 @@ class ClassesTab(TableTab):
         ]
 
     def preview(self, row):
-        from deluxe.anim import draw_guy2
-        from deluxe.bgi import BGI
+        from engine.anim import draw_guy2
+        from engine.bgi import BGI
         s = pygame.Surface((40, 40))
         s.fill((0, 168, 0))                                  # on grass, as in the game
         draw_guy2(BGI(s), 1, 1, row['id'], -1, 0, 0, 0, 0, 0, look=row.get('look') or {})

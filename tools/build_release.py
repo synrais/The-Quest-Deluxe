@@ -8,7 +8,7 @@
     --classic / --deluxe                           only that edition
 
 Each zip holds one folder: TheQuest-Classic/ (run_quest2.py, engine/, sprites/, packs/TheQuest/, the
-original as released) or TheQuestDeluxe/ (run_deluxe.py, deluxe/, packs/, and in the full zip
+original as released) or TheQuestDeluxe/ (run_deluxe.py, engine/, packs/, and in the full zip
 run_editor.py, editor/, docs/).
 The Quest Deluxe needs nothing of the classic edition. Double-clicking a launcher finds Python (or
 offers to install it with winget), sets up pygame-ce from the bundled wheels the first time, and
@@ -31,7 +31,7 @@ PY_VERSIONS = ('3.12', '3.13')         # 3.12 is what the launcher installs; oth
 EDITIONS = {
     'classic': ('classic', 'TheQuest-Classic', ['run_quest2.py'], ['engine', 'sprites', 'packs'], [], {
         'Play The Quest.bat': ('The Quest', 'run_quest2.py', False)}),
-    'deluxe': ('TheQuestDeluxe', 'TheQuestDeluxe', ['run_deluxe.py'], ['deluxe', 'packs'], ['run_editor.py', 'editor', 'docs'], {
+    'deluxe': ('TheQuestDeluxe', 'TheQuestDeluxe', ['run_deluxe.py'], ['engine', 'packs'], ['run_editor.py', 'editor', 'docs'], {
         'Play The Quest Deluxe.bat': ('The Quest Deluxe', 'run_deluxe.py', False),
         'The Quest Deluxe Editor.bat': ('The Quest Deluxe Editor', 'run_editor.py', True)}),
 }

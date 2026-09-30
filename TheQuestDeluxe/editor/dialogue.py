@@ -5,7 +5,7 @@
     "second line;
 
 Blank lines and anything that isn't an entry are kept where they are, so the file round-trips
-unchanged; the game reads it character by character (deluxe.events.talk_text), quirks included.
+unchanged; the game reads it character by character (engine.events.talk_text), quirks included.
 """
 from __future__ import annotations
 

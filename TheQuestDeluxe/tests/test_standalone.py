@@ -26,7 +26,7 @@ builtins.open = lambda f, *a, **k: (opened.add(str(f)), real_open(f, *a, **k))[1
 zipfile.ZipFile = lambda f, *a, **k: (opened.add(str(f)), real_zip(f, *a, **k))[1]
 import pygame
 pygame.init(); pygame.display.set_mode((640, 480))
-from deluxe.game import Game
+from engine.game import Game
 g = Game(pygame.Surface((640, 480)))
 for k in [pygame.K_RETURN] * 3:
     g.handle(pygame.event.Event(pygame.KEYDOWN, key=k, unicode='\r'))

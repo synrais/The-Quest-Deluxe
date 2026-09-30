@@ -5,8 +5,8 @@ from __future__ import annotations
 import tkinter as tk
 from tkinter import ttk
 
-from deluxe.script import Script, ScriptError
-from deluxe.formats import parse_talk, parse_story
+from engine.script import Script, ScriptError
+from engine.formats import parse_talk, parse_story
 
 HANDLERS = {
     'talk': ('def talk(npc):\n    # the hero walked into a person; x, y is their square, npc their creature number\n'
