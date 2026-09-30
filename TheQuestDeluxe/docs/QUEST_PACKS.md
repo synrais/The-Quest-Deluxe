@@ -168,7 +168,9 @@ Scholar; Cowardice, Rashness, Honor).
 Pictures: `sprites/floors/<id>.png`, `sprites/walls/<id>.png`, `sprites/decos/<id>.png`.
 
 **FPS mode (the 3D view).** Deluxe draws the same grid through the hero's eyes (F in the game; the
-panel's Map box shows the screen from above, M switches it to the level map). These fields say how things look there; all
+panel's Map box shows the screen from above, M switches it to the level map; the hero's bust by the
+coins is `sprites/bust.png` if the pack has one, else the engine's: red, EGA 4, is drawn in the class
+colour, white, 15, in the eye colour, and yellow, 14, in the colour of the amulet worn). These fields say how things look there; all
 are optional, so packs without them still work:
 
 | Field | Meaning |

@@ -1,57 +1,30 @@
-"""FPS mode: the hero's face in the panel (Deluxe), in the manner of Doom's status bar.
+"""FPS mode: the hero's bust in the panel (Deluxe).
 
-In the view from above the hero himself shows his state (guy2(): the eyes and the Shield rings); in FPS
-mode he can't be seen, so a face beside the Map box shows it:
+In the view from above the hero himself shows his state (guy2(): the eye colours); in FPS mode he can't
+be seen, so his bust stands in the panel, right of the coins and just above the right-hand key, with no
+frame. The picture is engine/assets/bust.png (a pack can have its own: sprites/bust.png), scaled up in
+whole pixels, and three of its colours stand for something:
 
-  - the eyes in guy2()'s colours and order: green when poisoned (and visible), dark red with the
-    killer switch, light red under a Berserker potion, white otherwise; the face glances about;
-  - hurt as life drops: blood at two thirds, more and a grimace at one third;
-  - teeth bared while the weapon in view attacks;
-  - the Shield spell's yellow ring and Shield of Fire's red one round the frame;
-  - invisible: only the eyes;
-  - the helmet or hood in the class colour.
-
-Drawn in code in EGA colours at twice the size, so every pack has it.
+  - red (EGA 4), the hood: the class colour;
+  - white (EGA 15), the eyes: guy2()'s eye colour (green when poisoned, dark red with the killer
+    switch, light red under a Berserker potion, white otherwise); invisible, only the eyes show;
+  - yellow (EGA 14), the necklace: the colour of the amulet he wears (black, unseen, without one).
 """
 from __future__ import annotations
+
+import os
+from collections import Counter
 
 import pygame
 
 from .bgi import EGA
 
-BOX = (414, 280, 60, 92)          # left of the Map box: x, y, width, height (the frame inside it)
-PX = 2                            # one face pixel is 2 x 2 screen pixels
-
-# H helmet (class colour), S skin, o outline, B brow, N nostril, M mouth; eyes are drawn on top
-FACE = [
-    '......HHHHHHHHHHHH......',
-    '....HHHHHHHHHHHHHHHH....',
-    '...HHHHHHHHHHHHHHHHHH...',
-    '..HHHHHHHHHHHHHHHHHHHH..',
-    '..HHHHHHHHHHHHHHHHHHHH..',
-    '..HHHoSSSSSSSSSSSSoHHH..',
-    '..HHoSSSSSSSSSSSSSSoHH..',
-    '..HoSSBBBBSSSSSBBBBSSoH.',
-    '.ooSSSSSSSSSSSSSSSSSSoo.',
-    '.oSSSSSSSSSSSSSSSSSSSSo.',
-    '.oSSSSSSSSSSSSSSSSSSSSo.',
-    '.oSSSSSSSSSSSSSSSSSSSSo.',
-    '..oSSSSSSSSSSSSSSSSSSo..',
-    '..oSSSSSSSSSSSSSSSSSSo..',
-    '..oSSSSSSSNSSNSSSSSSSo..',
-    '..oSSSSSSSSSSSSSSSSSSo..',
-    '..oSSSSSSSSSSSSSSSSSSo..',
-    '...oSSSSMMMMMMMMSSSSo...',
-    '...oSSSSSSSSSSSSSSSSo...',
-    '....oSSSSSSSSSSSSSSo....',
-    '.....oSSSSSSSSSSSSo.....',
-    '......ooSSSSSSSSoo......',
-    '........oooooooo........',
-]
-EYES = ((4, 9), (15, 9))          # each eye: 5 wide, 3 high, from this corner
-BLOOD = [(5, 5), (6, 6), (6, 7), (7, 8), (18, 13), (18, 14)]            # a cut over the eye, a graze
-BLOOD_MORE = [(9, 3), (10, 4), (10, 5), (17, 6), (19, 10), (19, 11), (4, 15), (5, 16), (6, 16)]
-COLOURS = {'S': 6, 'o': 0, 'B': 0, 'N': 0, 'M': 0}
+SCALE = 3
+# right of the coins (which end at x 550) and above the right-hand key (its ring's top is y 214);
+# centred over that key and evenly spaced between the gold's number (to y 172) and the key
+AT = (597, 193)                   # the middle of the bust
+HOOD, EYES, NECKLACE = 4, 15, 14
+BAG_BACK = {(84, 84, 84), (0, 0, 0)}
 
 
 def eye_colour(h, st) -> int:
@@ -65,66 +38,60 @@ def eye_colour(h, st) -> int:
     return 15
 
 
-class Face:
-    def __init__(self, pack):
-        self.pack = pack
-        self._last_life = None
-        self._ouch_until = 0
+def ega_index(rgb) -> int | None:
+    return next((n for n, c in enumerate(EGA) if tuple(c[:3]) == tuple(rgb[:3])), None)
 
-    def state(self, game, now: int) -> tuple:
+
+class Face:
+    def __init__(self, pack, sprites):
+        self.pack, self.sprites = pack, sprites
+        own = pack.path('sprites', 'bust.png')
+        path = own if os.path.exists(own) else os.path.join(os.path.dirname(__file__), 'assets', 'bust.png')
+        self.picture = pygame.image.load(path).convert_alpha()
+        self._amulets: dict[int, int] = {}
+        self._cache_key, self._cache = None, None
+
+    def amulet_colour(self, item: int) -> int:
+        """The colour an amulet is drawn in: the commonest colour of its bag picture that isn't the
+        cell's grey or black, white only when there's nothing else (the Pearl Necklace)."""
+        if item not in self._amulets:
+            cell = self.sprites.bag.get(item)
+            colour = NECKLACE
+            if cell is not None:
+                seen = Counter(tuple(cell.get_at((x, y)))[:3] for x in range(1, cell.get_width() - 1)
+                               for y in range(1, cell.get_height() - 1))
+                ranked = [c for c, _ in seen.most_common() if c not in BAG_BACK]
+                coloured = [c for c in ranked if c != tuple(EGA[15][:3])]
+                pick = (coloured or ranked or [None])[0]
+                colour = ega_index(pick) if pick else NECKLACE
+            self._amulets[item] = colour if colour is not None else NECKLACE
+        return self._amulets[item]
+
+    def state(self, game) -> tuple:
         p, st = game.player, game.status
         h = p.hero
-        life = h.life / h.mlife if h.mlife else 1
-        if self._last_life is not None and h.life < self._last_life:
-            self._ouch_until = now + 450                     # just hurt: eyes shut tight
-        self._last_life = h.life
-        hurt = 0 if life > 2 / 3 else 1 if life > 1 / 3 else 2
-        swing = getattr(game, 'swing', None)
-        attacking = bool(swing) and 0 <= now - swing[1] < 400
-        glance = (now // 1300) % 4                           # 0 ahead, 1 left, 2 ahead, 3 right
-        look = self.pack.classes.get(h.type, {}).get('look', {})
-        return (hurt, eye_colour(h, st), now < self._ouch_until, attacking, (0, -1, 0, 1)[glance],
-                h.invisible > 0, st.Shield > 0, st.fShield > 0, look.get('colour', 8) or 8)
+        amulet = p.bag.get((14, 6), 0)
+        return (self.pack.classes.get(h.type, {}).get('look', {}).get('colour', HOOD),
+                eye_colour(h, st), self.amulet_colour(amulet) if amulet else 0, h.invisible > 0)
 
-    def draw(self, game, scr, now: int):
-        hurt, eyes, ouch, attacking, glance, invisible, shield, fire, helmet = self.state(game, now)
-        x0, y0, w, h = BOX
-        pygame.draw.rect(scr, EGA[0], (x0 - 3, y0 - 3, w + 6, h + 6))
-        pygame.draw.rect(scr, EGA[6], (x0 - 3, y0 - 3, w + 6, h + 6), 3)         # brown, as the Map box
-        pygame.draw.rect(scr, EGA[15], (x0 - 3, y0 - 3, w + 6, h + 6), 1)
-        if shield:
-            pygame.draw.rect(scr, EGA[14], (x0 - 1, y0 - 1, w + 2, h + 2), 2)
-        if fire:
-            pygame.draw.rect(scr, EGA[4], (x0 + 1, y0 + 1, w - 2, h - 2), 2)
-        fx = x0 + (w - len(FACE[0]) * PX) // 2
-        fy = y0 + (h - len(FACE) * PX) // 2
+    def render(self, hood, eyes, necklace, invisible) -> pygame.Surface:
+        src = self.picture
+        out = pygame.Surface(src.get_size(), pygame.SRCALPHA)
+        swap = {HOOD: hood, EYES: eyes, NECKLACE: necklace}
+        for x in range(src.get_width()):
+            for y in range(src.get_height()):
+                c = src.get_at((x, y))
+                if c.a == 0:
+                    continue
+                n = ega_index(c)
+                if invisible and n != EYES:
+                    continue                                 # invisible: only the eyes
+                out.set_at((x, y), EGA[swap.get(n, n)] if n is not None else c)
+        return pygame.transform.scale(out, (src.get_width() * SCALE, src.get_height() * SCALE))
 
-        def dot(cx, cy, colour):
-            scr.fill(EGA[colour], (fx + cx * PX, fy + cy * PX, PX, PX))
-        if not invisible:
-            for y, row in enumerate(FACE):
-                for x, c in enumerate(row):
-                    if c == 'H':
-                        dot(x, y, helmet)
-                    elif c in COLOURS:
-                        dot(x, y, COLOURS[c])
-            for x, y in BLOOD * (hurt >= 1) + BLOOD_MORE * (hurt >= 2):
-                dot(x, y, 4)
-            if attacking or hurt >= 2:                       # teeth bared
-                for x in range(8, 16):
-                    dot(x, 17, 15)
-                    dot(x, 18, 0)
-                for x in range(8, 16, 2):
-                    dot(x, 17, 0)
-        for ex, ey in EYES:
-            if ouch and not invisible:
-                for x in range(ex, ex + 5):                  # screwed shut
-                    dot(x, ey + 1, 0)
-                continue
-            for x in range(ex, ex + 5):
-                for y in range(ey, ey + 3):
-                    dot(x, y, eyes)
-            if not invisible:
-                px = ex + 2 + glance
-                dot(px, ey + 1, 0)
-                dot(px, ey + 2, 0)
+    def draw(self, game, scr):
+        key = self.state(game)
+        if key != self._cache_key:
+            self._cache_key, self._cache = key, self.render(*key)
+        pic = self._cache
+        scr.blit(pic, (AT[0] - pic.get_width() // 2, AT[1] - pic.get_height() // 2))

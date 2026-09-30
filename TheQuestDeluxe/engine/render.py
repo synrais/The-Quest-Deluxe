@@ -249,8 +249,8 @@ class Renderer:
             if getattr(game, 'minimap', True):
                 self.map_box(game, scr)
             if not hasattr(self, 'face'):
-                self.face = Face(self.pack)
-            self.face.draw(game, scr, pygame.time.get_ticks())    # the hero's face beside the Map box
+                self.face = Face(self.pack, self.sprites)
+            self.face.draw(game, scr)                    # the hero's bust, right of the coins
         self.draw_message(scr, game)
         if game.overlay:
             game.overlay.draw(self, scr)

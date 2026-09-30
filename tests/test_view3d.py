@@ -211,12 +211,12 @@ def weapon_in_view():
         return {tuple(s.get_at((x, y))[:3]) for x in range(0, 200, 2) for y in range(0, 250, 2)}
     g.player.bag[(12, 4)] = 211                                  # a Long Sword: white blade, blue hilt
     held = colours()
-    assert EGA[15][:3] in held and EGA[1][:3] in held and EGA[7][:3] in held, 'the sword and the hand'
+    assert EGA[15][:3] in held and EGA[1][:3] in held, 'the sword'
     pic = cut_out(r.sprites.bag[211])
     assert not any(tuple(pic.get_at((x, y))) == (84, 84, 84, 255)
                    for x in range(pic.get_width()) for y in range(pic.get_height())), "the cell's grey stays"
     del g.player.bag[(12, 4)]
-    assert EGA[15][:3] not in colours()                          # a bare fist
+    assert EGA[15][:3] not in colours() and EGA[1][:3] not in colours()   # nothing in hand: nothing
     g.view3d = False
     assert EGA[1][:3] not in colours()                           # from above: no hand
     # the kinds of attack, and how the hand moves
@@ -235,41 +235,41 @@ def weapon_in_view():
     g.swing = ('swing', now - 5000)
     assert hands.pose(g, now)[:2] == (0, 0) or r._cam            # long over: back at rest
     g.swing = None
-    print('the weapon in view: the sword in hand, a fist without, swings, thrusts and shots: ok')
+    print('the weapon in view: the sword in hand, nothing without, swings, thrusts and shots: ok')
 
 
 
 def face():
-    from deluxe.face import BOX, eye_colour
+    from deluxe.face import AT, SCALE, eye_colour
     from deluxe.render import EGA
     g = deluxe.Game(pygame.Surface((640, 480)))
     g.quick_start(1, 1)
-    r, h, st = g.renderer, g.player.hero, g.status
+    r, h, st, p = g.renderer, g.player.hero, g.status, g.player
+    half = 11 * SCALE // 2 + 1
+    area = (AT[0] - half, AT[1] - half, 2 * half, 2 * half)
 
     def colours():
         r.draw(g, present=False)
-        s = r.screen.subsurface(BOX)
-        return {tuple(s.get_at((x, y))[:3]) for x in range(BOX[2]) for y in range(BOX[3])}
-    assert EGA[6][:3] not in colours()                           # from above: the hero shows it himself
+        s = r.screen.subsurface(area)
+        return {tuple(s.get_at((x, y))[:3]) for x in range(area[2]) for y in range(area[3])}
+    assert colours() <= {(0, 0, 0)}                               # from above: no bust
     g.view3d = True
     seen = colours()
-    assert {EGA[6][:3], EGA[15][:3], EGA[5][:3]} <= seen          # skin, white eyes, the Knight's colour
-    assert EGA[4][:3] not in seen                                 # unhurt: no blood
-    h.life = 1
-    assert EGA[4][:3] in colours()                                # badly hurt
-    h.life = h.mlife
-    r.face._ouch_until = 0
+    assert {EGA[5][:3], EGA[15][:3]} <= seen and EGA[4][:3] not in seen    # the Knight's hood, white eyes
+    assert area[1] > 172 and area[1] + area[3] < 214 and area[0] > 550      # below the gold, above the key
+    p.bag[(14, 6)] = 504                                          # the Evergreen Amulet: a green necklace
+    assert EGA[2][:3] in colours()
+    p.bag[(14, 6)] = 511                                          # the Pearl Necklace: white
+    assert r.face.amulet_colour(511) == 15
+    h.type = 2                                                    # a Mage: the hood in the Mage's colour
+    assert EGA[g.pack.classes[2]['look']['colour']][:3] in colours()
     st.killer = 1
-    assert eye_colour(h, st) == 4
+    assert eye_colour(h, st) == 4 and EGA[4][:3] in colours()
     h.poisoned = 1
     assert eye_colour(h, st) == 10                                # poison first, as guy2()
-    st.Shield = 3
-    assert EGA[14][:3] in colours()                               # the Shield's ring
     h.invisible = 5
-    seen = colours()
-    assert EGA[6][:3] not in seen and EGA[4][:3] in seen          # only the (killer-red) eyes
-    print("the face: in FPS mode only, hurt, the eye colours in guy2()'s order, the Shield, invisible: ok")
-
+    assert colours() == {(0, 0, 0), EGA[4][:3]}                   # only the (killer-red) eyes
+    print("the bust: in FPS mode only, the class's hood, the amulet's necklace, guy2()'s eyes, invisible: ok")
 
 def main():
     ap = argparse.ArgumentParser()

@@ -1,10 +1,10 @@
 """FPS mode: the hero's weapon in view (Deluxe).
 
-The weapon he holds (the bag's weapon cell) stands at the bottom right of the view in a gloved hand,
-big and partly off the edge: its bag picture with the cell's frame and grey cut away, tilted, and
+The weapon he holds (the bag's weapon cell) stands at the bottom right of the view, big and partly
+off the edge: its bag picture with the cell's frame and grey cut away, tilted, and
 scaled up in whole EGA pixels. An item's "fps_turn" turns its picture that many degrees (anticlockwise)
 to stand it up; a pack can also draw its own: sprites/hands/<item>.png (upright, the grip at the
-bottom). With nothing in hand, a fist.
+bottom). With nothing in hand, nothing shows.
 
 It moves with the hero: a bob as he steps, and when he attacks a swing (swords, axes, clubs...), a
 thrust (spears, pikes, lances: kind 3) or a draw and release (bows and slings). An item's
@@ -18,7 +18,6 @@ import os
 
 import pygame
 
-from .bgi import EGA
 
 SCALE = 5                 # whole pixels: the view is 400 x 400, a 40-pixel picture stands 200 high
 GRIP = (300, 405)         # where the grip sits: the bottom right, just below the view's edge
@@ -98,19 +97,12 @@ class Hands:
         return dx, dy, da
 
     def draw(self, game, scr, now: int):
-        p = game.player
-        item = p.bag.get((12, 4), 0)
-        dx, dy, da = self.pose(game, now)
-        colour = self.pack.classes.get(p.hero.type, {}).get('look', {}).get('colour', 7)
-        if not item:
-            self.fist(scr, (GRIP[0] - 10 + dx, GRIP[1] - 75 + dy), colour)
-            return
-        pic = self.picture(item)
+        item = game.player.bag.get((12, 4), 0)
+        pic = self.picture(item) if item else None
         if pic is None:
-            self.fist(scr, (GRIP[0] + dx, GRIP[1] - 60 + dy), colour)
-            return
-        row = self.pack.item(item)
-        shoot = attack_kind(row) == 'shoot'
+            return                                          # nothing in hand: nothing in view
+        dx, dy, da = self.pose(game, now)
+        shoot = attack_kind(self.pack.item(item)) == 'shoot'
         angle = (-8 if shoot else TILT) + da
         big = pygame.transform.scale(pic, (pic.get_width() * SCALE, pic.get_height() * SCALE))
         turned = pygame.transform.rotate(big, angle)
@@ -120,18 +112,3 @@ class Hands:
         rx, ry = vx * math.cos(a) + vy * math.sin(a), -vx * math.sin(a) + vy * math.cos(a)
         gx, gy = GRIP[0] + dx - (40 if shoot else 0), GRIP[1] + dy
         scr.blit(turned, (gx - rx - turned.get_width() / 2, gy - ry - turned.get_height() / 2))
-        # the hand closes on the handle a little above the grip
-        k = 0.1 * big.get_height()
-        self.fist(scr, (gx + math.sin(a) * -k - 25, gy - math.cos(a) * k - 30), colour)
-
-    @staticmethod
-    def fist(scr, at, colour):
-        """A gauntlet: grey, dark knuckle lines, a cuff in the class colour."""
-        x, y = int(at[0]), int(at[1])
-        pygame.draw.rect(scr, EGA[colour], (x + 4, y + 38, 46, 60))          # the sleeve
-        pygame.draw.rect(scr, EGA[0], (x + 4, y + 38, 46, 60), 2)
-        pygame.draw.rect(scr, EGA[7], (x, y, 54, 44), border_radius=10)      # the fist
-        pygame.draw.rect(scr, EGA[0], (x, y, 54, 44), 2, border_radius=10)
-        for k in range(1, 4):
-            pygame.draw.line(scr, EGA[8], (x + 13 * k, y + 4), (x + 13 * k, y + 18), 2)
-        pygame.draw.line(scr, EGA[8], (x + 6, y + 26), (x + 40, y + 26), 2)   # the thumb
