@@ -14,6 +14,8 @@ import pygame
 
 from .art import photo, to_ega, bag_cell
 
+OPAQUE = {'bag', 'spells', 'floors'}           # pictures with no transparent pixels
+
 
 class Field:
     def __init__(self, key, label, kind='int', choices=None, when=None, hint='', default=None, width=8,
@@ -304,10 +306,25 @@ class TableTab(ttk.Frame):
             ph = photo(s)
             self._pic_images.append(ph)
             ttk.Label(box, image=ph).pack(anchor='w')
+            ttk.Button(box, text='Paint...', command=lambda f=folder, b=is_bag, l=label: self.paint(f, b, l)).pack(
+                fill='x')
             ttk.Button(box, text='Import...', command=lambda f=folder, b=is_bag: self.import_picture(f, b)).pack(
                 fill='x')
             if is_bag:
                 ttk.Button(box, text='From the map picture', command=self.bag_from_map).pack(fill='x')
+
+    def paint(self, folder, is_bag, label):
+        """Open the painter on this picture; saving puts it back here."""
+        from .painter import Painter
+        row = self.row
+        opaque = is_bag or folder in OPAQUE
+
+        def keep(surface):
+            if self.row is not row:                  # another entry is showing: store it all the same
+                self.select(row['id'])
+            self.set_picture(folder, surface, is_bag)
+        return Painter(self, f'{label}: {self.label(row)}', self.app.project.picture(folder, row['id']), keep,
+                       opaque=opaque)
 
     def import_picture(self, folder, is_bag):
         path = filedialog.askopenfilename(title='A picture (40 x 40 is best)',

@@ -183,11 +183,45 @@ sh._put_on()
 assert sh.stock[-1] == 211 and len(sh.stock) == n + 1
 print('dialogue, stories and shops: edited, and the game reads them: ok')
 
+# Tiles, and the painter
+tt = app.tiles_tab
+app.tabs.select(tt)
+pump()
+tt.pick_kind('walls')
+tt.select(-2)
+assert tt.row['door'] == 'locked' and tt.row['key'] == 'yellow'
+tt._set(next(f for f in tt.fields() if f.key == 'door'), 'plain')
+assert 'key' not in tt.row
+tt.pick_kind('floors')
+from unittest import mock  # noqa: E402
+with mock.patch('tkinter.messagebox.askyesno', return_value=False):
+    tt.new()
+new_floor = tt.row['id']
+pt = tt.paint('floors', False, 'Picture')
+pump()
+assert pt.opaque                                      # floors have no see-through pixels
+pt.tool.set('rect')
+z = 12
+pt._press(mock.Mock(x=2, y=2, state=0), 'left')
+pt._release(mock.Mock(x=39 * z + 2, y=19 * z + 2, state=0), 'left')
+pt.left = 1
+pt.tool.set('fill')
+pt._press(mock.Mock(x=2, y=30 * z, state=0), 'left')
+pt._release(mock.Mock(x=2, y=30 * z, state=0), 'left')
+pt.undo()
+pt.redo()
+pt.save()
+pt.destroy()
+img = app.project.picture('floors', new_floor)
+assert tuple(img.get_at((0, 0)))[:3] == (252, 252, 252) and tuple(img.get_at((5, 30)))[:3] == (0, 0, 168)
+print('tiles: a door, a new floor painted: ok')
+
 assert app.dirty
 app.save()
 assert os.path.exists(os.path.join(pack, 'sprites', 'items', '1001.png'))
 assert os.path.exists(os.path.join(pack, 'sprites', 'bag', '1001.png'))
 assert not os.path.exists(os.path.join(pack, 'sprites', 'items', '201.png'))
+assert os.path.exists(os.path.join(pack, 'sprites', 'floors', f'{new_floor}.png'))
 assert not app.dirty
 with open(os.path.join(pack, 'levels', '1', 'map.txt')) as fh:
     lines = set(fh.read().splitlines())

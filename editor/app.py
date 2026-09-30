@@ -19,6 +19,7 @@ from .text_tabs import EventsTab, TextTab
 from .items_tab import ItemsTab
 from .creatures_tab import CreaturesTab
 from .classes_tab import ClassesTab
+from .tiles_tab import TilesTab
 from .spells_tab import SpellsTab
 from .shops_tab import ShopsTab
 from .dialogue_tab import DialogueTab
@@ -115,9 +116,10 @@ class App:
         self.shops_tab = ShopsTab(self.tabs, self)
         self.dialogue_tab = DialogueTab(self.tabs, self)
         self.stories_tab = StoriesTab(self.tabs, self)
+        self.tiles_tab = TilesTab(self.tabs, self)
         for tab, name in ((self.map_tab, 'Map'), (self.items_tab, 'Items'), (self.creatures_tab, 'Creatures'),
-                          (self.classes_tab, 'Classes'), (self.spells_tab, 'Spells'), (self.shops_tab, 'Shops'),
-                          (self.dialogue_tab, 'Dialogue'), (self.stories_tab, 'Stories'),
+                          (self.classes_tab, 'Classes'), (self.spells_tab, 'Spells'), (self.tiles_tab, 'Tiles'),
+                          (self.shops_tab, 'Shops'), (self.dialogue_tab, 'Dialogue'), (self.stories_tab, 'Stories'),
                           (self.events_tab, 'Events'), (self.text_tab, 'Text files'), (self.quest_tab, 'Quest')):
             self.tabs.add(tab, text=f'  {name}  ')
         self.tabs.bind('<<NotebookTabChanged>>', lambda e: self._tab_changed())
@@ -196,7 +198,8 @@ class App:
         self.play_class.config(values=classes)
         self.play_class.set(classes[0] if classes else '')
         for tab in (self.map_tab, self.events_tab, self.text_tab, self.quest_tab, self.items_tab, self.creatures_tab,
-                    self.classes_tab, self.spells_tab, self.shops_tab, self.dialogue_tab, self.stories_tab):
+                    self.classes_tab, self.spells_tab, self.tiles_tab, self.shops_tab, self.dialogue_tab,
+                    self.stories_tab):
             tab.load()
         self._title()
 
