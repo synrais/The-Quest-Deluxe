@@ -306,6 +306,7 @@ class Combat:
         if (8 - d) * 10 + h.atk + 5 - e.defense >= random(100) + 1:
             wep = p.item(SLOT_WEAPON)
             hit = self.g.pack.item(wep).get('missile_anim')
+            self.g.fly(hit, (p.X, p.Y), (e.x, e.y), True)          # FPS mode: the flight (Deluxe)
             if hit:
                 self.g.play_at(hit, e.x, e.y, 0)
             q = self.w.sq(e.x, e.y)
@@ -313,6 +314,7 @@ class Combat:
                 q.deco = self.g.pack.deco('blood')
             self.hurt(h.power, e, 2, by_hero=True, how='shot')
         else:
+            self.g.fly(self.g.pack.item(p.item(SLOT_WEAPON)).get('missile_anim'), (p.X, p.Y), (e.x, e.y), False)
             self.g.play_at('bhit', e.x, e.y, 6)
             self.g.tones((150, 50))
             self.g.report(f'Your shot misses the {self.g.monster_name(e.type)}.', 7, (e.x, e.y), 'miss')
@@ -396,6 +398,7 @@ class Combat:
             e.moved = False
         if e.atk + (8 - d) * 10 + 5 - h.defense >= random(100) + 1:
             hit = self.g.pack.trait(e.type, 'missile_anim')
+            self.g.fly(hit, (e.x, e.y), (p.X, p.Y), True, towards_hero=True)
             if hit:
                 self.g.play_at(hit, p.X, p.Y, 1)
             self.hurt(e.power, None, 2, e)
@@ -404,6 +407,7 @@ class Combat:
             if n and random(n) == 1 and not h.poisoned:
                 self.poison_hero()
         else:
+            self.g.fly(self.g.pack.trait(e.type, 'missile_anim'), (e.x, e.y), (p.X, p.Y), False, towards_hero=True)
             self.g.report(f"The {name}'s shot misses you.", 7, (p.X, p.Y), 'miss')
 
     def enemy_cast(self, e: Enemy, name: str):

@@ -12,6 +12,7 @@ from .hud import Hud
 from . import anim, view3d
 from .hands import Hands
 from .face import Face
+from . import missiles
 
 W, H = 640, 480
 TILE = 40
@@ -175,6 +176,27 @@ class Renderer:
         if not hasattr(self, 'hands'):
             self.hands = Hands(self.pack, self.sprites)
         self.hands.draw(game, scr.subsurface((0, 0, MAP_PX, MAP_PX)), pygame.time.get_ticks())
+
+    def fly(self, game, anim_name, frm, to, hit: bool, towards_hero: bool, fast=False):
+        """FPS mode: an arrow, bolt or stone flies through the view (engine.missiles), blocking like an
+        animation, before the original's landing plays."""
+        if fast or not self.in_3d(game):
+            return
+        kind = missiles.kind_of(anim_name)
+        at, ms = missiles.path(frm, to, hit, towards_hero)
+        tail = 0.35 / max(1.0, ms / missiles.MS_PER_SQUARE)     # about a third of a square behind
+        cam = self.camera(game)
+        start = pygame.time.get_ticks()
+        while True:
+            t = (pygame.time.get_ticks() - start) / ms
+            if t >= 1:
+                break
+            self.draw(game, present=False)
+            missiles.draw(self.screen.subsurface((0, 0, MAP_PX, MAP_PX)), self.v3d, cam, kind,
+                          at(t), at(max(0.0, t - tail)))
+            self.present()
+            pygame.event.pump()                  # keys pressed meanwhile stay queued
+            pygame.time.wait(10)
 
     def compose_3d(self, game) -> pygame.Surface:
         out = self._compose_3d(game)

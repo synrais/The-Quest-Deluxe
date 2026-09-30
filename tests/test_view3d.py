@@ -360,6 +360,44 @@ def holding_keys():
     print('holding a direction in FPS mode: keeps walking or turning, a step at a time: ok')
 
 
+
+def missiles_in_flight():
+    """FPS mode: arrows, bolts and stones fly before they land; only the picture."""
+    from deluxe import missiles
+    from deluxe.render import EGA
+    assert [missiles.kind_of(a) for a in ('arhit', 'bolthit', 'sthit', None)] == ['arrow', 'bolt', 'stone', 'arrow']
+    at, ms = missiles.path((5, 5), (5, 9), True, False)          # the hero shoots south, four squares
+    assert missiles.MIN_MS <= ms <= missiles.MAX_MS
+    (x0, y0, h0), (x1, y1, h1) = at(0), at(1)
+    assert y0 < y1 and abs(y1 - 9.5) < 1e-9 and h0 < h1           # from the bow, low, to the target
+    assert at(0.5)[2] > (h0 + h1) / 2                             # in an arc
+    at, _ = missiles.path((5, 5), (5, 9), False, False)
+    assert at(1)[1] > 11                                          # a miss flies on past
+    at, _ = missiles.path((5, 9), (5, 5), True, True)
+    assert 5.5 < at(1)[1] < 6.2 and at(1)[2] == 0.5               # at the hero's face
+    # drawn in the view, and nothing to do when not in FPS mode or when the game is scripted
+    g = deluxe.Game(pygame.Surface((640, 480)))
+    g.quick_start(1, 1)
+    g.view3d, g.facing = True, 2
+    r = g.renderer
+    r.draw(g, present=False)
+    view = pygame.Surface((400, 400))
+    view.fill((0, 0, 0))
+    at, _ = missiles.path((g.player.X, g.player.Y), (g.player.X, g.player.Y + 4), True, False)
+    missiles.draw(view, r.v3d, r.camera(g), 'arrow', at(0.3), at(0.2))
+    got = {tuple(view.get_at((x, y))[:3]) for x in range(0, 400, 1) for y in range(0, 400, 2)}
+    assert EGA[6][:3] in got, 'the shaft'
+    start = pygame.time.get_ticks()
+    g.fly('arhit', (5, 5), (5, 9), True)                          # scripted: no flight, no wait
+    g.fast = False
+    g.view3d = False
+    g.fly('arhit', (5, 5), (5, 9), True)                          # from above: none either
+    g.view3d = True
+    g.fly(None, (5, 9), (5, 5), True, towards_hero=True)          # a shot with no picture: none
+    assert pygame.time.get_ticks() - start < 100
+    print('missiles in flight: arrows, bolts and stones, to the target or past it, and at the hero: ok')
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--runs', type=int, default=12)
@@ -373,6 +411,7 @@ def main():
     face()
     drawing_order()
     holding_keys()
+    missiles_in_flight()
     bad = same_games(a.runs, a.keys)
     sys.exit(1 if bad else 0)
 

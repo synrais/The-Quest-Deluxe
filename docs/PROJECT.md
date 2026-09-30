@@ -58,7 +58,10 @@ game:
   scaled up in whole pixels (nothing when the hand is empty). The original's white attack stroke on
   the target isn't drawn in FPS mode (it is still heard): the weapon shows the blow, and a miss
   carries it too far. A creature's stroke on the hero is drawn as he sees it: from in front it rises
-  from the bottom of the view, from his right it comes from the left. It bobs as the hero steps, and swings, thrusts (spears, pikes, lances) or is drawn and
+  from the bottom of the view, from his right it comes from the left.
+- Arrows, bolts and sling stones fly (`engine/missiles.py`): the original only draws where a shot
+  lands; in FPS mode the shot first flies from the bow to the target in an arc, shrinking with
+  distance (a miss flies on past it), or from a creature at the hero, growing (a miss whips past). It bobs as the hero steps, and swings, thrusts (spears, pikes, lances) or is drawn and
   let go (bows, slings) as he attacks. Only the picture moves; the rules don't know about it.
 - The hero's bust in the panel, right of the coins and above the right-hand key, with no frame
   (`engine/face.py`, the picture `engine/assets/bust.png`, 11 x 11, drawn 3 times the size; a pack can

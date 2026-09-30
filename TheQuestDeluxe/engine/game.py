@@ -200,6 +200,13 @@ class Game:
             item = self.pack.item(self.player.bag.get((12, 4), 0)) if self.player.bag.get((12, 4)) else {}
             self.swing = (attack_kind(item), pygame.time.get_ticks())
 
+    def fly(self, anim_name, frm, to, hit: bool, towards_hero: bool = False):
+        """FPS mode: the missile's flight (Renderer.fly), before its landing animation. A creature
+        whose shot has no landing picture shows no flight either."""
+        if towards_hero and not anim_name:
+            return
+        self.renderer.fly(self, anim_name, frm, to, hit, towards_hero, fast=self.fast)
+
     def swing_missed(self):
         """FPS mode: the blow in progress missed (engine.hands carries it too far)."""
         if getattr(self, 'swing', None):
