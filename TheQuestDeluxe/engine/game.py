@@ -653,7 +653,8 @@ class Game:
         buffer keeps the last shop's number, so an unlisted screen sells the last shop's wares
         (0: none). 's' or 'i' goes to the selling page."""
         sx, sy = screen_of(self.player.X, self.player.Y)
-        self.last_shop = self.events.meta(self.world.level, 'SHOPS', {}).get((sx, sy), self.last_shop)
+        self.last_shop = self.events.meta(self.world.level, 'SHOPS', {}).get(
+            (sx, sy), 0 if self.pack.fixed('shop_memory') else self.last_shop)
         store = {}
         if self.last_shop:
             try:

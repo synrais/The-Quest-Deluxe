@@ -75,9 +75,17 @@ class QuestTab(ttk.Frame):
         ttk.Entry(self, textvariable=self.keys, width=40).grid(row=n + 4, column=1, sticky='w')
         ttk.Label(self, text='name: EGA colour, ... (green: 10, purple: 5); yellow, red and blue are the original\'s',
                   foreground='#555').grid(row=n + 5, column=1, sticky='w')
-        ttk.Button(self, text='Apply', command=self.apply).grid(row=n + 6, column=1, sticky='w', pady=8)
+        # the original's bugs, fixed (packs/TheQuest keeps them all, to play exactly as the original)
+        from engine.pack import Pack
+        box = ttk.LabelFrame(self, text="Fix the original's bugs", padding=6)
+        box.grid(row=n + 6, column=0, columnspan=2, sticky='w', pady=8)
+        self.fixes = {}
+        for r, (name, text) in enumerate(Pack.FIXES.items()):
+            self.fixes[name] = tk.BooleanVar()
+            ttk.Checkbutton(box, text=text, variable=self.fixes[name]).grid(row=r, column=0, sticky='w')
+        ttk.Button(self, text='Apply', command=self.apply).grid(row=n + 7, column=1, sticky='w', pady=8)
         self.info = ttk.Label(self, text='', foreground='#555', justify='left')
-        self.info.grid(row=n + 7, column=0, columnspan=2, sticky='w', pady=12)
+        self.info.grid(row=n + 8, column=0, columnspan=2, sticky='w', pady=12)
 
     RECLASS = {False: 'none: the hero keeps the class chosen',
                True: "Quest I's rule: the stats pick Knight, Mage, Rogue or Monk at each level-up",
@@ -94,6 +102,9 @@ class QuestTab(ttk.Frame):
             for f in ('name', 'colour', 'life', 'mana', 'berserk'):
                 v[f].set('' if pot.get(f) is None else str(pot.get(f)))
             v['cure_poison'].set(bool(pot.get('cure_poison')))
+        fixes = q.get('fixes')
+        for name, v in self.fixes.items():
+            v.set(fixes is True or (isinstance(fixes, list) and name in fixes))
         self.keys.set(', '.join(f'{k}: {v.get("colour", 7) if isinstance(v, dict) else v}'
                                 for k, v in (q.get('keys') or {}).items()))
         p = self.app.project
@@ -150,6 +161,11 @@ class QuestTab(ttk.Frame):
                                           'more key colours are like "green: 10" (a new name, colour 0-15).')
             return
         q['reclass'] = next(k for k, v in self.RECLASS.items() if v == self.reclass.get())
+        fixes = [name for name, v in self.fixes.items() if v.get()]
+        if fixes:
+            q['fixes'] = fixes
+        else:
+            q.pop('fixes', None)
         self.app.project.touch('quest')
         self.app.changed()
 

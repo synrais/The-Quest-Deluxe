@@ -168,7 +168,8 @@ class Magic:
             self.anim(spell, x, y)
             g.combat.hurt(0, target, 1, by_hero=True, quiet=True)   # even with nobody there: hurt(0, -1, ...)
             if target:
-                if self.tell(sp.get('freeze_power_of', spell), SP_POWER) > target.marm:   # Quest I: spell 4's
+                power_of = spell if g.pack.fixed('shield_ice') else sp.get('freeze_power_of', spell)
+                if self.tell(power_of, SP_POWER) > target.marm:    # Quest I: spell 4's
                     target.att = -11 - self.tell(spell, SP_DURATION)
                     g.report(f'The {g.monster_name(target.type)} is frozen.', 11, (x, y), 'frozen')
                 else:

@@ -124,6 +124,24 @@ class Pack:
     def spell(self, s: int) -> dict:
         return self.spells.get(s, {})
 
+    # The original's bugs a pack can have fixed: quest.json's "fixes", true for all or a list of names.
+    # packs/TheQuest has none, so it plays exactly as the original.
+    FIXES = {
+        'shield_ice': 'Shield and Ring of Ice each use their own power (the original swaps them)',
+        'quiz_ties': 'a questionnaire tie is drawn at random between the tied classes (not a Monk)',
+        'fault_colours': 'Honor and Rashness stay red on the character sheet while Cowardice shows',
+        'shop_memory': "a screen without a shop of its own has nothing to sell (not the last shop's stock)",
+        'dead_scan': 'every creature is checked when one dies, and a scan started over starts at the first',
+        'load_gaps': 'Load Game lists every saved game, past a missing or reserved slot',
+        'talk': 'dialogue entries are found by their lines, one-line messages sit in the strip like '
+                'two-line ones, and a missing line shows nothing (the original hangs)',
+    }
+
+    def fixed(self, name: str) -> bool:
+        """Does this pack fix the original's bug `name` (FIXES)?"""
+        f = self.quest.get('fixes')
+        return f is True or (isinstance(f, list) and name in f)
+
     ORIGINAL_KEYS = {'yellow': 14, 'red': 4, 'blue': 1}      # the original's three: gold, red, blue
 
     def extra_keys(self) -> dict:
@@ -158,7 +176,8 @@ class Pack:
         """How big a blow the Shield spell stops: the power of the spell its absorb_power_of names
         (in Quest I, Ring of Ice's: the original reads the wrong spell)."""
         sh = self._by_effect('shield')
-        return self.spell(sh.get('absorb_power_of', sh.get('id', 0))).get('power', 0)
+        own = sh.get('id', 0)
+        return self.spell(own if self.fixed('shield_ice') else sh.get('absorb_power_of', own)).get('power', 0)
 
     def fire_shield_power(self) -> int:
         return self._by_effect('fire_shield').get('power', 0)

@@ -80,9 +80,12 @@ port.
    20 spells, potions 9 and 10 (keys 9 and 0), a pack's own key colours,
    and new classes in job changes (`"reclass": "stats"`) and the questionnaire
    (`TheQuestDeluxe/tests/test_limits.py`).
-2. **Fix the original's bugs as a choice.** `packs/TheQuest` stays exact, so the lockstep test keeps its
-   meaning; the fixes (the Shield / Ring of Ice swap and the others in [FINDINGS.md](FINDINGS.md)) switch
-   on with a setting in a pack, so a "Quest I Deluxe" pack and new quests can have them.
+2. **Fix the original's bugs as a choice.** **Done**: `packs/TheQuest` stays exact, so the lockstep test
+   keeps its meaning; quest.json's `fixes` (the editor's Quest tab) switches on seven fixes (the Shield /
+   Ring of Ice swap, questionnaire ties, fault colours, the shop memory, the death scan, Load Game's
+   gaps and the dialogue reader), so a "Quest I Deluxe" pack and new quests can have them
+   (`TheQuestDeluxe/tests/test_fixes.py`). The rest are in a pack's data; [FINDINGS.md](FINDINGS.md)
+   says which.
 3. **A status frame in FPS mode**, since the hero's eye colours (killer, berserk, poison) and shield
    rings can't be seen in 3D.
 

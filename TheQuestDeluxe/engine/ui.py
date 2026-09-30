@@ -239,7 +239,7 @@ class LoadScreen(Overlay):
     covers_map = True
 
     def __init__(self, g: 'Game'):
-        self.games = g.slots.listing()
+        self.games = g.slots.listing(all_=g.pack.fixed('load_gaps'))
         self.i = 1
 
     def key(self, g, ev):
@@ -267,8 +267,8 @@ class LoadScreen(Overlay):
         g.outtextxy(180, 0, 'Available Games')
         g.setcolor(9)
         g.settextstyle(6, 0, 2)
-        for n, level, htype in self.games:
-            y = n * 20 + 30
+        for k, (n, level, htype) in enumerate(self.games, start=1):
+            y = k * 20 + 30                            # the original's k is n: it stops at the first gap
             g.outtextxy(140, y, f'{n:2d}.')
             g.outtextxy(180, y, r.pack.class_name(htype))
             g.outtextxy(240, y, 'Level')
@@ -518,7 +518,12 @@ class Quiz(Choice):
             self.total += int(score)
         g.overlay = self
         if self.n == 7:                              # shown over the last question
-            self.result = quiz_best(self.points, self.total) if self.own else quiz_class(self.total)
+            if self.own:
+                self.result = quiz_best(self.points, self.total)
+            elif g.pack.fixed('quiz_ties'):
+                self.result = quiz_best({}, self.total)
+            else:
+                self.result = quiz_class(self.total)
         else:
             self.n += 1
             self.i = 1
@@ -802,7 +807,7 @@ def draw_sheet(r, scr, g, title: str, cursor: int | None = None, gained=()):
     cowering = sk.cow == 1 and h.mlife and h.life / h.mlife <= 0.3
     if sk.cow == 1:
         r.btext(scr, 'Cowardice', (290, 415), 12 if cowering else colour, ROM)
-        if cowering:
+        if cowering and not g.pack.fixed('fault_colours'):
             colour = 14                      # the original leaves the colour at yellow here
     if sk.hon == 1:
         r.btext(scr, 'Honor', (290, 428), colour, ROM)

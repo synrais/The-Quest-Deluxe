@@ -25,6 +25,8 @@ pygame-ce.
 | **FPS mode** | F | The world through the hero's eyes: a retro EGA raycaster drawn from the pack's own pictures. Up/Down walk, Left/Right turn (a free action), Q/E or `,` `.` step sideways, M shows or hides the screen from above. The rules don't change: walking is the classic move, so bumping fights, talks and opens doors. |
 | **Combat log** | D | "You hit the imp for 4.", "The orc hits you for 3.", misses, spells, pick-ups, locked doors ("You need the gold key.") and deaths over the bottom of the map; in FPS mode the damage also rises off whoever took it. |
 | **Quest packs** | | Everything the original hardcodes (items, creatures and their traits, classes, spells, tiles, stories, dialogue, shops, level scripts) is data in the pack. |
+| **Bug fixes** | | A pack can fix the original's bugs (the Shield / Ring of Ice swap, the shop memory, questionnaire ties and more), each on its own; `packs/TheQuest` keeps them all. |
+| **Past the original's limits** | 9, 0 | More than 20 spells (a spell book with pages), potions 9 and 10, more key colours, and new classes in class changes and the questionnaire. |
 | **The editor** | | Maps and level settings, items, creatures, classes, spells, tiles, shops, dialogue, stories and events; a 16-colour painter for every picture; a 3D preview; Play (F5) test-plays from the clicked square; new packs. |
 
 The original's keys all work as in [the classic edition](../TheQuestClassic/README.md#keys).
@@ -41,7 +43,7 @@ The original's keys all work as in [the classic edition](../TheQuestClassic/READ
 | `docs/QUEST_PACKS.md` | Every file of a pack, and every field. |
 | `docs/EVENTS.md` | The level scripts: the language, the handlers and the functions they can call. |
 | `tools/make_pack.py` | Rebuilds `packs/TheQuest` from the original (the only thing here that reads `../TheQuestClassic`). |
-| `tests/` | `test_packs.py`, `test_editor.py` (under `xvfb-run` on Linux), and `test_standalone.py`: a copy of this folder alone must play, opening nothing outside itself. |
+| `tests/` | `test_packs.py`, `test_limits.py`, `test_fixes.py`, `test_editor.py` (under `xvfb-run` on Linux), and `test_standalone.py`: a copy of this folder alone must play, opening nothing outside itself. |
 
 Saves go to `saves/<pack>/save01.dat` to `save20.dat`. A `sound.txt` here containing `0` turns the
 PC-speaker tones off.

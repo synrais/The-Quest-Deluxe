@@ -208,12 +208,15 @@ class Slots:
         except (IndexError, ValueError):
             return None
 
-    def listing(self) -> list[tuple[int, int, int]]:
-        """loadscreen()'s list: slots 1, 2, ... up to the first one that is missing or reserved."""
+    def listing(self, all_=False) -> list[tuple[int, int, int]]:
+        """loadscreen()'s list: slots 1, 2, ... up to the first one that is missing or reserved (with
+        all_, every saved game: the fixed Load Game)."""
         out = []
         for n in range(1, SLOTS + 1):
             h = self.header(n)
             if h is None:
+                if all_:
+                    continue
                 break
             out.append((n, *h))
         return out

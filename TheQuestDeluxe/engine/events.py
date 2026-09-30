@@ -138,6 +138,24 @@ def talk_text(raw: str, level: int, npc: int, ran: int) -> tuple[str, str, int] 
     return cstr(s), cstr(ss), (-3 if ii == 0 else 8)
 
 
+TALK_ENTRY = re.compile(r'^[ \t]*(-?\d+)[ \t]+(-?\d+)[ \t]+(-?\d+)[ \t]*"(.*?);', re.M | re.S)
+
+
+def talk_text_fixed(raw: str, level: int, npc: int, ran: int) -> tuple[str, str, int] | None:
+    """The fixed talk() (a pack's "talk" fix): entries are found by their own lines, so a two-line entry
+    can't put the reader out of step; both kinds of message are drawn as the original draws a two-line
+    one; and a line that isn't there is None (nothing is said) where the original hangs."""
+    for m in TALK_ENTRY.finditer(raw.replace('\r\n', '\n')):
+        lvl, num, y = int(m.group(1)), int(m.group(2)), int(m.group(3))
+        if (lvl == level or lvl == 0) and num == npc and y == ran:
+            body = m.group(4)
+            if '"\n"' in body:
+                one, two = body.split('"\n"', 1)
+                return '\xff"' + one, '\xff' + two + '"', 8
+            return '\xff"' + body + '"', '', 8
+    return None
+
+
 class Cell:
     """A square as scripts see it. Writes to the screen's border, and map() writes to the current
     screen, are kept aside and dropped when the hero leaves, as the original's separate room copy did."""
@@ -263,7 +281,7 @@ class Events:
             sc.run('talk', self, npc)
         ran = self.ctx['ran']
         self.ctx = saved
-        text = talk_text(self.talk_raw, self.g.world.level, npc, ran)
+        text = (talk_text_fixed if self.g.pack.fixed('talk') else talk_text)(self.talk_raw, self.g.world.level, npc, ran)
         self.g.show_talk(text)
         return ran
 

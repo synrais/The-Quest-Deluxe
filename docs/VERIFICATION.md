@@ -62,6 +62,8 @@ Run from the top of the repository.
 | `TheQuestClassic/tests/test_anims.py` | Every place the game plays one of the original's animations or sounds. |
 | `TheQuestClassic/tests/test_saves.py` | The save system in play: a new game taking a slot, the silent save after creation, "Want to save?", "Want to load?", the Available Games list, "Want to quit?", loading after death. |
 | `TheQuestDeluxe/tests/test_packs.py` | `packs/TheQuest` goes through the editor's model and back byte for byte; a blank pack; a new weapon picked up, worn and bought; a new class killing a new monster. |
+| `TheQuestDeluxe/tests/test_limits.py` | Past the original's limits: Quest I saves unchanged and the DELUXE block round trip (and the classic reader still loads the original part); more than 20 spells; potions 9 and 10; more key colours; new classes in class changes and the questionnaire. |
+| `TheQuestDeluxe/tests/test_fixes.py` | The original's bugs: `packs/TheQuest` fixes none; each fix a pack can ask for, checked without it (the original's behaviour) and with it. |
 | `TheQuestDeluxe/tests/test_editor.py` | The editor's window driven by simulated clicks: painting, undo, every tab, the painter, the 3D preview, saving. |
 | `TheQuestDeluxe/tests/test_standalone.py` | A copy of `TheQuestDeluxe/` alone, somewhere empty, plays the title, the stories, a level, the bag, the spell book, FPS mode and the last level, opening nothing outside itself. |
 

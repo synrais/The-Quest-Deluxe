@@ -115,6 +115,7 @@ class Combat:
         is not looked at until the next check."""
         w, ev = self.w, self.g.events
         ev.attacker = -1 if attacker is None or attacker not in w.enemies else w.enemies.index(attacker)
+        fixed = self.g.pack.fixed('dead_scan')
         i = 0
         while i < len(w.enemies):
             ev.run_check(i)
@@ -125,9 +126,11 @@ class Combat:
                     ev.run_dies(i)
                     if i < len(w.enemies):
                         self.fall(i, w.enemies[i])
+                        if fixed and not ev.restart_scan:
+                            continue                   # the fix: look at the one that slid into place
             if ev.restart_scan:
                 ev.restart_scan = False
-                i = 0
+                i = -1 if fixed else 0                 # the original starts over at index 1
             i += 1
         self.g.status.mons = len(w.enemies)
 

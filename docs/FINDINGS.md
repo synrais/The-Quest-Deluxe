@@ -27,30 +27,32 @@ discoveries, the original's bugs, and the corrections they led to.
 
 ## The original's bugs
 
-The classic edition keeps all of these on purpose. The Quest Deluxe keeps them too for now (it must
-play exactly like the original); fixing them is planned as a choice a pack makes (see
-[PROJECT.md](PROJECT.md)).
+The classic edition keeps all of these on purpose, and so does The Quest Deluxe's `packs/TheQuest` (it
+must play exactly like the original). A Deluxe pack can have them fixed: quest.json's `fixes` (the
+Quest tab in the editor) names the fixes in the last column, or `true` for all of them; the others are
+in a pack's own data, where the editor can change them. `TheQuestDeluxe/tests/test_fixes.py` checks
+each fix with and without it.
 
-| Bug | What happens |
-|---|---|
-| **Shield and Ring of Ice swapped** | The Shield spell (4) absorbs blows up to the power of spell 5, and the Ring of Ice (5) freezes if the power of spell 4 beats the target's magic armour. Both spells have power 10, so in Quest I it never shows. |
-| **An item in a tree** | Level 6, square (24,82): a decayed tree holding item −5, which isn't an item. |
-| **A shield that doesn't exist** | Level 7, square (45,65): item 311, which has no stats, no picture and no price (the shields are 301-306). |
-| **`Talk.dat` reading** | To skip a line it counts two `"` or `;` characters, but two-line entries have three, so the reader can fall out of step. One-line messages are drawn 3 pixels off the left edge, quote marks and all. A line that is never found hangs the game. |
-| **Shops remember the last shop** | `peddler()` never clears its file-name buffer: on a screen without a shop of its own, a shopkeeper sells the last shop's stock, even from an earlier level. |
-| **Dead creatures skip a neighbour** | `deadenemycheck()` removes the dead in place, so the creature that slides into the gap isn't checked until next time; some scripted scenes only fire while a creature is on the screen. |
-| **Fatebringer's scan** | When the Woman becomes Fatebringer (level 6), the scan restarts at index 1, and later kills in that pass are credited to creature 0, not the hero. |
-| **The current screen's map is stale** | The screen is copied out on arrival and written back on leaving, so quest checks that read the map see the screen as it was on arrival. |
-| **Conversations move the hero through walls** | The level 1 farmer and the level 6 father move the hero without checking walls. |
-| **Quiz ties favour the Monk** | A tie involving the Monk, or any three- or four-way tie, gives a Monk. |
-| **Marksmanship can't be chosen** | It is only offered to Rogues, who already have it. |
-| **Fault colours** | With Cowardice active, the lines below it on the character sheet stay yellow instead of red. |
-| **Invisible wraiths are never drawn** | `clean2()` has no case for them, even when they should show. |
-| **Items never raise max life or mana** | `inventory()` gets the hero by value, so what it adds is thrown away. |
-| **A save number is never written** | `save()` hands `fprintf` five numbers for four `%d`s, so `st.saveslot` is lost; every save also ends with a doubled newline. |
-| **Load Game stops at a gap** | The list stops at the first missing or reserved slot; games after it can't be picked. |
-| **Only levels 1-9** | `newmap()` writes `'0' + level` into a file name, and level 8 is hardcoded as the ending. |
-| **Negative angles in arcs** | The graphics library compares arc angles unsigned, so a negative start angle counts as a large one. |
+| Bug | What happens | Fixed in a Deluxe pack by |
+|---|---|---|
+| **Shield and Ring of Ice swapped** | The Shield spell (4) absorbs blows up to the power of spell 5, and the Ring of Ice (5) freezes if the power of spell 4 beats the target's magic armour. Both spells have power 10, so in Quest I it never shows. | `shield_ice` |
+| **An item in a tree** | Level 6, square (24,82): a decayed tree holding item −5, which isn't an item. | the map |
+| **A shield that doesn't exist** | Level 7, square (45,65): item 311, which has no stats, no picture and no price (the shields are 301-306). | the map |
+| **`Talk.dat` reading** | To skip a line it counts two `"` or `;` characters, but two-line entries have three, so the reader can fall out of step. One-line messages are drawn 3 pixels off the left edge, quote marks and all. A line that is never found hangs the game. | `talk` |
+| **Shops remember the last shop** | `peddler()` never clears its file-name buffer: on a screen without a shop of its own, a shopkeeper sells the last shop's stock, even from an earlier level. | `shop_memory` |
+| **Dead creatures skip a neighbour** | `deadenemycheck()` removes the dead in place, so the creature that slides into the gap isn't checked until next time; some scripted scenes only fire while a creature is on the screen. | `dead_scan` |
+| **Fatebringer's scan** | When the Woman becomes Fatebringer (level 6), the scan restarts at index 1, and later kills in that pass are credited to creature 0, not the hero. | `dead_scan` (the restart) |
+| **The current screen's map is stale** | The screen is copied out on arrival and written back on leaving, so quest checks that read the map see the screen as it was on arrival. | kept |
+| **Conversations move the hero through walls** | The level 1 farmer and the level 6 father move the hero without checking walls. | the level scripts |
+| **Quiz ties favour the Monk** | A tie involving the Monk, or any three- or four-way tie, gives a Monk. | `quiz_ties` |
+| **Marksmanship can't be chosen** | It is only offered to Rogues, who already have it. | skills.json (`only_free`) |
+| **Fault colours** | With Cowardice active, the lines below it on the character sheet stay yellow instead of red. | `fault_colours` |
+| **Invisible wraiths are never drawn** | `clean2()` has no case for them, even when they should show. | kept |
+| **Items never raise max life or mana** | `inventory()` gets the hero by value, so what it adds is thrown away. | kept |
+| **A save number is never written** | `save()` hands `fprintf` five numbers for four `%d`s, so `st.saveslot` is lost; every save also ends with a doubled newline. | kept (the save format) |
+| **Load Game stops at a gap** | The list stops at the first missing or reserved slot; games after it can't be picked. | `load_gaps` |
+| **Only levels 1-9** | `newmap()` writes `'0' + level` into a file name, and level 8 is hardcoded as the ending. | none needed: a pack has as many levels as its `levels` says |
+| **Negative angles in arcs** | The graphics library compares arc angles unsigned, so a negative start angle counts as a large one. | kept (the graphics) |
 
 ## What the original doesn't have
 

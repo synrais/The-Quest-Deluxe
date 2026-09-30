@@ -278,6 +278,22 @@ assert app.project.quest['reclass'] is True
 assert any(f.key == 'reclass' for f in app.classes_tab.fields())
 print('class changes: the Quest tab rules and the class setting: ok')
 
+# the original's bugs: none fixed in Quest I; ticked on the Quest tab, saved as a list
+qt.load()
+assert not any(v.get() for v in qt.fixes.values())
+qt.fixes['talk'].set(True)
+qt.fixes['load_gaps'].set(True)
+qt.apply()
+assert app.project.quest['fixes'] == ['load_gaps', 'talk'], app.project.quest['fixes']
+app.project.quest['fixes'] = True
+qt.load()
+assert all(v.get() for v in qt.fixes.values())
+for v in qt.fixes.values():
+    v.set(False)
+qt.apply()
+assert 'fixes' not in app.project.quest
+print("the original's bugs: fixes ticked and saved: ok")
+
 assert app.dirty
 app.save()
 assert os.path.exists(os.path.join(pack, 'sprites', 'items', '1001.png'))
