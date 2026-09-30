@@ -167,11 +167,26 @@ class Game:
         self.view3d = False                # FPS mode: the world through the hero's eyes (F)
         self.facing = 0                    # which way the hero looks: 0 north, 1 east, 2 south, 3 west
         self.minimap = True                # FPS mode: the screen from above in the corner (M)
+        # the combat log (Deluxe, D): who hit whom for how much, over the bottom of the map, and the
+        # damage rising off whoever took it. Off in scripted runs, which compare screens with classic.
+        self.combat_log = not self.fast
+        self.log_lines: list = []          # (text, EGA colour, the key it came from)
+        self.log_key = 0
+        self.floaters: list = []           # damage numbers rising off a square
 
     # ── helpers ───────────────────────────────────────────────────────────────
     def log(self, text: str, colour: int = 15):
         if text:
             self.messages.append(Msg(text, colour))
+
+    def report(self, text: str, colour: int = 15, at=None, amount=None):
+        """A combat log line, and the amount rising off the square at (Deluxe; changes nothing)."""
+        if not self.combat_log:
+            return
+        self.log_lines = self.log_lines[-40:] + [(text, colour, self.log_key)]
+        if at is not None and amount is not None:
+            shown = amount if isinstance(amount, str) else f'-{amount}' if amount else '0'
+            self.floaters.append({'at': tuple(at), 'text': shown, 'colour': colour, 't0': None})
 
     def change_rep(self, delta: int):
         """hero.rep += delta, then reput()'s message."""
@@ -208,7 +223,8 @@ class Game:
             self.renderer.anchor = None
 
     def monster_name(self, t: int) -> str:
-        return self.renderer.sprites.names.get(('enemy', t), 'creature').lower()
+        """How the combat log names a creature: its log_name, else its name in lower case."""
+        return self.pack.trait(t, 'log_name') or self.renderer.sprites.names.get(('enemy', t), 'creature').lower()
 
     def item_name(self, it: int) -> str:
         return self.renderer.sprites.names.get(('object', it), f'item {it}')
@@ -348,6 +364,7 @@ class Game:
         if self.view3d and k in TURNS:
             self.facing = (self.facing + TURNS[k]) % 4    # FPS mode: turning is free, and not an action
             return
+        self.log_key += 1                                # the log shows this key's lines and the last's
         self.messages = []
         acted = False
         if self.view3d and (k in DIRS or k in STRAFE):
@@ -384,6 +401,9 @@ class Game:
             self.view3d = not self.view3d            # FPS mode (Deluxe)
         elif k == pygame.K_m and self.view3d:
             self.minimap = not self.minimap
+        elif k == pygame.K_d:
+            self.combat_log = not self.combat_log        # the combat log (Deluxe)
+            self.log_lines, self.floaters = [], []
         if acted:
             self.end_turn()
         self.events.run('after_action', 'space' if k == pygame.K_SPACE else 'key')

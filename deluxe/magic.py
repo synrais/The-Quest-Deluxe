@@ -86,7 +86,7 @@ class Magic:
         g, p = self.g, self.g.player
         if p.skill.hon == 1:
             p.skill.hon = 2
-        if g.combat.hurt(self.tell(spell, SP_POWER), e, 1, by_hero=True) == 0:
+        if g.combat.hurt(self.tell(spell, SP_POWER), e, 1, by_hero=True, how=g.pack.spell_name(spell)) == 0:
             g.play_at('bhit', x, y, 5)
 
     def cast_self(self, spell: int) -> None:
@@ -97,6 +97,8 @@ class Magic:
         eff, sp = self.effect(spell), g.pack.spell(spell)
         ring = [(p.X + dx, p.Y + dy) for dx, dy in RING8]
         if eff == 'heal':
+            g.report(f'You heal {min(power, max(0, h.mlife - h.life))} life.', 10, (p.X, p.Y),
+                     f'+{min(power, max(0, h.mlife - h.life))}')
             h.life = min(h.mlife, h.life + power)
             self.anim(spell, p.X, p.Y)
         elif eff == 'invisibility':
@@ -145,7 +147,7 @@ class Magic:
             if p.skill.hon == 1:
                 p.skill.hon = 2
             g.play_at('adrain', x, y, 1)
-            dealt = g.combat.hurt(power, target, 1, by_hero=True)
+            dealt = g.combat.hurt(power, target, 1, by_hero=True, how=g.pack.spell_name(spell))
             if dealt < 1:
                 g.play_at('bhit', x, y, 5)
             g.play_at('adrain', p.X, p.Y, 2)
@@ -164,12 +166,14 @@ class Magic:
             return
         if eff == 'freeze':                                 # ring of ice: freeze if it beats magic armour
             self.anim(spell, x, y)
-            g.combat.hurt(0, target, 1, by_hero=True)       # even with nobody there: hurt(0, -1, ...)
+            g.combat.hurt(0, target, 1, by_hero=True, quiet=True)   # even with nobody there: hurt(0, -1, ...)
             if target:
                 if self.tell(sp.get('freeze_power_of', spell), SP_POWER) > target.marm:   # Quest I: spell 4's
                     target.att = -11 - self.tell(spell, SP_DURATION)
+                    g.report(f'The {g.monster_name(target.type)} is frozen.', 11, (x, y), 'frozen')
                 else:
                     g.play_at('bhit', x, y, 5)
+                    g.report(f'The {g.monster_name(target.type)} resists the ice.', 7, (x, y), 'resists')
             return
         if eff == 'earthquake':                             # the cross; the centre may shake again
             ww = 0
@@ -182,7 +186,7 @@ class Magic:
                     if e:
                         self.strike(spell, e, tx, ty)
                     elif (tx, ty) == (p.X, p.Y):
-                        g.combat.hurt(power, None, 1)
+                        g.combat.hurt(power, None, 1, how=g.pack.spell_name(spell))
                         if h.life < -5:
                             return
                 if ww == 0 and random(3) == 0:

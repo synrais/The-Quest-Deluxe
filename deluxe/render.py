@@ -223,10 +223,12 @@ class Renderer:
             if present:
                 self.present()
             return
-        if self.in_3d(game) and not flat:
+        three_d = self.in_3d(game) and not flat
+        if three_d:
             self.draw_3d(game, scr)
         else:
             self.draw_map(game, scr)
+        self.draw_combat_log(game, scr, three_d)
         self.hud.draw(game)
         self.draw_message(scr, game)
         if game.overlay:
@@ -336,6 +338,63 @@ class Renderer:
             cy = 4 + (game.player.Y - oy) * n // 10 + n // 20
             dx, dy = view3d.FACINGS[game.facing % 4]
             pygame.draw.line(scr, EGA[14], (cx, cy), (cx + dx * 7, cy + dy * 7), 2)
+
+    # ── the combat log (Deluxe) ───────────────────────────────────────────────
+    LOG_LINES = 4
+    FLOAT_MS = 900
+
+    def draw_combat_log(self, game, scr, three_d):
+        """The last lines of the combat log over the bottom of the map, and the damage numbers rising
+        off the squares that took it."""
+        if not getattr(game, 'combat_log', False):
+            return
+        g = self.bgi
+        g.s = scr
+        lines = [ln for ln in game.log_lines if ln[2] >= game.log_key - 1][-self.LOG_LINES:]
+        g.settextstyle(0, 0, 1)
+        y = MAP_PX - 4 - 10 * len(lines)
+        for text, colour, _ in lines:
+            scr.fill((0, 0, 0), (2, y - 1, g.textwidth(text) + 4, 10))
+            g.setcolor(colour)
+            g.outtextxy(4, y, text)
+            y += 10
+        now = pygame.time.get_ticks()
+        w, p = game.world, game.player
+        ox, oy = w.origin
+        g.settextstyle(0, 0, 2)
+        keep, last = [], {}
+        for f in game.floaters:
+            if f['t0'] is None:                     # one after another off the same square
+                f['t0'] = max(now, last.get(f['at'], now - 300) + 300)
+            last[f['at']] = f['t0']
+            age = now - f['t0']
+            if age > self.FLOAT_MS:
+                continue
+            keep.append(f)
+            if age < 0:
+                continue
+            x, y = f['at']
+            rise = age * 30 // self.FLOAT_MS
+            if three_d:
+                if (x, y) == (p.X, p.Y):
+                    sx, sy = MAP_PX // 2, MAP_PX - 60 - rise
+                else:
+                    where = self.v3d.project(self.camera(game), x + 0.5, y + 0.5)
+                    if where is None:
+                        continue
+                    k = MAP_PX / view3d.RES
+                    sx, sy = int(where[0] * k), int((where[1] - where[2]) * k) - 8 - rise
+            else:
+                if not w.in_room(x, y):
+                    continue
+                sx, sy = (x - ox) * TILE + TILE // 2, (y - oy) * TILE + 4 - rise
+            tw = g.textwidth(f['text'])
+            for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):     # a black edge, so it reads on any ground
+                g.setcolor(0)
+                g.outtextxy(sx - tw // 2 + dx, sy + dy, f['text'])
+            g.setcolor(f['colour'])
+            g.outtextxy(sx - tw // 2, sy, f['text'])
+        game.floaters = keep
 
     def draw_message(self, scr, game):
         """The bottom strip shows this turn's messages, or the potion belt when there are none."""

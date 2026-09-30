@@ -35,6 +35,15 @@ SPELL_COLUMNS = ['req_int', 'mana', 'range', 'power', 'duration']
 CREATURE_COLUMNS = ['life', 'power', 'atk', 'def', 'warm', 'marm', 'range', 'att']
 
 
+# how the combat log (Deluxe) names creatures whose editor names tell variants apart
+LOG_NAMES = {-102: 'summoned scorpion', -101: 'summoned stone knight', -100: 'summoned skeleton',
+             -12: 'aristocrat', -11: 'aristocrat', 13: 'tribal elite', 16: 'pirate', 18: 'knight',
+             19: 'knight', 20: 'knight', 21: 'knight', 22: 'wraith', 23: 'wraith', 24: 'Oculus Overlord',
+             25: 'oculus', 26: 'elite archer', 27: 'archer', 38: 'cleric', 39: 'holy knight',
+             40: 'stone knight', 43: 'Spider Demon Ruler', 44: 'kamikaze spider demon', 45: 'Death Bringer',
+             46: 'Death Bringer', 47: 'pirate'}
+
+
 def creature_traits(c: int) -> dict:
     """What the original hardcodes per creature type (combat.py, ai.py, rules.py, world.py), as
     named traits. Deluxe reads these; new creatures can mix them freely."""
@@ -79,6 +88,8 @@ def creature_traits(c: int) -> dict:
         t['animal'] = True                        # doesn't fight people; killing it earns no reputation
     if c == 35:
         t['silences_witnesses'] = True            # nobody reports a killing while it is on the screen
+    if c in LOG_NAMES:
+        t['log_name'] = LOG_NAMES[c]              # Deluxe's combat log: the name a player reads
     return t
 
 
@@ -296,7 +307,8 @@ def main():
                  'with lo < roll <= hi applies). Traits (docs/QUEST_PACKS.md): bleeds, corpse, invisible, '
                  'reveals_as, hides_as, magic_attack, poison_melee/ranged/cast, missile_anim, cast_anim, '
                  'heals_allies, raises_dead, explodes, drains_life, deceiver, rests_after_moving, animal, '
-                 'silences_witnesses. Pictures: sprites/creatures/<id>.png.')
+                 'silences_witnesses; log_name is how Deluxe\'s combat log names it. '
+                 'Pictures: sprites/creatures/<id>.png.')
 
     # ── map tiles ────────────────────────────────────────────────────────────
     tiles = {}

@@ -95,6 +95,8 @@ class CreaturesTab(TableTab):
             Field('id', 'Number', 'readonly'),
             Field('_role', 'Is a', 'readonly', default=None),
             Field('name', 'Name', 'str', hint='in the editor, and "the <name>" in messages'),
+            Field('log_name', 'Name in the log', 'str',
+                  hint='Deluxe\'s combat log: "The <name> hits you" (empty: the name, in lower case)'),
             Field('life', 'Life', 'int', default=0),
             Field('power', 'Power', 'int', default=0, hint='the damage of its blows or spells'),
             Field('atk', 'Attack', 'int', default=0, hint='to hit: attack - the defender\'s defence, in %'),

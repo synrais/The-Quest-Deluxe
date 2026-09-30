@@ -38,9 +38,45 @@ class Combat:
 
     # ── hurt() ────────────────────────────────────────────────────────────────
     def hurt(self, dmg: int, target: Enemy | None, kind: int, attacker: Enemy | None = None,
-             by_hero: bool = False) -> int:
+             by_hero: bool = False, how: str = '', quiet: bool = False) -> int:
         """Deal `dmg` (± a third) to target (None = the hero). kind 0 weapon armour, 1 magic armour,
-        2/3 ignore armour. Returns damage done."""
+        2/3 ignore armour. Returns damage done. how: what dealt it, for the combat log (a spell's name)."""
+        self.absorbed = False
+        self._log = None if quiet else (kind, attacker, by_hero, how)
+        return self._hurt(dmg, target, kind, attacker, by_hero)
+
+    def _logged(self, dam, target):
+        if self._log is not None:
+            kind, attacker, by_hero, how = self._log
+            self.log_hurt(None if self.absorbed else dam, target, kind, attacker, by_hero, how)
+
+    def log_hurt(self, dam, target, kind, attacker, by_hero, how):
+        """The combat log's line for a hurt() (Deluxe; the original shows only the animation)."""
+        g = self.g
+        if not g.combat_log:
+            return
+        if target is None:
+            p = self.p
+            if dam is None:
+                g.report('Your Shield absorbs the blow.', 11)
+            elif attacker is not None:
+                verb = 'shoots' if kind == 2 else 'hits' if kind == 0 else 'blasts'
+                name = g.monster_name(attacker.type)
+                g.report(f'The {name} {verb} you for {dam}.' if dam else f'The {name} {verb} you, but does no harm.',
+                         12 if dam else 7, (p.X, p.Y), dam)
+            elif how:
+                g.report(f'Your {how} hits you for {dam}.', 12, (p.X, p.Y), dam)
+            return
+        name = g.monster_name(target.type)
+        if by_hero:
+            who = f'Your {how}' if how else 'You'
+            verb = 'hits' if how else 'hit'
+            g.report(f'{who} {verb} the {name} for {dam}.' if dam else f'The {name} shrugs off {"your " + how if how else "the blow"}.',
+                     14 if dam else 7, (target.x, target.y), dam)
+        elif attacker is not None and attacker is not target:
+            g.report(f'The {g.monster_name(attacker.type)} hits the {name} for {dam}.', 11, (target.x, target.y), dam)
+
+    def _hurt(self, dmg, target, kind, attacker, by_hero):
         h, st = self.p.hero, self.g.status
         if target is not None and target.att < -10 and h.invisible == -1:
             target.att = 9
@@ -48,6 +84,8 @@ class Combat:
         warm, marm = (h.warm, h.marm) if target is None else (target.warm, target.marm)
         if target is None and st.Shield > 0 and self.g.pack.shield_absorbs() >= dam:
             self.g.tones((400, 70), (350, 70))            # the Shield spell absorbs the blow
+            self.absorbed = True
+            self._logged(0, None)
             return 0
         if kind == 0:
             dam -= warm
@@ -57,8 +95,10 @@ class Combat:
         if target is None:
             if dam > 0:
                 h.life -= dam
+            self._logged(dam, None)
             return dam
         target.life -= dam
+        self._logged(dam, target)                           # before the death check, so hits come before deaths
         if (target.att == -1 or target.att < -10 or target.att == -3) and kind != 3 and h.invisible == -1:
             target.att = 9
         if target.is_npc and kind != 3:
@@ -110,8 +150,13 @@ class Combat:
         a = ev.attacker
         by_ally = 0 <= a < len(w.enemies) and w.enemies[a].type <= -100
         gold = 0
+        before = h.exper
         if a == -1 or by_ally:
             gold = self.grant_rewards(e)
+        if self.g.combat_log:
+            gained = before - h.exper
+            self.g.report(f'The {self.g.monster_name(e.type)} dies.' + (f' +{gained} experience.' if gained > 0 else ''),
+                          15)
         q.gold += gold
         witness = 0
         for o in w.enemies:
@@ -184,11 +229,14 @@ class Combat:
             kind = items.tell(p.item(SLOT_WEAPON), IT_KIND)
             if dmg > 0 and kind == 3:
                 g.tones((450, 20))                    # herohit(): a magic weapon rings
+            name = g.monster_name(e.type)
             if kind == KIND_RANGED:
                 g.tones((150, 150))
+                g.report(f'Your {g.item_name(p.item(SLOT_WEAPON)).lower() or "bow"} is no use up close.', 7)
             elif dmg > 0:
                 g.play_at('ahit', e.x, e.y, where, 1)
                 e.life -= dmg
+                g.report(f'You hit the {name} for {dmg}.', 14, (e.x, e.y), dmg)
                 q = self.w.sq(e.x, e.y)
                 if q.deco == 0 and e.life > 0 and bleeds(self.g.pack, e):
                     q.deco = self.g.pack.deco('blood')
@@ -196,8 +244,10 @@ class Combat:
                     g.play('pause', 100)
                     e.life -= dmg
                     g.play_at('ahit', e.x, e.y, where, 1)
+                    g.report(f'You strike again for {dmg}!', 14, (e.x, e.y), dmg)
             else:
                 g.play_at('bhit', e.x, e.y, where)
+                g.report(f'You miss the {name}.', 7, (e.x, e.y), 'miss')
             if swing == 1:
                 p.bag[SLOT_WEAPON], p.bag[SLOT_OFFHAND] = p.bag.get(SLOT_OFFHAND, 0), p.bag.get(SLOT_WEAPON, 0)
                 g.play('pause', 100)
@@ -255,10 +305,11 @@ class Combat:
             q = self.w.sq(e.x, e.y)
             if q.deco == 0 and e.life > 0 and bleeds(self.g.pack, e):
                 q.deco = self.g.pack.deco('blood')
-            self.hurt(h.power, e, 2, by_hero=True)
+            self.hurt(h.power, e, 2, by_hero=True, how='shot')
         else:
             self.g.play_at('bhit', e.x, e.y, 6)
             self.g.tones((150, 50))
+            self.g.report(f'Your shot misses the {self.g.monster_name(e.type)}.', 7, (e.x, e.y), 'miss')
         ammo = self.g.pack.item(p.item(SLOT_OFFHAND))
         p.bag[SLOT_OFFHAND] = self.g.pack.ammo_id(ammo.get('ammo'), ammo.get('count', 0) - 1)
         rules.status_update(p, self.g.status, self.g.items)
@@ -296,6 +347,7 @@ class Combat:
         return 3 if e.x < p.X else 1 if e.x > p.X else 2 if e.y > p.Y else 4
 
     def poison_hero(self):
+        self.g.report('You are poisoned!', 10)
         self.p.hero.poisoned = 1
         self.g.play('ampoisoned2', 1)
 
@@ -303,16 +355,22 @@ class Combat:
         p, h, g, items = self.p, self.p.hero, self.g, self.g.items
         self.reveal(e)
         dmg = rules.mon_hit(e, p, self.g.status, self.g.spells, g.pack)
-        if dmg == rules.SHIELDED:
+        shielded = dmg == rules.SHIELDED
+        if shielded:
             g.tones((400, 70), (350, 70))                 # monhit(): the Shield spell absorbs it
             dmg = 0
+            g.report(f"Your Shield absorbs the {name}'s blow.", 11)
         parry = items.tell(p.item(SLOT_WEAPON), IT_KIND) in (2, 6) or \
             (p.skill.amb == 1 and items.tell(p.item(SLOT_OFFHAND), IT_KIND) in (2, 6))
         if parry and random(5) == 1:
             dmg = 0
             g.play_at('bhit2', p.X, p.Y, self.side(e))
+            g.report(f"You parry the {name}'s blow.", 11)
+        elif dmg <= 0 and not shielded:
+            g.report(f'The {name} misses you.', 7, (p.X, p.Y), 'miss')
         if dmg > 0:
             h.life -= dmg
+            g.report(f'The {name} hits you for {dmg}.', 12, (p.X, p.Y), dmg)
             g.play_at('ahit', p.X, p.Y, self.side(e), 2)
             self.bleed_hero()
             n = g.pack.trait(e.type, 'poison_melee')
@@ -334,6 +392,8 @@ class Combat:
             n = self.g.pack.trait(e.type, 'poison_ranged')
             if n and random(n) == 1 and not h.poisoned:
                 self.poison_hero()
+        else:
+            self.g.report(f"The {name}'s shot misses you.", 7, (p.X, p.Y), 'miss')
 
     def enemy_cast(self, e: Enemy, name: str):
         """main2(), a creature without a melee or missile attack: heal, raise, explode, or cast at the
@@ -423,5 +483,5 @@ class Combat:
         for e in list(self.w.enemies):
             if e in self.w.enemies and abs(e.x - p.X) + abs(e.y - p.Y) == 1:
                 self.g.play_at('afireball', e.x, e.y, 1)
-                if self.hurt(power, e, 1, by_hero=True) == 0:
+                if self.hurt(power, e, 1, by_hero=True, how='Shield of Fire') == 0:
                     self.g.play_at('bhit', e.x, e.y, 5)

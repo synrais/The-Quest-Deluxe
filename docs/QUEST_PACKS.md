@@ -110,6 +110,7 @@ Traits (all optional):
 | `rests_after_moving` | Doesn't attack in a turn it moved. |
 | `animal` | Doesn't fight people; killing it earns no reputation. |
 | `silences_witnesses` | Nobody reports a killing while it is on the screen. |
+| `log_name` | How Deluxe's combat log names it ("The knight hits you for 7."); left out, its name in lower case. |
 
 Pictures: `sprites/creatures/<id>.png`.
 

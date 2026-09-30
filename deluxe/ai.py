@@ -89,9 +89,12 @@ def monsmove(g: 'Game') -> None:
                 if dmg > 0:
                     g.play_at('ahit', o.x, o.y, mw, 1)
                     o.life -= dmg
+                    g.report(f'The {g.monster_name(e.type)} hits the {g.monster_name(o.type)} for {dmg}.', 11,
+                             (o.x, o.y), dmg)
                     g.combat.check_dead(e)
                 else:
                     g.play_at('bhit', o.x, o.y, mw)
+                    g.report(f'The {g.monster_name(e.type)} misses the {g.monster_name(o.type)}.', 7, (o.x, o.y), 'miss')
                 e.moved = True
                 fought = not ranok
                 break

@@ -28,6 +28,9 @@ Quest Deluxe — the extended engine (the classic port above stays frozen as the
                                walk, Left/Right turn (free), Q/E or , . step sideways; M shows or
                                hides the screen from above. The rules don't change: walking is the
                                classic move, so bumping fights, talks and opens doors
+  Combat:   D in the game: the combat log (on by default): "You hit the imp for 4.", "The orc hits
+                               you for 3.", misses, spells and deaths over the bottom of the map, and
+                               the damage rising off whoever took it (in FPS mode too)
   Saves:    saves/<pack>/save01.dat .. save20.dat
   Tests:    tests/test_packs.py, tests/test_editor.py (under xvfb-run on Linux), tests/test_view3d.py
             (FPS mode plays the same games as the view from above), and
