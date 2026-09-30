@@ -65,7 +65,8 @@ game:
   invisible.
 - On a square, gold and items stand in front of the creature on it. The combat log's rising
   numbers (plain pixel text) are off unless settings.ini says `floating_numbers = on`.
-- Steps and turns glide over 140 ms. Turning is free (not a game action); a step is the classic move,
+- Steps and turns glide over 140 ms; a walking or turning key held down keeps going, one step or turn
+  at a time. Turning is free (not a game action); a step is the classic move,
   so the rules don't change: `tests/test_view3d.py` plays the same random games from above and in FPS
   mode and requires identical game state after every key.
 - The original's animations draw on the map from above, out of sight; what they change is carried into

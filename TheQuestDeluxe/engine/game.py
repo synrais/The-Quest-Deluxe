@@ -993,11 +993,39 @@ class Game:
         self.messages = []
 
     # ── loop ──────────────────────────────────────────────────────────────────
+    HOLD_MS = 250                  # FPS mode: a direction held this long keeps going
+    REPEAT_MS = 150                # ... a step or a turn at a time, each after the last has glided
+
+    def held_key(self, held: dict, now: int):
+        """FPS mode: the walking or turning key to press again for the hero, if one is held down (held:
+        key -> when it went down): only once the last step or turn has glided, and no sooner than
+        REPEAT_MS after the last repeat, so walking into a wall or a fight doesn't run away."""
+        if not self.view3d or self.overlay or not self.renderer.in_3d(self) or self.renderer.gliding(self):
+            return None
+        if now - getattr(self, '_last_repeat', -10 ** 9) < self.REPEAT_MS:
+            return None
+        for k, t0 in held.items():
+            if (k in DIRS or k in STRAFE or k in TURNS) and now - t0 >= self.HOLD_MS:
+                return k
+        return None
+
     def run(self):
         clock = pygame.time.Clock()
+        held = {}                                        # keys down now -> when they went down
         while self.running:
+            now = pygame.time.get_ticks()
             for ev in pygame.event.get():
+                if ev.type == pygame.KEYDOWN:
+                    held[ev.key] = now
+                elif ev.type == pygame.KEYUP:
+                    held.pop(ev.key, None)
+                elif ev.type == pygame.WINDOWFOCUSLOST:
+                    held.clear()                         # its key-up would never come
                 self.handle(ev)
+            k = self.held_key(held, now)
+            if k is not None:                            # FPS mode: keep walking (or turning)
+                self._last_repeat = now
+                self.handle(pygame.event.Event(pygame.KEYDOWN, key=k, unicode='', mod=0))
             self.renderer.draw(self)
             clock.tick(30)
 

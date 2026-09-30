@@ -324,6 +324,29 @@ def drawing_order():
     print('the drawing order: gold and items over creatures and the hero (items_on_top, and FPS mode): ok')
 
 
+
+def holding_keys():
+    """FPS mode: a direction held down keeps going, a step or a turn at a time."""
+    g = deluxe.Game(pygame.Surface((640, 480)))
+    g.quick_start(1, 1)
+    held = {K.K_UP: 1000}
+    assert g.held_key(held, 1400) is None                        # from above: no
+    g.view3d = True
+    g.renderer.draw(g, present=False)
+    assert g.held_key(held, 1100) is None                        # a tap is one step
+    assert g.held_key(held, 1300) == K.K_UP                      # held: again
+    g._last_repeat = 1300
+    assert g.held_key(held, 1400) is None                        # not faster than a step
+    assert g.held_key(held, 1460) == K.K_UP
+    assert g.held_key({K.K_LEFT: 0}, 5000) == K.K_LEFT           # turning keeps turning too
+    assert g.held_key({K.K_q: 0}, 5000) == K.K_q                 # and stepping sideways
+    assert g.held_key({K.K_i: 0}, 5000) is None                  # other keys don't repeat
+    g.overlay = deluxe.ui.Notice('hello')
+    assert g.held_key(held, 5000) is None                        # not over a message or a page
+    g.overlay = None
+    print('holding a direction in FPS mode: keeps walking or turning, a step at a time: ok')
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--runs', type=int, default=12)
@@ -336,6 +359,7 @@ def main():
     weapon_in_view()
     face()
     drawing_order()
+    holding_keys()
     bad = same_games(a.runs, a.keys)
     sys.exit(1 if bad else 0)
 
