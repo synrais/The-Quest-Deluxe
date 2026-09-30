@@ -238,6 +238,39 @@ def weapon_in_view():
     print('the weapon in view: the sword in hand, a fist without, swings, thrusts and shots: ok')
 
 
+
+def face():
+    from deluxe.face import BOX, eye_colour
+    from deluxe.render import EGA
+    g = deluxe.Game(pygame.Surface((640, 480)))
+    g.quick_start(1, 1)
+    r, h, st = g.renderer, g.player.hero, g.status
+
+    def colours():
+        r.draw(g, present=False)
+        s = r.screen.subsurface(BOX)
+        return {tuple(s.get_at((x, y))[:3]) for x in range(BOX[2]) for y in range(BOX[3])}
+    assert EGA[6][:3] not in colours()                           # from above: the hero shows it himself
+    g.view3d = True
+    seen = colours()
+    assert {EGA[6][:3], EGA[15][:3], EGA[5][:3]} <= seen          # skin, white eyes, the Knight's colour
+    assert EGA[4][:3] not in seen                                 # unhurt: no blood
+    h.life = 1
+    assert EGA[4][:3] in colours()                                # badly hurt
+    h.life = h.mlife
+    r.face._ouch_until = 0
+    st.killer = 1
+    assert eye_colour(h, st) == 4
+    h.poisoned = 1
+    assert eye_colour(h, st) == 10                                # poison first, as guy2()
+    st.Shield = 3
+    assert EGA[14][:3] in colours()                               # the Shield's ring
+    h.invisible = 5
+    seen = colours()
+    assert EGA[6][:3] not in seen and EGA[4][:3] in seen          # only the (killer-red) eyes
+    print("the face: in FPS mode only, hurt, the eye colours in guy2()'s order, the Shield, invisible: ok")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--runs', type=int, default=12)
@@ -248,6 +281,7 @@ def main():
     real_time()
     map_box()
     weapon_in_view()
+    face()
     bad = same_games(a.runs, a.keys)
     sys.exit(1 if bad else 0)
 

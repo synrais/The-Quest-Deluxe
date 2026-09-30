@@ -58,6 +58,10 @@ game:
   scaled up in whole pixels, in a grey gauntlet with a cuff in the class colour (a fist when the hand
   is empty). It bobs as the hero steps, and swings, thrusts (spears, pikes, lances) or is drawn and
   let go (bows, slings) as he attacks. Only the picture moves; the rules don't know about it.
+- The hero's face beside the Map box (`engine/face.py`), in the manner of Doom's status bar: the eyes
+  in guy2()'s colours (poison, killer, berserk), glancing about; blood as life drops; teeth bared as
+  he attacks; the Shield rings round its frame; only the eyes when invisible; the helmet in the class
+  colour.
 - Steps and turns glide over 140 ms. Turning is free (not a game action); a step is the classic move,
   so the rules don't change: `tests/test_view3d.py` plays the same random games from above and in FPS
   mode and requires identical game state after every key.
@@ -100,8 +104,9 @@ port.
    seen in 3D. A first try, a portrait of the hero top left, was dropped. Stage 1 (**done**): the
    screen from above moved from the view's corner into the panel's Map box. Stage 2 (**done**): the
    weapon in view, bottom right, bobbing as the hero walks and swinging, thrusting or drawing as he
-   attacks. Stage 3: a Doom-style face to the right of the coins: hurt as life drops, the eyes in the state
-   colours, a rim for the Shields, faded when invisible, in the class colour.
+   attacks. Stage 3 (**done**): a Doom-style face beside the Map box (the gold's number grows into the
+   space right of the coins): hurt as life drops, the eyes in the state colours, a rim for the
+   Shields, only the eyes when invisible, in the class colour.
 
 ## Sharing
 

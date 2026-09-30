@@ -11,6 +11,7 @@ from .bgi import BGI
 from .hud import Hud
 from . import anim, view3d
 from .hands import Hands
+from .face import Face
 
 W, H = 640, 480
 TILE = 40
@@ -244,8 +245,12 @@ class Renderer:
             self.draw_map(game, scr)
         self.draw_combat_log(game, scr, three_d)
         self.hud.draw(game)
-        if self.in_3d(game) and getattr(game, 'minimap', True):
-            self.map_box(game, scr)
+        if self.in_3d(game):
+            if getattr(game, 'minimap', True):
+                self.map_box(game, scr)
+            if not hasattr(self, 'face'):
+                self.face = Face(self.pack)
+            self.face.draw(game, scr, pygame.time.get_ticks())    # the hero's face beside the Map box
         self.draw_message(scr, game)
         if game.overlay:
             game.overlay.draw(self, scr)
