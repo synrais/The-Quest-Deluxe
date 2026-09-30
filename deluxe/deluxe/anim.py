@@ -6,7 +6,7 @@ decides how to wait. A few animations also redraw a square (`h.clean2(x, y)`), t
 (`h.guy2(x, y)`), or move the hero partway through (`h.move_hero(x, y)`).
 
 Positions are 1-based screen squares, as in the original (`i = (x - 1) * 40`). Every function
-is checked against TheQuest.exe by tools/re/verify_anims.py: same BGI calls, tones and delays, in
+is checked against TheQuest.exe by classic/tools/re/verify_anims.py: same BGI calls, tones and delays, in
 the same order, with the same rand() draws.
 """
 from __future__ import annotations

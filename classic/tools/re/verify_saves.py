@@ -5,7 +5,7 @@ For many random game states:
     fprintf()s must equal savefile.to_text() for the same state, character for character;
   - load2(): the original reads that text back into its globals, and savefile.from_text() must
     read the same values.
-Also: data/SAVE01.DAT (a save made by the original) must survive from_bytes() -> to_bytes()
+Also: SAVE01.DAT here (a save made by the original) must survive from_bytes() -> to_bytes()
 unchanged.
 
     python verify_saves.py            # 40 random states
@@ -283,11 +283,11 @@ def main():
             print(f'case {case}: load2 differs: {diffs[:5]}')
         else:
             ok_load += 1
-    raw = open(os.path.join(os.path.dirname(os.path.dirname(HERE)), 'data', 'SAVE01.DAT'), 'rb').read()
+    raw = open(os.path.join(HERE, 'SAVE01.DAT'), 'rb').read()
     same = savefile.to_bytes(savefile.from_bytes(raw)) == raw
     print(f'{ok_save} of {n} saves identical to the original save()')
     print(f'{ok_load} of {n} loads identical to the original load2()')
-    print(f'data/SAVE01.DAT round trip: {"identical" if same else "DIFFERENT"}')
+    print(f'SAVE01.DAT round trip: {"identical" if same else "DIFFERENT"}')
     return 0 if ok_save == ok_load == n and same else 1
 
 

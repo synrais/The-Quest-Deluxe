@@ -2,7 +2,7 @@
 
 The original game hardcodes its story in talk(), deadenemycheck() and main2(). The Quest II keeps those
 rules as per-level scripts in a small safe language (see script.py), ported from the original code and
-checked against it by tools/re/verify_events.py. New levels (8+) just add a script.
+checked against it by classic/tools/re/verify_events.py. New levels (8+) just add a script.
 
 The host API mirrors the original's globals so scripts read like the C they were ported from:
   level, m1, m2 (st.mission1/2), rep, coins, killer, ems, mons, leaving

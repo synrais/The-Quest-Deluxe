@@ -1,9 +1,12 @@
 __pycache__/
 *.pyc
-tests/out/
-tools/re/out/
+# made when playing: the classic port's saves (classic/data/) and Quest Deluxe's (deluxe/saves/)
+classic/data/
 saves/
-sprites_backup_*/
+# the reverse-engineering tools' output, and test output
+classic/tools/re/out/
+**/tests/out/
+.deps/
+# release building
 build/
 dist/
-.deps/

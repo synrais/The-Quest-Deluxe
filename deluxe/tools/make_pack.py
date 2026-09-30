@@ -16,16 +16,17 @@ import re
 import shutil
 import sys
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, ROOT)
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))                     # deluxe/
+CLASSIC = os.path.join(os.path.dirname(ROOT), 'classic')      # the original's data and the port's sprites
+sys.path[:0] = [ROOT, CLASSIC]
 
 from quest2.formats import DataSource, level_filename  # noqa: E402
 from quest2.bgi import FONT_FILES  # noqa: E402
 from deluxe.packio import write_text, write_json, write_table, tiles_text, map_text  # noqa: E402
 
 OUT = os.path.join(ROOT, 'packs', 'quest1')
-SPRITES = os.path.join(ROOT, 'sprites')
-CONTENT = os.path.join(ROOT, 'quest2', 'content')
+SPRITES = os.path.join(CLASSIC, 'sprites')
+CONTENT = os.path.join(CLASSIC, 'quest2', 'content')
 SPRITE_RE = re.compile(r'^(floor|wall|enemy|object|extra|spell)_(-?\d+)_?(?:\[(.*)\])?\.png$')
 KIND_DIR = {'floor': 'floors', 'wall': 'walls', 'extra': 'decos', 'enemy': 'creatures', 'object': 'items',
             'spell': 'spells'}

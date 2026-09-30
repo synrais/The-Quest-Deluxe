@@ -1,23 +1,14 @@
-"""Readers for The Quest's original data files.
+"""Readers for the data in the original's formats, as a quest pack serves them (deluxe.pack's
+PackSource answers under the original's file names: Talk.dat, Items.dat, L00003.dat, ...).
 
-Every text file the original game ships is lightly obfuscated: each byte except
-space, CR and LF is stored as (char + 0x51).  Numbers in map files are the same
-cipher applied to decimal digits ('0' -> 0x81, '-' -> 0x7E).
-
-Files are looked up first in the project's ``data/`` folder (so edited levels
-win), then inside ``TheQuest.zip`` (TheQuest/data/...), so the original game
-archive never has to be unpacked.
+The original's save files keep its light cipher: each byte except space, CR and LF is stored as
+(char + 0x51).
 """
 from __future__ import annotations
 
-import os
 import re
-import zipfile
 from dataclasses import dataclass, field
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DATA_DIR = os.path.join(ROOT, 'data')
-GAME_ZIP = os.path.join(ROOT, 'TheQuest.zip')
 MAP_SIZE = 100
 
 _PLAIN = (0x20, 0x0D, 0x0A)
@@ -31,50 +22,6 @@ def decode_bytes(raw: bytes) -> str:
 
 def encode_text(text: str) -> bytes:
     return bytes((c + 0x51) & 0xFF if c not in _PLAIN else c for c in text.encode('latin-1'))
-
-
-# ── File access ───────────────────────────────────────────────────────────────
-
-class DataSource:
-    """Finds data files in data/ first, then inside TheQuest.zip."""
-
-    def __init__(self, data_dir: str = DATA_DIR, game_zip: str = GAME_ZIP):
-        self.data_dir = data_dir
-        self._zip = zipfile.ZipFile(game_zip) if os.path.exists(game_zip) else None
-        self._zip_names = {}
-        if self._zip:
-            for n in self._zip.namelist():
-                self._zip_names[os.path.basename(n).lower()] = n
-
-    def read(self, name: str) -> bytes:
-        if os.path.isdir(self.data_dir):
-            for f in os.listdir(self.data_dir):
-                if f.lower() == name.lower():
-                    with open(os.path.join(self.data_dir, f), 'rb') as fh:
-                        return fh.read()
-        key = name.lower()
-        if self._zip and key in self._zip_names:
-            return self._zip.read(self._zip_names[key])
-        raise FileNotFoundError(f'{name} not found in {self.data_dir} or {GAME_ZIP}')
-
-    def exists(self, name: str) -> bool:
-        try:
-            self.read(name)
-            return True
-        except FileNotFoundError:
-            return False
-
-    def text(self, name: str) -> str:
-        return decode_bytes(self.read(name))
-
-    def numbers(self, name: str) -> list[list[int]]:
-        """Decode a whitespace-separated numeric table, one row per non-empty line."""
-        rows = []
-        for line in self.text(name).splitlines():
-            parts = line.split()
-            if parts:
-                rows.append([int(p) for p in parts])
-        return rows
 
 
 # ── Maps ──────────────────────────────────────────────────────────────────────
@@ -189,7 +136,7 @@ def parse_monsters(rows: list[list[int]]) -> dict[int, MonsterStats]:
 @dataclass
 class GameData:
     """Everything the engine needs from the original game, loaded once."""
-    src: DataSource = field(default_factory=DataSource)
+    src: object = None                            # a deluxe.pack.PackSource
     talk: dict = field(default_factory=dict)
     story: dict = field(default_factory=dict)
     monsters: dict = field(default_factory=dict)

@@ -3,11 +3,11 @@
 The original game draws everything (HUD, text, screens) with BGI calls in 640x480x16 EGA/VGA.
 This module reproduces the calls the game uses so the HUD can be ported call-for-call:
 colours, lines (1 or 3 px), rectangles, bars, circles, arcs, ellipses, flood fill, and text in
-the stroked .CHR fonts shipped in TheQuest.zip (bgi/*.CHR) plus the 8x8 ROM font.
+the Borland stroked .CHR fonts (a quest pack's fonts/) plus the 8x8 ROM font.
 
 EGAVGA.BGI draws only pixels, lines and bars itself; arcs, ellipses, sectors, polygons and bar3d
 are drawn by the Borland kernel inside the exe, and so is the line clipping and the 3-pixel
-thickness. Those parts are ports of the kernel code (tools/re/verify_bgi.py checks them).
+thickness. Those parts are ports of the kernel code (classic/tools/re/verify_bgi.py checks them).
 """
 from __future__ import annotations
 

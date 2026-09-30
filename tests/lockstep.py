@@ -20,7 +20,8 @@ from dataclasses import asdict
 
 os.environ['SDL_VIDEODRIVER'] = 'dummy'
 os.environ.setdefault('SDL_AUDIODRIVER', 'dummy')
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path[:0] = [os.path.join(REPO, 'classic'), os.path.join(REPO, 'deluxe')]      # quest2 and deluxe
 import pygame  # noqa: E402
 
 pygame.init()

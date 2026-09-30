@@ -16,7 +16,7 @@ from dataclasses import asdict
 
 import pygame
 
-from .formats import GameData, Square, MAP_SIZE, DATA_DIR
+from .formats import GameData, Square, MAP_SIZE
 from .state import Status, Player, Hero, Inventory, Skills, new_player, POTION_FIELDS, KNIGHT, Enemy
 from .world import World, screen_of, room_origin
 from .savefile import SaveData, Slots

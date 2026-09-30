@@ -1,22 +1,21 @@
 # Level scripts (quests and events)
 
 The original game hardcodes its whole story in C: `talk()`, `deadenemycheck()`, `main2()` and
-`newmap()` in TheQuest.exe. The Quest II moves every one of those rules into small per-level script
-files:
+`newmap()` in TheQuest.exe. The ports move every one of those rules into small per-level script
+files. In Quest Deluxe they live in the quest pack (docs/QUEST_PACKS.md):
 
 ```
-quest2/content/levels/common.qs     rules for every level (from deadenemycheck())
-quest2/content/levels/level1.qs     ... level7.qs: the original story, ported
-quest2/content/levels/level8.qs     a new level: add L00008.dat and (optionally) this file
+packs/<name>/levels/common.qs          rules for every level (from deadenemycheck())
+packs/<name>/levels/<n>/script.qs      each level's settings and events; quest1's 1-7 are the
+                                       original story, ported; a new level adds its own
 ```
 
-In Quest Deluxe the same scripts live in the quest pack (docs/QUEST_PACKS.md):
-`packs/<name>/levels/common.qs` and `packs/<name>/levels/<n>/script.qs`, and the editor's Events
-tab edits them (its Map tab sets START, STORIES, SHOPS, TELEPORT and the other settings).
+The editor's Events tab edits them (its Map tab sets START, STORIES, SHOPS, TELEPORT and the other
+settings). The classic port keeps the same scripts in ../classic/quest2/content/levels/.
 
 The original seven were ported line by line from the decompiled code. Then they were checked
-against the real exe, which runs in an emulator (`tools/re/verify_events.py` and
-`tools/re/verify_deaths.py`). In thousands of random game states, every conversation and every
+against the real exe, which runs in an emulator (the repository's
+`classic/tools/re/verify_events.py` and `verify_deaths.py`, with `QUEST_ENGINE=deluxe` for Deluxe). In thousands of random game states, every conversation and every
 death gave exactly the same result: the message, the quest counters, reputation, gold, bag, map
 and creatures.
 
@@ -85,7 +84,7 @@ PEACEFUL_SCREENS = [(1, 1)]    # Deluxe: screens where people and allies don't a
 | `change_rep(d)` | Reputation plus or minus, with the original message. |
 | `hero_step(dx, dy)`, `poison()`, `hurt_hero(power, kind, w)` | Move the hero, poison them, or hurt them. |
 | `autosave(slot)`, `next_level()` | Save the game, or go to the next level. |
-| `effect(name, ...)` | Play one of the original's animations from `quest2/anim.py`, at 1-based screen squares: `effect('dcast2', e.x, e.y)`, `effect('asskeleton', 4, 1, 3)`, `effect('screen_flash', 2)`. It has no game effect. |
+| `effect(name, ...)` | Play one of the original's animations from `deluxe/anim.py`, at 1-based screen squares: `effect('dcast2', e.x, e.y)`, `effect('asskeleton', 4, 1, 3)`, `effect('screen_flash', 2)`. It has no game effect. |
 | `range()`, `len()`, `min()`, `max()`, `abs()` | As in Python. |
 
 ### Things the original does that scripts keep

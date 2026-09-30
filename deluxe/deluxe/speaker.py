@@ -1,7 +1,8 @@
 """The PC speaker: Borland's sound(freq) / nosound(), as a square wave through pygame.mixer.
 
 The original's asound() plays a tone only when sound.txt holds 1 (the manual: "1=sound, 0=no
-sound"). Quest II reads sound.txt from the game folder, then data/, then TheQuest.zip (which ships 1).
+sound"). Quest Deluxe reads sound.txt from its folder, else from the quest pack (as sound.txt); with
+neither, the sound is on.
 """
 from __future__ import annotations
 
@@ -10,7 +11,7 @@ import os
 
 import pygame
 
-from .formats import ROOT
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))      # the Quest Deluxe folder
 
 RATE = 22050
 VOLUME = 0.12
