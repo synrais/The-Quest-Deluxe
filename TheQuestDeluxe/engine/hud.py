@@ -70,7 +70,8 @@ class Hud:
     def panel_key(self, game):
         p, h, w = game.player, game.player.hero, game.world
         return (h.life, h.mlife, h.mana, h.mmana, p.inv.coins, p.inv.bkey, p.inv.rkey, p.inv.ykey,
-                w.level, w.origin, len(w.visited), getattr(w, 'map_version', 0))
+                w.level, w.origin, len(w.visited), getattr(w, 'map_version', 0),
+                tuple(sorted(p.more.get('keys', {}).items())))
 
     def redraw_panel(self, game):
         """stats(): clear the panel, hatch the frame, then draw every gauge."""
@@ -88,7 +89,11 @@ class Hud:
         self.dmoney(p.inv.coins)
         g.setcolor(15)
         g.outtextxy(513, 240, 'Map')        # still in dmoney()'s font (3, 0, 1), as in the original
-        self.dkeys(p.inv)
+        extra = game.pack.extra_keys() if getattr(game, 'pack', None) else {}
+        if extra:
+            self.dkeys_more(p, game.pack.ORIGINAL_KEYS, extra)
+        else:
+            self.dkeys(p.inv)
         self.dmap(game)
 
     def dlife(self, h):
@@ -178,6 +183,23 @@ class Hud:
             g.line(x + 516, y + 250, x + 501, y + 250)
             g.line(x + 501, y + 250, x + 501, y + 240)
         g.setlinestyle(0, 1, 1)
+
+    def dkeys_more(self, p, original, extra):
+        """The Quest Deluxe, with a pack's own key colours: every key smaller, in two rows of five above
+        'Map', each in its colour when held (grey when not)."""
+        from .state import has_key
+        g = self.g
+        colours = list(original.items()) + list(extra.items())
+        g.setlinestyle(0, 1, 1)
+        for k, (name, colour) in enumerate(colours[:10]):
+            x, y = 426 + (k % 5) * 42, 196 + (k // 5) * 24
+            g.setcolor(colour if has_key(p, name) else 8)
+            for r in (6, 5):
+                g.circle(x, y, r)
+            g.line(x + 6, y, x + 30, y)
+            g.line(x + 6, y + 1, x + 30, y + 1)
+            g.line(x + 30, y, x + 30, y + 7)
+            g.line(x + 24, y, x + 24, y + 6)
 
     def dmap(self, game):
         """dmap(): a brown frame and one pixel per map tile. Unvisited screens are grey and the

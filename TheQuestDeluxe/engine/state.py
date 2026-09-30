@@ -68,6 +68,23 @@ class Inventory:
 POTION_FIELDS = {1: 'rose', 2: 'red', 3: 'purple', 4: 'blue', 5: 'yellow', 6: 'white', 7: 'cyan', 8: 'black'}
 
 
+KEY_FIELDS = {'yellow': 'ykey', 'red': 'rkey', 'blue': 'bkey'}       # the original's three keys
+
+
+def has_key(p: 'Player', colour: str) -> bool:
+    """The original's three keys are in its inventory; a pack's own colours in more['keys']."""
+    if colour in KEY_FIELDS:
+        return getattr(p.inv, KEY_FIELDS[colour]) == 1
+    return bool(p.more.get('keys', {}).get(colour))
+
+
+def give_key(p: 'Player', colour: str):
+    if colour in KEY_FIELDS:
+        setattr(p.inv, KEY_FIELDS[colour], 1)
+    else:
+        p.more.setdefault('keys', {})[colour] = 1
+
+
 def potions(p: 'Player', n: int) -> int:
     """How many of potion n the hero has: 1-8 the original's, 9 and 10 The Quest Deluxe's."""
     if n in POTION_FIELDS:

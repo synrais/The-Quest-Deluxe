@@ -14,6 +14,12 @@ WALL_LOOKS = [(None, '(by the picture: opaque = block)'), ('block', 'block: a so
               ('billboard', 'billboard: standing up (trees)'), ('flat', 'flat: on the ground (water)')]
 DECO_LOOKS = [(None, 'billboard: standing up'), ('flat', 'flat: on the ground (blood)')]
 KEYS = [('yellow', 'yellow'), ('red', 'red'), ('blue', 'blue')]
+
+
+def key_choices(quest, labels=None):
+    """The original's three key colours, then the pack's own (quest.json's \"keys\", set on the Quest tab)."""
+    out = [(k, (labels or {}).get(k, k)) for k, _ in KEYS]
+    return out + [(k, k) for k in (quest.get('keys') or {}) if k not in dict(KEYS)]
 ROLES = [(None, '(none)'), ('open_door', 'open door: where a door opened'),
          ('open_chest', 'open chest: an emptied chest'), ('remains', 'remains: where a creature died'),
          ('remains2', 'remains 2: the other kind of remains'), ('blood', 'blood: where a blow landed'),
@@ -89,7 +95,7 @@ class TilesTab(TableTab):
         if self.kind == 'walls':
             out += [Field('solid', 'Solid', 'bool', hint='blocks the way'),
                     Field('door', 'Door', 'choice', DOORS),
-                    Field('key', 'Key', 'choice', KEYS, when=lambda r: r.get('door') == 'locked',
+                    Field('key', 'Key', 'choice', key_choices(self.app.project.quest), when=lambda r: r.get('door') == 'locked',
                           hint='the key colour that opens it')]
         if self.kind in ('floors', 'walls'):
             out += [Field('map_colour', 'Automap colour', 'custom', fmt=fmt_colour('map_colour'),

@@ -43,6 +43,7 @@ well. Fields that are left out take the default given below.
 | `first_level` | Where a new game starts. |
 | `start_potions` | Potions a new hero carries: `{"potion number": count}`. |
 | `potions` | Potions 9 and 10, which the original doesn't have (1-8 are its own): `{"9": {"name": "Elixir", "colour": 10, "life": "full", "mana": 5, "cure_poison": true, "berserk": 5}}`. `life` and `mana` are `"half"`, `"full"` or an amount; `cure_poison` cures (a potion that only cures can only be drunk when poisoned); `berserk` is turns of doubled power and armour, like potion 8. Keys 9 and 0 drink them, the belt shows ten bottles, and items and shops can hold them (`"potion": 9`). Their counts go in the save's DELUXE block. |
+| `keys` | Key colours past the original's yellow, red and blue: `{"green": 10, "purple": 5}`, the name and the EGA colour the key is drawn in. A key item (`"key": "green"`) opens locked walls with the same `key`; like the original's keys, they are lost on a new level. With any extra colour the key panel shows small keys, five to a row, grey until found. They go in the save's DELUXE block. |
 | `story_order` | Which skills and faults story 1 mentions, in order (their `story` lines in skills.json). |
 | `reclass` | `true`: at each level-up the class follows the stats (Quest I's rule, between classes 1-4). |
 
@@ -69,7 +70,7 @@ with two conventions the engine and saves rely on:
 | `power` | A weapon's damage; for amulets see `power_bonus`. |
 | `kind` | Weapons: 0 normal, 1 double strike (1 in 5), 2 parry (1 in 5), 3 magic (ignores armour), 4 ranged, 5 two-handed, 6 two-handed with parry. |
 | `potion` | For potions: its number 1-8 (the key that drinks it and its place on the belt). |
-| `key` | For keys: `yellow`, `red` or `blue`. |
+| `key` | For keys: `yellow`, `red` or `blue`, or a colour of quest.json's `keys`. |
 | `ammo`, `count` | For ammunition: its kind (`arrows`, ...) and how many the stack holds (up to 20). A stack of each size is its own item. |
 | `fires` | For launchers: the kinds of ammunition it takes. |
 | `missile_anim` | For launchers: the animation of a hit (`sthit`, `arhit`, `bolthit`). |

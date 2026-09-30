@@ -124,6 +124,17 @@ class Pack:
     def spell(self, s: int) -> dict:
         return self.spells.get(s, {})
 
+    ORIGINAL_KEYS = {'yellow': 14, 'red': 4, 'blue': 1}      # the original's three: gold, red, blue
+
+    def extra_keys(self) -> dict:
+        """Key colours past the original's three: quest.json's "keys", {"green": 10, ...} (the EGA colour
+        the key is drawn in)."""
+        out = {}
+        for name, v in (self.quest.get('keys') or {}).items():
+            if name not in self.ORIGINAL_KEYS:
+                out[name] = int(v.get('colour', 7) if isinstance(v, dict) else v)
+        return out
+
     def extra_potions(self) -> dict:
         """Potions 9 and 10 (keys 9 and 0), which the original doesn't have: quest.json's "potions",
         {"9": {"name", "colour", "life", "mana", "cure_poison", "berserk"}, ...}. 1-8 are the original's."""

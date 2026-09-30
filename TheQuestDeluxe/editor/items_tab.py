@@ -4,6 +4,7 @@ from __future__ import annotations
 from tkinter import simpledialog, messagebox
 
 from .table_tab import TableTab, Field
+from .tiles_tab import key_choices
 
 TYPES = [('weapon', 'Weapon (melee)'), ('launcher', 'Launcher (sling, bow)'), ('ammo', 'Ammunition'),
          ('armour', 'Armour'), ('shield', 'Shield'), ('helmet', 'Helmet'), ('amulet', 'Amulet'),
@@ -85,8 +86,9 @@ class ItemsTab(TableTab):
                     (self.app.project.quest.get('potions') or {}).items(), key=lambda kv: int(kv[0]))],
                   when=is_('potion'),
                   hint="the belt's potions 1-8 are the original's; 9 and 10 are defined on the Quest tab"),
-            Field('key', 'Opens', 'choice', [('yellow', 'gold-key doors'), ('red', 'red-key doors'),
-                                            ('blue', 'blue-key doors')], when=is_('key')),
+            Field('key', 'Opens', 'choice', key_choices(self.app.project.quest, {
+                'yellow': 'gold-key doors', 'red': 'red-key doors', 'blue': 'blue-key doors'}), when=is_('key'),
+                  hint='yellow, red and blue are the original\'s; more colours are defined on the Quest tab'),
             Field('quest', 'Quest item', 'bool', hint="can't be sold or dropped", when=is_('treasure', 'weapon', 'launcher', 'armour',
                                                                         'shield', 'helmet', 'amulet')),
         ]

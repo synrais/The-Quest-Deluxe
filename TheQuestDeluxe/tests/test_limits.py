@@ -7,6 +7,7 @@
     2 is shown, chosen and cast, and the lot saves and loads.
   - Potions 9 and 10: defined in quest.json, started with, drunk with keys 9 and 0, picked up, on a belt
     of ten, saved and loaded.
+  - More key colours: defined in quest.json, open their doors, drawn on the key panel, saved and loaded.
 
     python tests/test_limits.py
 """
@@ -189,10 +190,65 @@ def potions():
     print('potions 9 and 10: started with, drunk (keys 9 and 0), picked up, on the belt, saved and loaded: ok')
 
 
+def keys(shot=None):
+    from engine.state import has_key
+
+    def green_keys(folder, json):
+        path = os.path.join(folder, 'quest.json')
+        q = json.load(open(path))
+        q['keys'] = {'green': 10, 'purple': {'colour': 5}}
+        json.dump(q, open(path, 'w'))
+        path = os.path.join(folder, 'items.json')
+        items = json.load(open(path))
+        items['items'].append({'id': 951, 'name': 'Green Key', 'type': 'key', 'key': 'green'})
+        json.dump(items, open(path, 'w'))
+        path = os.path.join(folder, 'tiles.json')
+        tiles = json.load(open(path))
+        tiles['walls'].append({'id': -40, 'name': 'Locked Green Key Door', 'door': 'locked', 'key': 'green'})
+        json.dump(tiles, open(path, 'w'))
+    g = pack_copy(green_keys)
+    assert g.pack.extra_keys() == {'green': 10, 'purple': 5}, g.pack.extra_keys()
+    g.quick_start(1, 1)
+    g.combat_log = True
+    p, w = g.player, g.world
+    # a green door beside the hero: locked without the key
+    door = w.sq(p.X + 1, p.Y)
+    door.wall, door.mon, door.item = -40, 0, 0
+    x0 = p.X
+    press(g, pygame.K_RIGHT)
+    assert w.sq(x0 + 1, p.Y).wall == -40 and p.X == x0
+    assert any('green key' in t for t, _, _ in g.log_lines), g.log_lines
+    # picked up, drawn on the key panel
+    here = w.sq(p.X, p.Y)
+    here.item = 951
+    press(g, pygame.K_RETURN)
+    assert has_key(p, 'green') and not has_key(p, 'purple') and here.item == 0 and p.more['keys'] == {'green': 1}
+    g.renderer.draw(g, present=False)
+    if shot:
+        pygame.image.save(g.renderer.screen, shot)
+    # saved and loaded
+    d = savefile.from_bytes(savefile.to_bytes(g.to_save()))
+    assert d.extra['more']['keys'] == {'green': 1}, d.extra
+    g.from_save(d, 1)
+    p, w = g.player, g.world
+    assert has_key(p, 'green')
+    # it opens the door
+    w.sq(p.X + 1, p.Y).wall = -40
+    w.sq(p.X + 1, p.Y).mon = 0
+    press(g, pygame.K_RIGHT)
+    assert w.sq(x0 + 1, p.Y).wall == 0, w.sq(x0 + 1, p.Y).wall
+    # a new level takes it, as the original's keys
+    w.load_level(2, p, g.status)
+    assert not has_key(p, 'green') and 'keys' not in p.more
+    print('more key colours: a locked green door, the key picked up, on the panel, saved, loaded, the door '
+          'opened, and gone on a new level: ok')
+
+
 def main():
     saves()
     spells()
     potions()
+    keys(sys.argv[1] if len(sys.argv) > 1 else None)
     print('all limit checks passed')
 
 

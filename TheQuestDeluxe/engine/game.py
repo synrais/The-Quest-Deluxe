@@ -18,7 +18,7 @@ import pygame
 
 from .formats import GameData, Square, MAP_SIZE
 from .state import (Status, Player, Hero, Inventory, Skills, new_player, POTION_FIELDS, KNIGHT, Enemy,
-                    potions, add_potions)
+                    potions, add_potions, has_key, give_key)
 from .world import World, screen_of, room_origin
 from .savefile import SaveData, Slots
 from . import savefile
@@ -37,7 +37,6 @@ from . import view3d
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-KEY_FIELDS = {'yellow': 'ykey', 'red': 'rkey', 'blue': 'bkey'}
 DIRS = {pygame.K_LEFT: (-1, 0), pygame.K_RIGHT: (1, 0), pygame.K_UP: (0, -1), pygame.K_DOWN: (0, 1),
         pygame.K_KP4: (-1, 0), pygame.K_KP6: (1, 0), pygame.K_KP8: (0, -1), pygame.K_KP2: (0, 1)}
 FACES = {(0, -1): 0, (1, 0): 1, (0, 1): 2, (-1, 0): 3}
@@ -453,7 +452,7 @@ class Game:
             self.combat.melee(e)
             return True
         door = wall.get('door')
-        if door in ('plain', 'fake') or (door == 'locked' and getattr(p.inv, KEY_FIELDS[wall['key']])):
+        if door in ('plain', 'fake') or (door == 'locked' and has_key(p, wall['key'])):
             q.wall, q.deco = 0, self.pack.deco('open_door')
             self.tones((400, 100))
             if door == 'locked':
@@ -551,7 +550,7 @@ class Game:
             self.report(f'You pick up {self.a_name(q.item)}.', 15)
             q.item = 0
         if pk.item_type(q.item) == 'key':
-            setattr(p.inv, KEY_FIELDS[pk.item(q.item)['key']], 1)
+            give_key(p, pk.item(q.item)['key'])
             self.report(f'You pick up the {self.key_name(pk.item(q.item)["key"])}.', 15)
             q.item = 0
             self.play('song_key')

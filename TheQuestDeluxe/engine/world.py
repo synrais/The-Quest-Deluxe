@@ -46,6 +46,7 @@ class World:
         player.X, player.Y = start
         st.mission1 = st.mission2 = 0
         player.inv.rkey = player.inv.bkey = player.inv.ykey = 0
+        player.more.pop('keys', None)                      # a pack's own key colours go too
         if player.hero.rep <= -4:
             player.hero.rep = -3
         self.enter_room(player, st)

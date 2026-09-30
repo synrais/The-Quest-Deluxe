@@ -68,9 +68,15 @@ class QuestTab(ttk.Frame):
             self.pots[k] = v
         ttk.Label(box, text='Life and mana: half, full or a number. An empty name: no such potion.',
                   foreground='#555').grid(row=3, column=0, columnspan=7, sticky='w', pady=(4, 0))
-        ttk.Button(self, text='Apply', command=self.apply).grid(row=n + 4, column=1, sticky='w', pady=8)
+        # key colours past the original's yellow, red and blue
+        ttk.Label(self, text='More key colours').grid(row=n + 4, column=0, sticky='w')
+        self.keys = tk.StringVar()
+        ttk.Entry(self, textvariable=self.keys, width=40).grid(row=n + 4, column=1, sticky='w')
+        ttk.Label(self, text='name: EGA colour, ... (green: 10, purple: 5); yellow, red and blue are the original\'s',
+                  foreground='#555').grid(row=n + 5, column=1, sticky='w')
+        ttk.Button(self, text='Apply', command=self.apply).grid(row=n + 6, column=1, sticky='w', pady=8)
         self.info = ttk.Label(self, text='', foreground='#555', justify='left')
-        self.info.grid(row=n + 5, column=0, columnspan=2, sticky='w', pady=12)
+        self.info.grid(row=n + 7, column=0, columnspan=2, sticky='w', pady=12)
 
     def load(self):
         q = self.app.project.quest
@@ -83,6 +89,8 @@ class QuestTab(ttk.Frame):
             for f in ('name', 'colour', 'life', 'mana', 'berserk'):
                 v[f].set('' if pot.get(f) is None else str(pot.get(f)))
             v['cure_poison'].set(bool(pot.get('cure_poison')))
+        self.keys.set(', '.join(f'{k}: {v.get("colour", 7) if isinstance(v, dict) else v}'
+                                for k, v in (q.get('keys') or {}).items()))
         p = self.app.project
         self.info.config(text=f'Pack folder: {p.root}\n{p.levels} levels, {len(p.tables["items"])} items, '
                               f'{len(p.tables["creatures"])} creatures, {len(p.tables["spells"])} spells, '
@@ -119,9 +127,22 @@ class QuestTab(ttk.Frame):
                 q['potions'] = extra
             else:
                 q.pop('potions', None)
+            keys = {}
+            for part in self.keys.get().split(','):
+                if part.strip():
+                    k, v = part.split(':')
+                    k, v = k.strip().lower(), int(v)
+                    if not k or k in ('yellow', 'red', 'blue') or not 0 <= v <= 15:
+                        raise ValueError(k)
+                    keys[k] = v
+            if keys:
+                q['keys'] = keys
+            else:
+                q.pop('keys', None)
         except ValueError:
             messagebox.showerror('Quest', 'The year and first level are numbers; potions are like "6: 1"; a potion\'s '
-                                          'colour and berserk turns are numbers, its life and mana half, full or a number.')
+                                          'colour and berserk turns are numbers, its life and mana half, full or a number; '
+                                          'more key colours are like "green: 10" (a new name, colour 0-15).')
             return
         q['reclass'] = self.reclass.get()
         self.app.project.touch('quest')

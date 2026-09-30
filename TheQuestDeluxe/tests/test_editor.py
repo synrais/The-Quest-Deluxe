@@ -246,6 +246,24 @@ mt._apply_settings()
 assert app.project.constant(1, 'SKY_3D') is None
 print('FPS mode: roofs, 3D level settings, the 3D preview: ok')
 
+# more key colours: set on the Quest tab, then offered to key items and locked doors
+qt = app.quest_tab
+qt.load()
+qt.keys.set('Green: 10, purple: 5')
+qt.apply()
+assert app.project.quest['keys'] == {'green': 10, 'purple': 5}, app.project.quest.get('keys')
+qt.load()
+assert qt.keys.get() == 'green: 10, purple: 5'
+key_field = next(f for f in app.items_tab.fields() if f.key == 'key')
+assert [k for k, _ in key_field.choices] == ['yellow', 'red', 'blue', 'green', 'purple'], key_field.choices
+app.tiles_tab.pick_kind('walls')
+door_field = next(f for f in app.tiles_tab.fields() if f.key == 'key')
+assert [k for k, _ in door_field.choices] == ['yellow', 'red', 'blue', 'green', 'purple'], door_field.choices
+qt.keys.set('')
+qt.apply()
+assert 'keys' not in app.project.quest
+print('more key colours: the Quest tab, and the choices for keys and locked doors: ok')
+
 assert app.dirty
 app.save()
 assert os.path.exists(os.path.join(pack, 'sprites', 'items', '1001.png'))
