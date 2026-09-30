@@ -1,4 +1,4 @@
-"""The Quest II — launcher.
+"""The Quest Classic — launcher.
 
     python run_quest2.py            start a new game
     python run_quest2.py --level 3  start directly on level 3 (testing)
