@@ -32,12 +32,16 @@ from .speaker import Speaker, sound_setting
 from . import anim
 from . import invshop
 from . import ui
+from . import view3d
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 KEY_FIELDS = {'yellow': 'ykey', 'red': 'rkey', 'blue': 'bkey'}
 DIRS = {pygame.K_LEFT: (-1, 0), pygame.K_RIGHT: (1, 0), pygame.K_UP: (0, -1), pygame.K_DOWN: (0, 1),
         pygame.K_KP4: (-1, 0), pygame.K_KP6: (1, 0), pygame.K_KP8: (0, -1), pygame.K_KP2: (0, 1)}
+FACES = {(0, -1): 0, (1, 0): 1, (0, 1): 2, (-1, 0): 3}
+TURNS = {pygame.K_LEFT: -1, pygame.K_KP4: -1, pygame.K_RIGHT: 1, pygame.K_KP6: 1}      # FPS mode
+STRAFE = {pygame.K_COMMA: -1, pygame.K_q: -1, pygame.K_PERIOD: 1, pygame.K_e: 1}     # FPS mode: step sideways
 
 
 class ScreenHost(anim.Host):
@@ -160,6 +164,9 @@ class Game:
         self.pending_next_level = False    # set by a level script (e.g. the end of level 7)
         self.overlay = ui.TitleScreen()     # title() / mastermind()
         self.running = True
+        self.view3d = False                # FPS mode: the world through the hero's eyes (F)
+        self.facing = 0                    # which way the hero looks: 0 north, 1 east, 2 south, 3 west
+        self.minimap = True                # FPS mode: the screen from above in the corner (M)
 
     # ── helpers ───────────────────────────────────────────────────────────────
     def log(self, text: str, colour: int = 15):
@@ -193,7 +200,11 @@ class Game:
 
     def play_at(self, name: str, x: int, y: int, *args, **kw):
         """An animation at map square (x, y)."""
-        self.play(name, *self.on_screen(x, y), *args, **kw)
+        self.renderer.anchor = (x, y)
+        try:
+            self.play(name, *self.on_screen(x, y), *args, **kw)
+        finally:
+            self.renderer.anchor = None
 
     def monster_name(self, t: int) -> str:
         return self.renderer.sprites.names.get(('enemy', t), 'creature').lower()
@@ -327,9 +338,15 @@ class Game:
             self.overlay.key(self, ev)
             return
         k = ev.key
+        if self.view3d and k in TURNS:
+            self.facing = (self.facing + TURNS[k]) % 4    # FPS mode: turning is free, and not an action
+            return
         self.messages = []
         acted = False
-        if k in DIRS:
+        if self.view3d and (k in DIRS or k in STRAFE):
+            acted = self.step_3d(k)
+        elif k in DIRS:
+            self.facing = FACES[DIRS[k]]
             acted = self.try_move(*DIRS[k])
         elif k in (pygame.K_RETURN, pygame.K_KP_ENTER):
             acted = self.pick_up()
@@ -356,6 +373,10 @@ class Game:
             self.load_game()
         elif k == pygame.K_ESCAPE:
             self.quit_prompt()
+        elif k == pygame.K_f:
+            self.view3d = not self.view3d            # FPS mode (Deluxe)
+        elif k == pygame.K_m and self.view3d:
+            self.minimap = not self.minimap
         if acted:
             self.end_turn()
         self.events.run('after_action', 'space' if k == pygame.K_SPACE else 'key')
@@ -364,6 +385,15 @@ class Game:
             self.next_level()
 
     # ── movement ──────────────────────────────────────────────────────────────
+    def step_3d(self, k) -> bool:
+        """FPS mode: Up walks forward, Down back, , and . (or Q and E) step sideways (Left and Right
+        turn, in handle()). Walking is the classic move, so bumping still fights, talks and opens."""
+        f = self.facing
+        way = {pygame.K_UP: f, pygame.K_KP8: f, pygame.K_DOWN: f + 2, pygame.K_KP2: f + 2}.get(k)
+        if way is None:
+            way = f + STRAFE[k]
+        return self.try_move(*view3d.FACINGS[way % 4])
+
     def try_move(self, dx: int, dy: int) -> bool:
         p, w, st = self.player, self.world, self.status
         nx, ny = p.X + dx, p.Y + dy

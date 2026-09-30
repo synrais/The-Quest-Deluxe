@@ -206,6 +206,13 @@ class Project:
                     return default
         return default
 
+    def remove_constant(self, level: int, name: str):
+        lines = self.scripts.get(level, '').split('\n')
+        kept = [line for line in lines if not re.match(rf'^{name}\s*=', line)]
+        if kept != lines:
+            self.scripts[level] = '\n'.join(kept)
+            self.touch(('script', level))
+
     def set_constant(self, level: int, name: str, value, comment: str = ''):
         """Rewrite (or add) `NAME = value` at the top of the level's script, keeping its comment."""
         text = self.scripts.get(level, '')

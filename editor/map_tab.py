@@ -25,6 +25,7 @@ from .project import SIZE
 
 LAYERS = [('floor', 'Floor'), ('wall', 'Wall / door'), ('deco', 'Decoration'), ('item', 'Item'),
           ('mon', 'Creature'), ('gold', 'Gold')]
+SETTINGS_3D = [('SKY_3D', '3D sky colour'), ('FOG_3D', '3D fog colour'), ('RANGE_3D', '3D range')]
 TOOLS = [('paint', 'Paint'), ('rect', 'Rectangle'), ('fill', 'Fill'), ('pick', 'Pick'),
          ('start', 'Start'), ('shop', 'Shop'), ('peace', 'Peaceful')]
 ZOOMS = {'Large (40)': 40, 'Medium (24)': 24, 'Small (12)': 12}
@@ -79,9 +80,18 @@ class MapTab(ttk.Frame):
         self.jingle = tk.BooleanVar()
         ttk.Checkbutton(box, text='Jingle when leaving', variable=self.jingle).grid(row=4, column=0, columnspan=2,
                                                                                   sticky='w')
-        ttk.Button(box, text='Apply', command=self._apply_settings).grid(row=5, column=0, columnspan=2, pady=4)
-        ttk.Label(left, text='Stories: numbers from\nthe Text tab, e.g. 2, 3.\nTeleporter: dx, dy.',
+        self.look3d = {}
+        for i, (name, label) in enumerate(SETTINGS_3D):
+            ttk.Label(box, text=label).grid(row=5 + i, column=0, sticky='w')
+            e = ttk.Entry(box, width=10)
+            e.grid(row=5 + i, column=1, sticky='w')
+            self.look3d[name] = e
+        ttk.Button(box, text='Apply', command=self._apply_settings).grid(row=8, column=0, columnspan=2, pady=4)
+        ttk.Label(left, text='Stories: numbers from\nthe Text tab, e.g. 2, 3.\nTeleporter: dx, dy.\n'
+                             '3D: EGA colours 0-15 and\nhow far the eye sees\n(empty: the default).',
                   foreground='#555').pack(anchor='w')
+        ttk.Button(left, text='3D view from here...', command=self.open_3d).pack(fill='x', pady=6)
+        self.preview3d = None
 
         right = ttk.Frame(self, padding=4)
         right.pack(side='right', fill='y')
@@ -206,6 +216,10 @@ class MapTab(ttk.Frame):
         self.teleport.insert(0, f'{tp[0]}, {tp[1]}')
         self.ask_leave.set(p.constant(self.level, 'ASK_TO_LEAVE', True))
         self.jingle.set(p.constant(self.level, 'LEAVE_JINGLE', True))
+        for name, e in self.look3d.items():
+            v = p.constant(self.level, name)
+            e.delete(0, 'end')
+            e.insert(0, '' if v is None else str(v))
 
     def _apply_settings(self):
         p, n = self.app.project, self.level
@@ -220,12 +234,31 @@ class MapTab(ttk.Frame):
             p.set_constant(n, 'STORIES', stories, 'story screens shown before the level')
         if tp != tuple(p.constant(n, 'TELEPORT', (0, 0))):
             p.set_constant(n, 'TELEPORT', tp, 'where a teleporter pad sends the hero (dx, dy)')
+        try:
+            look3d = {name: (int(e.get()) if e.get().strip() else None) for name, e in self.look3d.items()}
+            assert all(v is None or 0 <= v <= 15 for k, v in look3d.items() if k != 'RANGE_3D')
+            assert look3d['RANGE_3D'] is None or 2 <= look3d['RANGE_3D'] <= 30
+        except (ValueError, AssertionError):
+            messagebox.showerror('Level settings', 'The 3D sky and fog are EGA colours 0-15, the range 2-30 squares.')
+            return
+        for name, v in look3d.items():
+            if v is None:
+                p.remove_constant(n, name)
+            elif v != p.constant(n, name):
+                p.set_constant(n, name, v, dict(SETTINGS_3D)[name].lower())
         for name, var, what in (('ASK_TO_LEAVE', self.ask_leave, 'ask before leaving by the exit'),
                                 ('LEAVE_JINGLE', self.jingle, 'play the jingle when leaving')):
             if var.get() != p.constant(n, name, True):
                 p.set_constant(n, name, var.get(), what)
         self.app.changed()
         self.app.scripts_changed(n)
+
+    def open_3d(self):
+        """FPS mode's view of this level, from the square last clicked."""
+        from .preview3d import Preview3D
+        if self.preview3d is not None and self.preview3d.winfo_exists():
+            self.preview3d.destroy()
+        self.preview3d = Preview3D(self, self.selected)
 
     # ── palette ─────────────────────────────────────────────────────────────
     def _fill_palette(self):
@@ -377,6 +410,8 @@ class MapTab(ttk.Frame):
         if not self._inside(x, y):
             return
         self.selected = (x, y)
+        if self.preview3d is not None and self.preview3d.winfo_exists():
+            self.preview3d.goto(x, y)
         tool = self.tool.get()
         self.stroke = {}
         if tool == 'paint':

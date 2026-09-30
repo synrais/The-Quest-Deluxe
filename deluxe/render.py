@@ -1,6 +1,7 @@
 """pygame renderer: 640x480 logical screen laid out like the original, scaled to the window."""
 from __future__ import annotations
 
+import math
 import os
 
 import pygame
@@ -8,11 +9,12 @@ import pygame
 from .world import ROOM
 from .bgi import BGI
 from .hud import Hud
-from . import anim
+from . import anim, view3d
 
 W, H = 640, 480
 TILE = 40
 MAP_PX = ROOM * TILE          # 400
+STEP_MS = 140                 # FPS mode: how long a step or a turn takes to glide
 
 # the EGA palette as the game shows it (see bgi.EGA)
 from .bgi import EGA  # noqa: E402
@@ -63,6 +65,7 @@ class Renderer:
         self.bgi._fonts = self.hud.g._fonts
         self.pack = pack
         self.sprites = Sprites(pack)
+        self.anchor = None             # the map square the running animation plays at (FPS mode)
 
     # ── tiles ─────────────────────────────────────────────────────────────────
     def draw_tile(self, surf, px, py, q, enemy=None):
@@ -107,8 +110,25 @@ class Renderer:
             for _ in gen:
                 pass
             return
-        if redraw:
+        three_d = self.in_3d(game)
+        while three_d and self.gliding(game):               # a step or a turn finishes before the animation
             self.draw(game)
+            pygame.event.pump()
+            pygame.time.wait(10)
+        if redraw:
+            self.draw(game, present=False, flat=three_d)
+        if three_d:
+            # the animation draws on the map from above, out of sight; what it changes is carried
+            # into the 3D view (see compose_3d)
+            if redraw or getattr(self, '_anim_base', None) is None:
+                self._anim_base = self.screen.copy()
+            view = pygame.Surface((MAP_PX, MAP_PX))
+            self.draw_3d(game, view)
+            self._anim_view = view
+            if redraw:
+                self.present(self.compose_3d(game))
+        elif redraw:
+            self.present()
         self.bgi.s = self.screen
         clock = pygame.time.get_ticks
         target = shown = clock()
@@ -116,13 +136,53 @@ class Renderer:
             target += max(0, ms)
             now = clock()
             if now < target or now - shown >= 16:
-                self.present()
+                self.present(self.compose_3d(game) if three_d else None)
                 shown = clock()
             pygame.event.pump()                  # keys pressed meanwhile stay queued, like the BIOS buffer
             wait = target - clock()
             if wait > 0:
                 pygame.time.wait(wait)
-        self.present()
+        self.present(self.compose_3d(game) if three_d else None)
+
+    def compose_3d(self, game) -> pygame.Surface:
+        """An animation frame in FPS mode: the 3D view, with what the animation drew on the map moved
+        to where it happens: around a creature's square, at that square in the view; around the
+        hero, over the whole view; anywhere else (a flash of the screen), as it is."""
+        out = self.screen.copy()
+        out.blit(self._anim_view, (0, 0))
+        area = (0, 0, MAP_PX, MAP_PX)
+        drawn, base = self.screen.subsurface(area), self._anim_base.subsurface(area)
+        same = pygame.mask.from_threshold(drawn, (0, 0, 0, 255), (1, 1, 1, 255), base)
+        same.invert()
+        if not same.count():
+            return out
+        colours = pygame.Surface((MAP_PX, MAP_PX), pygame.SRCALPHA)
+        colours.blit(drawn, (0, 0))
+        layer = pygame.Surface((MAP_PX, MAP_PX), pygame.SRCALPHA)
+        same.to_surface(layer, setsurface=colours, unsetcolor=(0, 0, 0, 0))
+        at = self.anchor
+        if at is None:
+            out.blit(layer, (0, 0))
+            return out
+        ox, oy = game.world.origin
+        ax, ay = (at[0] - ox) * TILE, (at[1] - oy) * TILE
+        crop = pygame.Surface((3 * TILE, 3 * TILE), pygame.SRCALPHA)
+        crop.fill((0, 0, 0, 0))
+        crop.blit(layer, (TILE - ax, TILE - ay))
+        p = game.player
+        if tuple(at) == (p.X, p.Y):
+            out.blit(pygame.transform.scale(crop, (MAP_PX, MAP_PX)), (0, 0))
+            return out
+        where = self.v3d.project(self.camera(game), at[0] + 0.5, at[1] + 0.5)
+        if where is None:
+            return out
+        k = MAP_PX / view3d.RES
+        x, y, size = where[0] * k, where[1] * k, where[2] * k
+        n = max(3, int(3 * size))
+        big = pygame.transform.scale(crop, (n, n))
+        view = out.subsurface(area)
+        view.blit(big, (int(x - n / 2), int(y - size / 2 - n / 2)))
+        return out
 
     def wait(self, surface, ms, fast=False):
         """delay(ms) while an original key loop owns the screen: show its surface, then wait."""
@@ -152,7 +212,8 @@ class Renderer:
             clock.tick(30)
 
     # ── frame ─────────────────────────────────────────────────────────────────
-    def draw(self, game, present=True):
+    def draw(self, game, present=True, flat=False):
+        """flat: the map from above even in FPS mode."""
         self.game = game
         scr = self.screen
         scr.fill((0, 0, 0))
@@ -162,6 +223,19 @@ class Renderer:
             if present:
                 self.present()
             return
+        if self.in_3d(game) and not flat:
+            self.draw_3d(game, scr)
+        else:
+            self.draw_map(game, scr)
+        self.hud.draw(game)
+        self.draw_message(scr, game)
+        if game.overlay:
+            game.overlay.draw(self, scr)
+        if present:
+            self.present()
+
+    def draw_map(self, game, scr):
+        """The screen from above, as the original shows it."""
         w, p = game.world, game.player
         ox, oy = w.origin
         for x, y in w.room_tiles():
@@ -175,12 +249,93 @@ class Renderer:
             cx, cy = game.cursor
             pygame.draw.rect(scr, EGA[14], ((cx - ox) * TILE, (cy - oy) * TILE, TILE, TILE), 2)
 
-        self.hud.draw(game)
-        self.draw_message(scr, game)
-        if game.overlay:
-            game.overlay.draw(self, scr)
-        if present:
-            self.present()
+    # ── FPS mode ──────────────────────────────────────────────────────────────
+    @staticmethod
+    def in_3d(game) -> bool:
+        """The 3D view shows unless the game asks for a square on the map (a target, a spell's aim)."""
+        return getattr(game, 'view3d', False) and game.cursor is None
+
+    def scene3d(self, game) -> view3d.Scene:
+        w, pack = game.world, self.pack
+        key = (id(w.grid), w.level)
+        if getattr(self, '_scene_key', None) != key:
+            s = self.sprites
+            kinds = {'floor': 'floor', 'wall': 'wall', 'deco': 'extra', 'item': 'object', 'mon': 'enemy'}
+
+            def picture(kind, v):
+                return s.gold if kind == 'gold' else s.get(kinds[kind], v)
+
+            def square(x, y):
+                if not w.in_map(x, y):
+                    return None
+                q = w.grid[x][y]
+                return q.floor, q.wall, q.item, q.mon, q.gold, q.deco
+            items = {v: (r.get('type', ''), r.get('view3d')) for v, r in pack.items.items()}
+            scene = view3d.Scene(pack.tiles, items, picture, square, hidden=lambda m: pack.trait(m, 'invisible'))
+            meta, dflt = game.events.meta, pack.quest.get('view3d', {})
+            scene.sky = meta(w.level, 'SKY_3D', dflt.get('sky', view3d.Scene.sky))
+            scene.fog = meta(w.level, 'FOG_3D', dflt.get('fog', scene.sky))
+            scene.range = meta(w.level, 'RANGE_3D', dflt.get('range', view3d.Scene.range))
+            self._scene, self._scene_key = scene, key
+        return self._scene
+
+    def camera(self, game, snap=False):
+        """Where the eye is: it glides a step or a quarter turn over STEP_MS, then stays."""
+        p = game.player
+        goal = (p.X + 0.5, p.Y + 0.5, view3d.facing_angle(game.facing))
+        now = pygame.time.get_ticks()
+        cam = getattr(self, '_cam', None)
+        if cam is None or snap or game.fast:
+            cam = self._cam = {'from': goal, 'goal': goal, 't0': now}
+        if cam['goal'] != goal:
+            here = self._pose(cam, now)
+            far = abs(goal[0] - here[0]) + abs(goal[1] - here[1]) > 1.5
+            cam.update({'from': goal if far else here, 'goal': goal, 't0': now})
+        return self._pose(cam, now)
+
+    @staticmethod
+    def _pose(cam, now):
+        t = min(1.0, (now - cam['t0']) / STEP_MS)
+        (x0, y0, a0), (x1, y1, a1) = cam['from'], cam['goal']
+        da = (a1 - a0 + math.pi) % (2 * math.pi) - math.pi
+        return x0 + (x1 - x0) * t, y0 + (y1 - y0) * t, a0 + da * t
+
+    def gliding(self, game) -> bool:
+        """Is the eye still on its way to where the hero now is?"""
+        return self.camera(game) != self._cam['goal']
+
+    def draw_3d(self, game, scr, snap=False):
+        if not hasattr(self, 'v3d'):
+            self.v3d = view3d.View3D()
+        frame = self.v3d.render(self.scene3d(game), self.camera(game, snap))
+        k = MAP_PX // view3d.RES
+        scr.blit(pygame.transform.scale(frame, (MAP_PX, MAP_PX)), (0, 0))
+        t = game.target
+        if t is not None and t in game.world.enemies:
+            r = self.v3d.sprite_rects.get((t.x, t.y))
+            if r:
+                pygame.draw.rect(scr, EGA[12], (r.x * k, r.y * k, r.w * k, r.h * k), 1)
+        # the compass, and the screen from above in the corner
+        self.btext(scr, view3d.FACING_NAMES[game.facing % 4], (MAP_PX // 2, 2), 15, style=(8, 1), center=True)
+        if getattr(game, 'minimap', True):
+            n = 100
+            w, p, st, h = game.world, game.player, game.status, game.player.hero
+            key = (tuple((q.floor, q.wall, q.item, q.mon, q.gold, q.deco) for q in
+                         (w.grid[x][y] for x, y in w.room_tiles())), p.X, p.Y, p.hero.type, h.invisible,
+                   h.poisoned, st.killer, st.powboost, st.Shield, st.fShield, t and (t.x, t.y))
+            if key != getattr(self, '_mini_key', None):
+                small = pygame.Surface((MAP_PX, MAP_PX))
+                self.draw_map(game, small)
+                self._mini, self._mini_key = pygame.transform.scale(small, (n, n)), key
+            mini = self._mini
+            x0 = MAP_PX - n - 4
+            scr.blit(mini, (x0, 4))
+            pygame.draw.rect(scr, EGA[7], (x0 - 1, 3, n + 2, n + 2), 1)
+            ox, oy = game.world.origin
+            cx = x0 + (game.player.X - ox) * n // 10 + n // 20
+            cy = 4 + (game.player.Y - oy) * n // 10 + n // 20
+            dx, dy = view3d.FACINGS[game.facing % 4]
+            pygame.draw.line(scr, EGA[14], (cx, cy), (cx + dx * 7, cy + dy * 7), 2)
 
     def draw_message(self, scr, game):
         """The bottom strip shows this turn's messages, or the potion belt when there are none."""
@@ -218,14 +373,15 @@ class Renderer:
             out.append(line)
         return out
 
-    def present(self):
+    def present(self, surface=None):
+        surface = self.screen if surface is None else surface
         ww, wh = self.window.get_size()
         scale = max(1, min(ww // W, wh // H))
         if ww / W >= 1 and wh / H >= 1 and scale * W <= ww:
-            scaled = pygame.transform.scale(self.screen, (W * scale, H * scale))
+            scaled = pygame.transform.scale(surface, (W * scale, H * scale))
         else:
             f = min(ww / W, wh / H)
-            scaled = pygame.transform.smoothscale(self.screen, (int(W * f), int(H * f)))
+            scaled = pygame.transform.smoothscale(surface, (int(W * f), int(H * f)))
         self.window.fill((0, 0, 0))
         self.window.blit(scaled, ((ww - scaled.get_width()) // 2, (wh - scaled.get_height()) // 2))
         pygame.display.flip()

@@ -10,6 +10,9 @@ from .table_tab import TableTab, Field
 KINDS = [('floors', 'Floors', 'floor'), ('walls', 'Walls and doors', 'wall'), ('decos', 'Decorations', 'deco')]
 DOORS = [(None, '(not a door)'), ('plain', 'plain: opens when walked into'),
          ('fake', 'fake: a secret wall that opens the same way'), ('locked', 'locked: needs a key')]
+WALL_LOOKS = [(None, '(by the picture: opaque = block)'), ('block', 'block: a solid cube'),
+              ('billboard', 'billboard: standing up (trees)'), ('flat', 'flat: on the ground (water)')]
+DECO_LOOKS = [(None, 'billboard: standing up'), ('flat', 'flat: on the ground (blood)')]
 KEYS = [('yellow', 'yellow'), ('red', 'red'), ('blue', 'blue')]
 ROLES = [(None, '(none)'), ('open_door', 'open door: where a door opened'),
          ('open_chest', 'open chest: an emptied chest'), ('remains', 'remains: where a creature died'),
@@ -95,6 +98,16 @@ class TilesTab(TableTab):
                           hint='other colours on some levels: "5: 8, 2; 7: 1, 1"')]
         if self.kind == 'decos':
             out.append(Field('role', 'Role', 'choice', ROLES, hint='what the engine puts it down for (one of each)'))
+        if self.kind == 'walls':
+            out.append(Field('view3d', 'In 3D', 'choice', WALL_LOOKS, hint='how FPS mode shows it'))
+        if self.kind == 'decos':
+            out.append(Field('view3d', 'In 3D', 'choice', DECO_LOOKS, hint='how FPS mode shows it'))
+        if self.kind == 'floors':
+            walls = [(None, '(open sky)')] + [(w['id'], f'{w["id"]} {w.get("name", "")}')
+                                             for w in sorted(self.app.project.tiles.get('walls', []),
+                                                             key=lambda w: w['id'])]
+            out.append(Field('roof', 'Roof in 3D', 'choice', walls,
+                             hint="indoors: FPS mode draws this wall's picture overhead"))
         return out
 
     def after_change(self, row, key, old):

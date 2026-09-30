@@ -158,12 +158,18 @@ def tile_traits(key: str, n: int) -> dict:
             t['map_colour'] = colour
         if n == 5:
             t['map_colour_on_level'] = {'5': [8, 2]}
+        if n == 2:
+            t['view3d'] = 'flat'                 # FPS mode: water lies on the ground
     elif key == 'floors':
         colour = {2: [8, 2], 7: [6, 3], 8: [6, 3], 6: [0, 5], 4: [0, 5]}.get(n)
         if colour:
             t['map_colour'] = colour
+        if n in (4, 6):
+            t['roof'] = 10                       # FPS mode: carpeted rooms are indoors
     else:
         t['role'] = {1: 'open_door', 2: 'open_chest', 3: 'remains', 4: 'blood', 5: 'remains2', 6: 'bones'}[n]
+        if n >= 3:
+            t['view3d'] = 'flat'                 # FPS mode: blood and remains lie on the ground
     return t
 
 
@@ -302,7 +308,10 @@ def main():
                          'map_colour: [EGA colour, priority] on the automap (the higher priority of the '
                          'floor and the wall wins; grass-green 2 at priority 0 otherwise); '
                          'map_colour_on_level overrides it on one level. Decorations: role is what the '
-                         'engine uses them for (open_door, open_chest, remains, remains2, blood, bones).')
+                         'engine uses them for (open_door, open_chest, remains, remains2, blood, bones). '
+                         'FPS mode: view3d is how a wall or decoration shows in 3D (block, billboard or '
+                         'flat; left out, opaque wall pictures are blocks and the rest billboards); roof '
+                         'is the wall picture drawn overhead on a floor (indoors).')
     write_text(os.path.join(OUT, 'tiles.json'), tiles_text(tiles))
 
     # ── text: the original's own files, decoded (the game reads them character by character) ──

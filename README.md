@@ -24,8 +24,13 @@ Quest Deluxe — the extended engine (the classic port above stays frozen as the
                                dialogue, stories, events, quest settings; a 16-colour painter for
                                every picture (Paint... beside it); new packs; Play (F5) test-plays
                                from the clicked square
+  FPS mode: F in the game: the world through the hero's eyes (a retro EGA raycaster). Up/Down
+                               walk, Left/Right turn (free), Q/E or , . step sideways; M shows or
+                               hides the screen from above. The rules don't change: walking is the
+                               classic move, so bumping fights, talks and opens doors
   Saves:    saves/<pack>/save01.dat .. save20.dat
-  Tests:    tests/test_packs.py, tests/test_editor.py (under xvfb-run on Linux), and
+  Tests:    tests/test_packs.py, tests/test_editor.py (under xvfb-run on Linux), tests/test_view3d.py
+            (FPS mode plays the same games as the view from above), and
             tests/lockstep.py  classic and Deluxe side by side on random keys: every screen and
                                the whole game state must match; QUEST_ENGINE=deluxe runs the
                                tools/re verifiers against Deluxe

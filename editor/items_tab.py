@@ -22,6 +22,11 @@ def is_(*types):
     return lambda r: r.get('type') in types
 
 
+
+ITEM_LOOKS = [(None, '(by type: stairs and pads flat, chests full size, the rest small)'),
+              ('small', 'small: half size, standing'), ('billboard', 'full size, standing'),
+              ('flat', 'flat: on the ground')]
+
 class ItemsTab(TableTab):
     TABLE = 'items'
     ICON_LAYER = 'item'
@@ -52,6 +57,7 @@ class ItemsTab(TableTab):
             Field('bag_name', 'Name in the bag', 'str', hint="printed under the map in the inventory "
                                                              "(Quest I's own spellings)"),
             Field('price', 'Price', 'int', hint='gold, in shops (empty: not sold)'),
+            Field('view3d', 'In 3D', 'choice', ITEM_LOOKS, hint='how FPS mode shows it on the ground'),
             Field('req_str', 'Needs strength', 'int', when=is_(*WORN), default=0),
             Field('req_int', 'Needs intelligence', 'int', when=is_(*WORN), default=0),
             Field('power', 'Power', 'int', when=is_(*WORN), default=0,

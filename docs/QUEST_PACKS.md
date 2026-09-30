@@ -156,10 +156,21 @@ Scholar; Cowardice, Rashness, Honor).
 
 Pictures: `sprites/floors/<id>.png`, `sprites/walls/<id>.png`, `sprites/decos/<id>.png`.
 
-**For the 3D view (FPS mode, planned):** walls will get how they look in 3D (their picture as a
-wall texture, or a free-standing object such as a table or a well), and floors a colour for the
-ground; creatures and items are drawn as flat pictures facing the hero. Those fields will be added
-here with defaults, so existing packs keep working.
+**FPS mode (the 3D view).** Deluxe draws the same grid through the hero's eyes (F in the game; M
+shows or hides the screen from above in the corner). These fields say how things look there; all
+are optional, so packs without them still work:
+
+| Field | Meaning |
+|---|---|
+| `view3d` | Walls: `block` (a solid cube with the picture on each side), `billboard` (the picture standing in the middle of the square, like a tree) or `flat` (lying on the ground, like water). Left out, an opaque picture is a block and one with see-through pixels a billboard. Decorations: `billboard` (the default) or `flat` (blood, bones). |
+| `roof` | Floors: the wall picture drawn overhead (indoors). Left out, the sky shows. A building's walls carry the roof of the room beside them. |
+
+Items have a `view3d` too (items.json): `small` (half size, standing; the default), `billboard` (full
+size; the default for chests) or `flat` (the default for stairs and teleporter pads). Creatures and
+gold always stand up; invisible creatures don't show. A level's script can set `SKY_3D` and `FOG_3D`
+(EGA colours; the fog is what the distance fades into, the sky's colour if left out) and `RANGE_3D`
+(how many squares the eye sees, 10 if left out); quest.json can give defaults for all levels as
+`"view3d": {"sky": 9, "fog": 9, "range": 10}`.
 
 ## levels
 

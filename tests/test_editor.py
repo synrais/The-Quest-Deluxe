@@ -216,6 +216,36 @@ img = app.project.picture('floors', new_floor)
 assert tuple(img.get_at((0, 0)))[:3] == (252, 252, 252) and tuple(img.get_at((5, 30)))[:3] == (0, 0, 168)
 print('tiles: a door, a new floor painted: ok')
 
+# FPS mode: the 3D fields, the level's 3D settings and the 3D preview
+tt.pick_kind('floors')
+tt.select(1)
+tt._set(next(f for f in tt.fields() if f.key == 'roof'), 10)
+assert app.project.tiles['floors'][0]['roof'] == 10
+tt._set(next(f for f in tt.fields() if f.key == 'roof'), None)
+assert 'roof' not in app.project.tiles['floors'][0]
+app.tabs.select(app.map_tab)
+pump()
+mt = app.map_tab
+mt.look3d['SKY_3D'].insert(0, '1')
+mt._apply_settings()
+assert app.project.constant(1, 'SKY_3D') == 1
+mt.selected = (5, 5)
+mt.open_3d()
+pump()
+pv = mt.preview3d
+assert pv.scene.sky == 1
+pv.turn(1)
+pv.walk(0)
+assert (pv.x, pv.y, pv.facing) == (6, 5, 1), (pv.x, pv.y, pv.facing)
+mt._press(mock.Mock(x=(9 - 1) * mt.size + 5, y=(9 - 1) * mt.size + 5))     # a click on the map moves the view
+mt._release(mock.Mock(x=(9 - 1) * mt.size + 5, y=(9 - 1) * mt.size + 5))
+assert (pv.x, pv.y) == mt.selected
+pv.destroy()
+mt.look3d['SKY_3D'].delete(0, 'end')
+mt._apply_settings()
+assert app.project.constant(1, 'SKY_3D') is None
+print('FPS mode: roofs, 3D level settings, the 3D preview: ok')
+
 assert app.dirty
 app.save()
 assert os.path.exists(os.path.join(pack, 'sprites', 'items', '1001.png'))
