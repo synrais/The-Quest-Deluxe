@@ -79,8 +79,45 @@ pump()
 assert app.text_tab.check()
 print('script and dialogue checks: ok')
 
+# the Items tab: a new weapon, renamed, made a launcher, with a picture
+import pygame  # noqa: E402
+from tkinter import messagebox, simpledialog  # noqa: E402
+from editor.art import to_ega  # noqa: E402
+
+it = app.items_tab
+app.tabs.select(it)
+pump()
+it.new()
+row = it.row
+assert row['id'] == 1001 and row['type'] == 'weapon'
+name = next(f for f in it.fields() if f.key == 'name')
+w, var = it.widgets['name']
+var.set('Thunder Hammer')
+it._typed(name, var, w)
+assert row['bag_name'] == 'Thunder Hammer'                # follows the name while they match
+it._set(next(f for f in it.fields() if f.key == 'type'), 'launcher')
+assert row['kind'] == 4 and 'fires' in it.widgets or row.get('fires') == []
+pic = pygame.Surface((40, 40), pygame.SRCALPHA)
+pygame.draw.circle(pic, (200, 30, 30), (20, 20), 12)
+it.set_picture('items', to_ega(pic))
+assert app.project.picture('bag', 1001) is not None        # a bag picture was made from it
+simpledialog.askstring = lambda *a, **k: 'Darts'
+messagebox.showinfo = lambda *a, **k: None
+it.new_ammo_kind()
+darts = [r for r in it.rows if r.get('ammo') == 'darts']
+assert len(darts) == 20 and [r['count'] for r in darts] == list(range(1, 21))
+asked = []
+messagebox.askyesno = lambda title, msg, **k: asked.append(msg) or True
+it.select(201)
+it.delete()
+assert 'level 1 map' in asked[0] and not any(r['id'] == 201 for r in it.rows)
+print('items: new weapon, rename, launcher, picture, ammo kind, delete with its uses listed: ok')
+
 assert app.dirty
 app.save()
+assert os.path.exists(os.path.join(pack, 'sprites', 'items', '1001.png'))
+assert os.path.exists(os.path.join(pack, 'sprites', 'bag', '1001.png'))
+assert not os.path.exists(os.path.join(pack, 'sprites', 'items', '201.png'))
 assert not app.dirty
 with open(os.path.join(pack, 'levels', '1', 'map.txt')) as fh:
     lines = set(fh.read().splitlines())

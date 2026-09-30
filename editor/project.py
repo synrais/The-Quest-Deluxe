@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import io
 import os
 import re
 import shutil
@@ -65,6 +66,7 @@ class Project:
             self.shops[n] = {int(f[:-4]): packio.read_text(os.path.join(d, f))
                              for f in sorted(os.listdir(d)) if f.endswith('.txt')} if os.path.isdir(d) else {}
         self.grids: dict[int, Grid] = {}
+        self.pictures: dict[str, bytes | None] = {}    # sprites/<folder>/<id>.png waiting to be saved (None: delete)
         self.dirty: set = set()           # what save() must write: 'quest', table keys, 'tiles', ('map', n), ...
 
     # ── paths and basics ────────────────────────────────────────────────────
@@ -119,11 +121,78 @@ class Project:
                 return r.get('name') or f'#{v}'
         return f'#{v}'
 
-    SPRITE_DIRS = {'floor': 'floors', 'wall': 'walls', 'deco': 'decos', 'item': 'items', 'mon': 'creatures'}
+    SPRITE_DIRS = {'floor': 'floors', 'wall': 'walls', 'deco': 'decos', 'item': 'items', 'mon': 'creatures',
+                   'bag': 'bag', 'spell': 'spells'}
 
     def sprite(self, layer: str, v: int) -> str | None:
         p = self.path('sprites', self.SPRITE_DIRS[layer], f'{v}.png')
         return p if os.path.exists(p) else None
+
+    # ── pictures (kept here until saved) ────────────────────────────────────
+    def picture(self, folder: str, v: int):
+        """A picture as a pygame Surface (a pending one first), or None."""
+        import pygame
+        rel = f'{folder}/{v}.png'
+        if rel in self.pictures:
+            data = self.pictures[rel]
+            return None if data is None else pygame.image.load(io.BytesIO(data), 'x.png')
+        p = self.path('sprites', folder, f'{v}.png')
+        return pygame.image.load(p) if os.path.exists(p) else None
+
+    def set_picture(self, folder: str, v: int, surface):
+        """Store a picture (a pygame Surface), or delete it (None), when the pack is saved."""
+        import pygame
+        rel = f'{folder}/{v}.png'
+        if surface is None:
+            self.pictures[rel] = None
+        else:
+            buf = io.BytesIO()
+            pygame.image.save(surface, buf, 'x.png')
+            self.pictures[rel] = buf.getvalue()
+        self.touch('pictures')
+
+    # ── where things are used (before deleting them) ────────────────────────
+    def uses(self, kind: str, v: int) -> list[str]:
+        """Where an item ('item') or a creature ('mon') appears: maps, shops, classes, loot, scripts."""
+        out = []
+        field = {'item': 2, 'mon': 3}[kind]
+        for n in range(1, self.levels + 1):
+            g = self.grid(n)
+            count = sum(1 for x in range(1, SIZE + 1) for y in range(1, SIZE + 1) if g.sq[x][y][field] == v)
+            if count:
+                out.append(f'level {n} map: {count} square{"s" if count > 1 else ""}')
+        word = re.compile(rf'(?<![\w.]){v}(?![\w.])')
+        if kind == 'item':
+            for n, shops in self.shops.items():
+                for k, text in shops.items():
+                    if str(v) in text.split():
+                        out.append(f'level {n} shop {k}')
+            for c in self.tables['classes']:
+                if v in c.get('bag', {}).values():
+                    out.append(f'class {c["name"]}: starting item')
+            for c in self.tables['creatures']:
+                if any(r[2] == 'item' and r[3] == v for r in c.get('loot', [])) or \
+                        v in c.get('drop_on_level', {}).values():
+                    out.append(f'creature {c["id"]} {c.get("name", "")}: loot')
+        else:
+            for c in self.tables['spells']:
+                if c.get('creature') == v:
+                    out.append(f'spell {c["name"]}: summons it')
+            for c in self.tables['creatures']:
+                if v in (c.get('raises_dead'), c.get('reveals_as'), c.get('hides_as')) or \
+                        (c.get('deceiver') or {}).get('becomes') == v:
+                    out.append(f'creature {c["id"]} {c.get("name", "")}')
+        for n, text in self.scripts.items():
+            if word.search(text):
+                out.append(f'{"common" if n == 0 else f"level {n}"} script mentions {v}')
+        return out
+
+    def next_id(self, table: str, start: int) -> int:
+        used = {r['id'] for r in self.tables[table]}
+        v = start
+        while v in used or v in (999, 1000):
+            v += 1
+        return v
 
     # ── level settings (the constants at the top of a level's script) ───────
     def constant(self, level: int, name: str, default=None):
@@ -207,6 +276,17 @@ class Project:
                     shutil.rmtree(d)
                 for k, text in self.shops[what[1]].items():
                     packio.write_text(os.path.join(d, f'{k}.txt'), text)
+            elif what == 'pictures':
+                for rel, data in self.pictures.items():
+                    p = self.path('sprites', *rel.split('/'))
+                    if data is None:
+                        if os.path.exists(p):
+                            os.remove(p)
+                    else:
+                        os.makedirs(os.path.dirname(p), exist_ok=True)
+                        with open(p, 'wb') as fh:
+                            fh.write(data)
+                self.pictures.clear()
             elif isinstance(what, tuple) and what[0] == 'drop_level' and what[1] > self.levels:
                 shutil.rmtree(self.path('levels', str(what[1])), ignore_errors=True)
         self.dirty.clear()

@@ -40,10 +40,16 @@ class Art:
             if layer == 'gold':
                 p = self.project.path('sprites', 'gold.png')
                 p = p if os.path.exists(p) else None
+                self._src[key] = pygame.image.load(p) if p else None
             else:
-                p = self.project.sprite(layer, v)
-            self._src[key] = pygame.image.load(p) if p else None
+                self._src[key] = self.project.picture(self.project.SPRITE_DIRS[layer], v)
         return self._src[key]
+
+    def forget(self, layer: str, v: int):
+        """A picture changed: drop what was drawn from it."""
+        for cache in (self._src, self._scaled, self._icons):
+            for k in [k for k in cache if k[0] == layer and k[1] == v]:
+                del cache[k]
 
     def tile(self, layer: str, v: int, size: int):
         key = (layer, v, size)
@@ -94,3 +100,35 @@ class Art:
                 pygame.draw.line(s, (200, 60, 60), (size - 4, 3), (3, size - 4), 2)
             self._icons[key] = photo(s)
         return self._icons[key]
+
+
+def nearest_ega(rgb) -> tuple:
+    r, g, b = rgb[:3]
+    return min(EGA, key=lambda c: (c[0] - r) ** 2 + (c[1] - g) ** 2 + (c[2] - b) ** 2)
+
+
+def to_ega(surface, keep_alpha=True):
+    """A copy 40 x 40 in the 16 EGA colours; pixels less than half opaque become transparent."""
+    src = surface.convert_alpha() if pygame.display.get_surface() else surface
+    if src.get_size() != (40, 40):
+        src = pygame.transform.scale(src, (40, 40))
+    out = pygame.Surface((40, 40), pygame.SRCALPHA)
+    for x in range(40):
+        for y in range(40):
+            c = src.get_at((x, y))
+            if c.a >= 128 or not keep_alpha:
+                out.set_at((x, y), (*nearest_ega(c), 255))
+    return out
+
+
+def bag_cell(project, map_picture):
+    """A bag picture: the map picture on an empty bag cell (sprites/bag/0.png), as bagdraw() shows items."""
+    empty = project.picture('bag', 0)
+    cell = pygame.Surface((40, 40))
+    if empty is not None:
+        cell.blit(empty, (0, 0))
+    else:
+        cell.fill(EGA[8])
+    if map_picture is not None:
+        cell.blit(map_picture, (0, 0))
+    return cell

@@ -60,6 +60,16 @@ assert blank.levels == 1 and len(blank.tables['items']) == len(p.tables['items']
 g = blank.grid(1)
 assert all(g.get(x, y) == [1, 0, 0, 0, 0, 0] for x in (1, 50, 100) for y in (1, 50, 100))
 g.get(8, 5)[3] = 1                                       # a monster to meet
+# a new weapon, on the map and in a shop run by a shopkeeper
+blank.tables['items'].append({'id': 1001, 'name': 'Sword of Tests', 'price': 50, 'type': 'weapon',
+                              'bag_name': 'Sword of Tests', 'req_str': 5, 'req_int': 0, 'atk': 10, 'def': 0,
+                              'warm': 0, 'marm': 0, 'str': 0, 'int': 0, 'power': 20, 'kind': 1, 'dex': 0, 'acc': 0})
+blank.touch('items')
+g.get(5, 6)[2] = 1001
+g.get(5, 2)[3] = -5
+blank.shops[1] = {1: '1001 1 3\n'}
+blank.touch(('shops', 1))
+blank.set_constant(1, 'SHOPS', {(1, 1): 1})
 blank.touch(('map', 1))
 n = blank.add_level()
 blank.save()
@@ -76,11 +86,25 @@ from deluxe.game import Game  # noqa: E402
 
 game = Game(pygame.Surface((640, 480)))
 assert game.pack.root == blank.root
-game.quick_start(1, 1, (6, 5))
-assert (game.player.X, game.player.Y) == (6, 5) and game.world.level == 1
-for k in (pygame.K_RIGHT, pygame.K_RIGHT, pygame.K_DOWN, pygame.K_LEFT):
-    game.handle(pygame.event.Event(pygame.KEYDOWN, key=k, unicode=''))
+def press(*keys):
+    for k in keys:
+        game.handle(pygame.event.Event(pygame.KEYDOWN, key=k, unicode=''))
+
+
+game.quick_start(3, 1, (5, 5))                          # a Rogue: no Ambidexterity, the sword goes in the hand
+assert (game.player.X, game.player.Y) == (5, 5) and game.world.level == 1
+press(pygame.K_DOWN, pygame.K_RETURN)                   # onto the sword, pick it up
+assert 1001 in game.player.bag.values()
+cell = next(c for c, v in game.player.bag.items() if v == 1001)
+assert cell == (14, 8), cell                            # the Rogue's sling and pebbles fill the first two cells
+press(pygame.K_i, pygame.K_RIGHT, pygame.K_RIGHT, pygame.K_RETURN, pygame.K_ESCAPE)   # wear it
+assert game.player.item((12, 4)) == 1001 and game.player.hero.power == 20, (game.player.item((12, 4)),
+                                                                              game.player.hero.power)
+game.player.inv.coins = 100
+press(pygame.K_UP, pygame.K_UP, pygame.K_UP, pygame.K_UP)   # into the shopkeeper
+assert type(game.overlay).__name__ == 'Page'
+press(pygame.K_RETURN, pygame.K_ESCAPE)                 # buy the sword
+assert game.player.inv.coins == 50 and list(game.player.bag.values()).count(1001) == 2
 game.renderer.draw(game)
-print(f'Deluxe on the blank pack: hero at ({game.player.X}, {game.player.Y}), '
-      f'{len(game.world.enemies)} creature(s) on the screen')
+print('Deluxe on the blank pack: a new weapon picked up, worn (power 20) and bought for 50 gold')
 print('all pack checks passed')
