@@ -52,6 +52,8 @@ game:
   get a roof. Tiles and items can say how they look (`view3d`, `roof`), otherwise opaque wall pictures
   become blocks and the rest billboards.
 - Distance fades out in a 4×4 ordered dither, in the EGA colours.
+- A status frame, top left: the hero as the map draws him, twice the size, so his eyes (poison, the
+  killer switch, a Berserker potion) and the Shield rings show, with those states in words below.
 - Steps and turns glide over 140 ms. Turning is free (not a game action); a step is the classic move,
   so the rules don't change: `tests/test_view3d.py` plays the same random games from above and in FPS
   mode and requires identical game state after every key.
@@ -87,7 +89,8 @@ port.
    (`TheQuestDeluxe/tests/test_fixes.py`). The rest are in a pack's data; [FINDINGS.md](FINDINGS.md)
    says which.
 3. **A status frame in FPS mode**, since the hero's eye colours (killer, berserk, poison) and shield
-   rings can't be seen in 3D.
+   rings can't be seen in 3D. **Done**: the hero's portrait, twice the size, top left, with his states
+   in words below it (`tests/test_view3d.py`).
 
 ## Sharing
 

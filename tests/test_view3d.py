@@ -5,6 +5,7 @@
 2. The 3D view draws everywhere those games go, fast enough to glide (under 60 ms a frame here).
 3. The Quest I pack's looks: building walls are blocks, trees billboards, water and blood flat,
    carpeted rooms have roofs; an animation's hit lands on the creature in view.
+4. The status frame: the hero's portrait (eyes and rings) and his states in words, in FPS mode only.
 
     python tests/test_view3d.py              # 12 runs of 200 keys
     python tests/test_view3d.py --runs 3 --keys 80
@@ -171,6 +172,38 @@ def real_time():
     print('in real time: steps and turns every way, and no level loaded: ok')
 
 
+def status_frame(shot=None):
+    from deluxe.render import EGA
+    g = deluxe.Game(pygame.Surface((640, 480)))
+    g.quick_start(1, 1)
+    r = g.renderer
+
+    def colours(box):
+        x0, y0, x1, y1 = box
+        return {tuple(r.screen.get_at((x, y))[:3]) for x in range(x0, x1) for y in range(y0, y1)}
+    g.view3d = True
+    r.draw(g, present=False)
+    assert EGA[6][:3] in colours((2, 2, 4, 84))                   # the frame
+    assert EGA[15][:3] in colours((4, 4, 84, 84))                 # the eyes: white
+    before = r.screen.subsurface((2, 89, 100, 30)).copy()
+    g.player.hero.poisoned = 1
+    g.status.killer = 1
+    g.status.Shield = 3
+    r.draw(g, present=False)
+    assert EGA[10][:3] in colours((4, 4, 84, 84))                 # poisoned eyes are green
+    assert EGA[14][:3] in colours((4, 4, 84, 84))                 # the Shield's yellow ring
+    for n, (word, c) in enumerate((('Poisoned', 10), ('Killer', 12), ('Shield', 14))):
+        y = 89 + 10 * n                                           # each on its own black strip
+        assert colours((2, y, 2 + 8 * len(word) + 4, y + 10)) == {(0, 0, 0), EGA[c][:3]}, word
+    assert pygame.image.tobytes(before, 'RGB') != pygame.image.tobytes(r.screen.subsurface((2, 89, 100, 30)), 'RGB')
+    if shot:
+        pygame.image.save(r.screen, shot)
+    g.view3d = False                                              # from above the hero shows it himself
+    r.draw(g, present=False)
+    assert EGA[6][:3] not in colours((2, 2, 4, 84))
+    print('the status frame: the portrait and the states in words, in FPS mode only: ok')
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--runs', type=int, default=12)
@@ -179,6 +212,7 @@ def main():
     looks()
     fight()
     real_time()
+    status_frame()
     bad = same_games(a.runs, a.keys)
     sys.exit(1 if bad else 0)
 

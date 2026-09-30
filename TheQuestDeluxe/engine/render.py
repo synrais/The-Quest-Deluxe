@@ -1,6 +1,7 @@
 """pygame renderer: 640x480 logical screen laid out like the original, scaled to the window."""
 from __future__ import annotations
 
+import copy
 import math
 import os
 
@@ -321,8 +322,9 @@ class Renderer:
             r = self.v3d.sprite_rects.get((t.x, t.y))
             if r:
                 pygame.draw.rect(scr, EGA[12], (r.x * k, r.y * k, r.w * k, r.h * k), 1)
-        # the compass, and the screen from above in the corner
+        # the compass, the hero's portrait, and the screen from above in the corner
         self.btext(scr, view3d.FACING_NAMES[game.facing % 4], (MAP_PX // 2, 2), 15, style=(8, 1), center=True)
+        self.draw_status_3d(game, scr)
         if getattr(game, 'minimap', True):
             n = 100
             w, p, st, h = game.world, game.player, game.status, game.player.hero
@@ -342,6 +344,47 @@ class Renderer:
             cy = 4 + (game.player.Y - oy) * n // 10 + n // 20
             dx, dy = view3d.FACINGS[game.facing % 4]
             pygame.draw.line(scr, EGA[14], (cx, cy), (cx + dx * 7, cy + dy * 7), 2)
+
+    def draw_status_3d(self, game, scr):
+        """FPS mode's status frame, top left: the hero as guy2() draws him on his square, twice the size,
+        so what his eyes and rings say can be seen (poison, the killer switch, a Berserker potion, the
+        Shield spells, invisibility), and the same in words below."""
+        p, st, h = game.player, game.status, game.player.hero
+        w = game.world
+        states = []
+        if h.invisible > 0:
+            states.append(('Invisible', 7))
+        if h.poisoned:
+            states.append(('Poisoned', 10))
+        if st.killer:
+            states.append(('Killer', 12))
+        if st.powboost > 0:
+            states.append(('Berserk', 13))
+        if st.Shield > 0:
+            states.append(('Shield', 14))
+        if st.fShield > 0:
+            states.append(('Fire Shield', 12))
+        q = w.grid[p.X][p.Y]
+        key = (q.floor, q.deco, p.hero.type, h.invisible, h.poisoned, st.killer, st.powboost, st.Shield,
+               st.fShield)
+        if key != getattr(self, '_portrait_key', None):
+            tile = pygame.Surface((TILE, TILE))
+            tile.fill((0, 0, 0))
+            ground = copy.copy(q)
+            ground.item = ground.gold = ground.mon = 0            # only what the hero stands on
+            self.draw_tile(tile, 0, 0, ground)
+            self.draw_hero(tile, game, 0, 0)
+            self._portrait, self._portrait_key = pygame.transform.scale(tile, (2 * TILE, 2 * TILE)), key
+        pygame.draw.rect(scr, EGA[6], (2, 2, 2 * TILE + 4, 2 * TILE + 4), 2)
+        scr.blit(self._portrait, (4, 4))
+        g = self.bgi
+        g.s = scr
+        g.settextstyle(0, 0, 1)
+        for n, (text, colour) in enumerate(states):
+            y = 2 * TILE + 10 + 10 * n
+            pygame.draw.rect(scr, (0, 0, 0), (2, y - 1, 8 * len(text) + 4, 10))
+            g.setcolor(colour)
+            g.outtextxy(4, y, text)
 
     # ── the combat log (Deluxe) ───────────────────────────────────────────────
     LOG_LINES = 6
