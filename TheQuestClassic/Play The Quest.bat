@@ -1,11 +1,11 @@
 @echo off
-rem The Quest - Windows launcher. Double-click to play.
+rem The Quest Classic - Windows launcher. Double-click to play.
 rem   1. finds Python 3.10+ (or offers to install Python 3.12 with winget)
 rem   2. the first time, installs pygame-ce into the .deps folder here (from the bundled wheels)
 rem   3. starts the game
 setlocal EnableExtensions
 cd /d "%~dp0"
-title The Quest
+title The Quest Classic
 
 set "PY="
 rem The py launcher first, then python on PATH (skipping the Microsoft Store stub), then the default install folders.
@@ -57,7 +57,7 @@ if errorlevel 1 (
 )
 
 :run
-%PY% run_quest2.py %*
+%PY% run_classic.py %*
 if errorlevel 1 (
     echo.
     echo The game stopped with an error; the message above says why.
