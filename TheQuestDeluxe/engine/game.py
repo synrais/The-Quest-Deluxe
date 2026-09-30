@@ -31,6 +31,7 @@ from .events import Events
 from .render import Renderer, TILE
 from .speaker import Speaker, sound_setting
 from .settings import fix_override
+from .hands import attack_kind
 from . import anim
 from . import invshop
 from . import ui
@@ -191,6 +192,12 @@ class Game:
         if row.get('type') == 'ammo':                    # 'Arrows-12': 12 arrows
             return f'{row.get("count", 1)} {name.split("-")[0].strip()}'
         return f'{"an" if name[0] in "aeiou" else "a"} {name}'
+
+    def start_swing(self):
+        """FPS mode: the weapon in view (engine.hands) attacks from now. Only the picture moves."""
+        if self.view3d and not self.fast:
+            item = self.pack.item(self.player.bag.get((12, 4), 0)) if self.player.bag.get((12, 4)) else {}
+            self.swing = (attack_kind(item), pygame.time.get_ticks())
 
     def key_name(self, colour: str) -> str:
         """The key of a colour, by its item's name ('gold key' for the yellow one in Quest I)."""

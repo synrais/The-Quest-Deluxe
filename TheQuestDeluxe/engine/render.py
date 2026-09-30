@@ -10,6 +10,7 @@ from .world import ROOM
 from .bgi import BGI
 from .hud import Hud
 from . import anim, view3d
+from .hands import Hands
 
 W, H = 640, 480
 TILE = 40
@@ -145,7 +146,18 @@ class Renderer:
                 pygame.time.wait(wait)
         self.present(self.compose_3d(game) if three_d else None)
 
+    def hand(self, game, scr):
+        """The weapon in view (engine.hands), over the view and under the combat log."""
+        if not hasattr(self, 'hands'):
+            self.hands = Hands(self.pack, self.sprites)
+        self.hands.draw(game, scr.subsurface((0, 0, MAP_PX, MAP_PX)), pygame.time.get_ticks())
+
     def compose_3d(self, game) -> pygame.Surface:
+        out = self._compose_3d(game)
+        self.hand(game, out)
+        return out
+
+    def _compose_3d(self, game) -> pygame.Surface:
         """An animation frame in FPS mode: the 3D view, with what the animation drew on the map moved
         to where it happens: around a creature's square, at that square in the view; around the
         hero, over the whole view; anywhere else (a flash of the screen), as it is."""
@@ -227,6 +239,7 @@ class Renderer:
         three_d = self.in_3d(game) and not flat
         if three_d:
             self.draw_3d(game, scr)
+            self.hand(game, scr)
         else:
             self.draw_map(game, scr)
         self.draw_combat_log(game, scr, three_d)

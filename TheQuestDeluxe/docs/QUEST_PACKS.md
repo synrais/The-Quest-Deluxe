@@ -72,6 +72,8 @@ with two conventions the engine and saves rely on:
 | `power` | A weapon's damage; for amulets see `power_bonus`. |
 | `kind` | Weapons: 0 normal, 1 double strike (1 in 5), 2 parry (1 in 5), 3 magic (ignores armour), 4 ranged, 5 two-handed, 6 two-handed with parry. |
 | `potion` | For potions: its number 1-8 (the key that drinks it and its place on the belt). |
+| `fps_attack` | Weapons and launchers: how the weapon in view moves in FPS mode when the hero attacks: `swing`, `thrust` or `shoot` (by default spears, pikes and lances, kind 3, thrust; other weapons swing; launchers shoot). |
+| `fps_turn` | Weapons and launchers: degrees anticlockwise to stand the bag picture up in the hand (the crossbow: 90). A pack can instead draw the weapon as held: `sprites/hands/<id>.png`, upright, the grip at the bottom. |
 | `key` | For keys: `yellow`, `red` or `blue`, or a colour of quest.json's `keys`. |
 | `ammo`, `count` | For ammunition: its kind (`arrows`, ...) and how many the stack holds (up to 20). A stack of each size is its own item. |
 | `fires` | For launchers: the kinds of ammunition it takes. |

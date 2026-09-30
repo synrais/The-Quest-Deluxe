@@ -228,6 +228,7 @@ class Combat:
                 p.bag[SLOT_WEAPON], p.bag[SLOT_OFFHAND] = p.bag.get(SLOT_OFFHAND, 0), p.bag.get(SLOT_WEAPON, 0)
                 g.play('pause', 100)
             rules.status_update(p, self.g.status, items)
+            g.start_swing()                           # FPS mode: the weapon in view swings (Deluxe)
             dmg = rules.hero_hit(p, e, items)
             kind = items.tell(p.item(SLOT_WEAPON), IT_KIND)
             if dmg > 0 and kind == 3:
@@ -293,6 +294,7 @@ class Combat:
         """Fire at e: to-hit (8-dist)*10 + atk + 5 - def, damage = power (ignores armour)."""
         p, h = self.p, self.p.hero
         rules.status_update(p, self.g.status, self.g.items)
+        self.g.start_swing()                          # FPS mode: the bow is drawn and let go (Deluxe)
         if e.att == -2:
             self.anger_npcs()
         self.wake_on_attack(e)

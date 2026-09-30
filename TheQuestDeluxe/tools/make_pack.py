@@ -151,6 +151,8 @@ def item_traits(i: int) -> dict:
         t['missile_anim'] = {230: 'sthit', 233: 'bolthit'}.get(i, 'arhit')
     if i in (230, 233):
         t['no_ammo_bonus'] = True                     # poisoned arrows don't double its power
+    if i == 233:
+        t['fps_turn'] = 90                            # FPS mode: the crossbow's picture lies down; stand it up
     if 641 <= i <= 660:
         t['power_x2'] = True                          # doubles a bow's power
     if i in (503, 507, 511):

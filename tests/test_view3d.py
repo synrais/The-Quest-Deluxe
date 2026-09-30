@@ -195,6 +195,49 @@ def map_box():
     assert shown() == level_map
     print("the Map box: this screen from above in FPS mode, M for the level map, the original's from above: ok")
 
+
+def weapon_in_view():
+    from deluxe.hands import attack_kind, cut_out, ATTACK_MS
+    from deluxe.render import EGA
+    g = deluxe.Game(pygame.Surface((640, 480)))
+    g.quick_start(1, 1)
+    g.view3d = True
+    r = g.renderer
+    corner = (200, 150, 200, 250)                                # the bottom right of the view
+
+    def colours():
+        r.draw(g, present=False)
+        s = r.screen.subsurface(corner)
+        return {tuple(s.get_at((x, y))[:3]) for x in range(0, 200, 2) for y in range(0, 250, 2)}
+    g.player.bag[(12, 4)] = 211                                  # a Long Sword: white blade, blue hilt
+    held = colours()
+    assert EGA[15][:3] in held and EGA[1][:3] in held and EGA[7][:3] in held, 'the sword and the hand'
+    pic = cut_out(r.sprites.bag[211])
+    assert not any(tuple(pic.get_at((x, y))) == (84, 84, 84, 255)
+                   for x in range(pic.get_width()) for y in range(pic.get_height())), "the cell's grey stays"
+    del g.player.bag[(12, 4)]
+    assert EGA[15][:3] not in colours()                          # a bare fist
+    g.view3d = False
+    assert EGA[1][:3] not in colours()                           # from above: no hand
+    # the kinds of attack, and how the hand moves
+    pk = g.pack
+    assert (attack_kind(pk.item(211)), attack_kind(pk.item(206)), attack_kind(pk.item(231))) == \
+        ('swing', 'thrust', 'shoot')
+    assert cut_out(r.sprites.bag[233]).get_width() >= 28 and pk.item(233).get('fps_turn') == 90
+    hands = r.hands
+    now = 10000
+    g.swing = ('swing', now - ATTACK_MS['swing'] // 2)
+    dx, dy, da = hands.pose(g, now)
+    assert dx < -100 and da < -40                                # mid-swing: across to the left
+    g.swing = ('thrust', now - ATTACK_MS['thrust'] // 2)
+    dx, dy, da = hands.pose(g, now)
+    assert dy < -60 and da == 0                                  # mid-thrust: forward
+    g.swing = ('swing', now - 5000)
+    assert hands.pose(g, now)[:2] == (0, 0) or r._cam            # long over: back at rest
+    g.swing = None
+    print('the weapon in view: the sword in hand, a fist without, swings, thrusts and shots: ok')
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--runs', type=int, default=12)
@@ -204,6 +247,7 @@ def main():
     fight()
     real_time()
     map_box()
+    weapon_in_view()
     bad = same_games(a.runs, a.keys)
     sys.exit(1 if bad else 0)
 

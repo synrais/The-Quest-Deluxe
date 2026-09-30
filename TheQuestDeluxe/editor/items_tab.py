@@ -73,6 +73,13 @@ class ItemsTab(TableTab):
             Field('dex', 'Dexterity +', 'int', when=is_(*WORN), default=0),
             Field('acc', 'Accuracy +', 'int', when=is_(*WORN), default=0),
             Field('fires', 'Fires', 'multi', kinds, when=is_('launcher')),
+            Field('fps_attack', 'FPS mode attack', 'choice', [(None, '(by kind: thrust for spears, else swing; '
+                                                                     'launchers shoot)'),
+                                                              ('swing', 'swing'), ('thrust', 'thrust'),
+                                                              ('shoot', 'shoot')], when=is_('weapon', 'launcher'),
+                  hint='how the weapon in view moves when the hero attacks'),
+            Field('fps_turn', 'FPS mode turn', 'int', when=is_('weapon', 'launcher'),
+                  hint='degrees anticlockwise to stand the bag picture up in the hand (the crossbow: 90)'),
             Field('missile_anim', 'Hit animation', 'choice', MISSILES, when=is_('launcher')),
             Field('no_ammo_bonus', 'No poison bonus', 'bool', when=is_('launcher'),
                   hint="ammunition that doubles a launcher's power doesn't, with this one"),
