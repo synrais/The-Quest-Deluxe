@@ -74,10 +74,10 @@ port.
 ## What's next
 
 1. **Lift The Quest Deluxe's limits.** The original's structures fix 20 spells, 8 potions and 3 key
-   colours, and job changes and the creation quiz only know the first 4 classes. Done so far: the
+   colours, and job changes and the creation quiz only know the first 4 classes. **Done**: the
    Deluxe save format (the original's save text, with a `DELUXE` block written only when a game goes
    past the original's limits, so Quest I saves stay identical), a spell book with pages for more than
-   20 spells, potions 9 and 10 (keys 9 and 0), and a pack's own key colours
+   20 spells, potions 9 and 10 (keys 9 and 0), a pack's own key colours,
    and new classes in job changes (`"reclass": "stats"`) and the questionnaire
    (`TheQuestDeluxe/tests/test_limits.py`).
 2. **Fix the original's bugs as a choice.** `packs/TheQuest` stays exact, so the lockstep test keeps its
