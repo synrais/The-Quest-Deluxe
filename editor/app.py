@@ -19,6 +19,10 @@ from .text_tabs import EventsTab, TextTab
 from .items_tab import ItemsTab
 from .creatures_tab import CreaturesTab
 from .classes_tab import ClassesTab
+from .spells_tab import SpellsTab
+from .shops_tab import ShopsTab
+from .dialogue_tab import DialogueTab
+from .stories_tab import StoriesTab
 
 SETTINGS = os.path.join(os.path.expanduser('~'), '.quest_editor.json')
 
@@ -107,13 +111,15 @@ class App:
         self.items_tab = ItemsTab(self.tabs, self)
         self.creatures_tab = CreaturesTab(self.tabs, self)
         self.classes_tab = ClassesTab(self.tabs, self)
-        self.tabs.add(self.map_tab, text='  Map  ')
-        self.tabs.add(self.items_tab, text='  Items  ')
-        self.tabs.add(self.creatures_tab, text='  Creatures  ')
-        self.tabs.add(self.classes_tab, text='  Classes  ')
-        self.tabs.add(self.events_tab, text='  Events  ')
-        self.tabs.add(self.text_tab, text='  Text  ')
-        self.tabs.add(self.quest_tab, text='  Quest  ')
+        self.spells_tab = SpellsTab(self.tabs, self)
+        self.shops_tab = ShopsTab(self.tabs, self)
+        self.dialogue_tab = DialogueTab(self.tabs, self)
+        self.stories_tab = StoriesTab(self.tabs, self)
+        for tab, name in ((self.map_tab, 'Map'), (self.items_tab, 'Items'), (self.creatures_tab, 'Creatures'),
+                          (self.classes_tab, 'Classes'), (self.spells_tab, 'Spells'), (self.shops_tab, 'Shops'),
+                          (self.dialogue_tab, 'Dialogue'), (self.stories_tab, 'Stories'),
+                          (self.events_tab, 'Events'), (self.text_tab, 'Text files'), (self.quest_tab, 'Quest')):
+            self.tabs.add(tab, text=f'  {name}  ')
         self.tabs.bind('<<NotebookTabChanged>>', lambda e: self._tab_changed())
         root.bind('<Control-s>', lambda e: self.save())
         root.bind('<F5>', lambda e: self.play())
@@ -190,7 +196,7 @@ class App:
         self.play_class.config(values=classes)
         self.play_class.set(classes[0] if classes else '')
         for tab in (self.map_tab, self.events_tab, self.text_tab, self.quest_tab, self.items_tab, self.creatures_tab,
-                    self.classes_tab):
+                    self.classes_tab, self.spells_tab, self.shops_tab, self.dialogue_tab, self.stories_tab):
             tab.load()
         self._title()
 
@@ -262,8 +268,8 @@ class App:
         tab = self.tabs.nametowidget(self.tabs.select())
         if tab is self.classes_tab:
             self.play_class.config(values=[f'{c["id"]} {c["name"]}' for c in self.project.tables['classes']])
-        if tab is self.events_tab:
-            self.events_tab.load()
+        if tab in (self.events_tab, self.text_tab, self.dialogue_tab, self.stories_tab, self.shops_tab):
+            tab.load()                                  # the same files can be changed from other tabs
         elif tab is self.map_tab:
             self.map_tab._show_settings()
             self.map_tab._fill_palette()                 # names and pictures may have changed

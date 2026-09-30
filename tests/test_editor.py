@@ -147,6 +147,42 @@ cl._set(next(f for f in cl.fields() if f.key == 'look.colour'), 14)
 assert cl.row['bag'] == {'12,4': 1001, '12,8': 230, '13,8': 620} and cl.row['look']['colour'] == 14
 print('classes: a new class, its kit and colour: ok')
 
+# Dialogue, Stories, Shops
+dt = app.dialogue_tab
+app.tabs.select(dt)
+pump()
+dt.f_level.set('1 ')
+dt.fill()
+dt.list.selection_set(dt.list.get_children()[0])
+pump()
+assert dt.entry.key == (1, -6, 10)
+dt.lines[0].set('My daughter was taken two days ago. If you see her, please')
+dt._typed()
+assert 'taken two days ago' in app.project.texts['talk']
+dt.new()
+assert dt.entry.key == (1, -6, 18)
+from deluxe.events import talk_text  # noqa: E402
+assert talk_text(app.project.texts['talk'], 1, -6, 18)[0] == ' "Hello there."'   # as the game reads one-liners
+st = app.stories_tab
+app.tabs.select(st)
+pump()
+st.new()
+st.text.delete('1.0', 'end')
+st.text.insert('1.0', 'A new tale begins.\nThe hero wakes.')
+st._typed()
+from deluxe.formats import parse_story  # noqa: E402
+assert parse_story(app.project.texts['stories'])[st.story.number] == 'A new tale begins.\nThe hero wakes.'
+sh = app.shops_tab
+app.tabs.select(sh)
+pump()
+sh.levels.set('4')
+sh._pick_level()
+n = len(sh.stock)
+sh.items.selection_set('211')
+sh._put_on()
+assert sh.stock[-1] == 211 and len(sh.stock) == n + 1
+print('dialogue, stories and shops: edited, and the game reads them: ok')
+
 assert app.dirty
 app.save()
 assert os.path.exists(os.path.join(pack, 'sprites', 'items', '1001.png'))
