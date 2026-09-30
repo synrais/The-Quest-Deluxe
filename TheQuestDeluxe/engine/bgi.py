@@ -7,7 +7,7 @@ the Borland stroked .CHR fonts (a quest pack's fonts/) plus the 8x8 ROM font.
 
 EGAVGA.BGI draws only pixels, lines and bars itself; arcs, ellipses, sectors, polygons and bar3d
 are drawn by the Borland kernel inside the exe, and so is the line clipping and the 3-pixel
-thickness. Those parts are ports of the kernel code (classic/tools/re/verify_bgi.py checks them).
+thickness. Those parts are ports of the kernel code (TheQuestClassic/tools/re/verify_bgi.py checks them).
 """
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""Which port the verifiers check: the classic port (classic/engine, the default) or, with
+"""Which port the verifiers check: the classic port (TheQuestClassic/engine, the default) or, with
 QUEST_ENGINE=deluxe, The Quest Deluxe (TheQuestDeluxe/engine) playing its packs/TheQuest. Import
 this before anything from engine:
 

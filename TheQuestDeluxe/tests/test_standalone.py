@@ -1,6 +1,6 @@
 """The Quest Deluxe stands alone: a copy of this folder, and nothing else, plays.
 
-The TheQuestDeluxe/ folder is copied somewhere empty (no ../classic beside it) and played
+The TheQuestDeluxe/ folder is copied somewhere empty (no ../TheQuestClassic beside it) and played
 there in a fresh Python: the title, the story pages, a level, the bag, the spell book, FPS mode and
 the last level. Every file it opens must be inside the copy.
 

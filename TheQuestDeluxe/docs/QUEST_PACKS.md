@@ -2,9 +2,9 @@
 
 The Quest Deluxe plays **quest packs**: folders under `packs/` that hold everything a quest is made of,
 as plain JSON, text and PNG files. `packs/TheQuest` is the original The Quest, built from the original
-game by `tools/make_pack.py` (it reads the classic edition, `../classic`); Deluxe playing it plays
+game by `tools/make_pack.py` (it reads the classic edition, `../TheQuestClassic`); Deluxe playing it plays
 exactly like the classic port, which the repository's `tests/lockstep.py` and the exe verifiers
-(`classic/tools/re`, with `QUEST_ENGINE=deluxe`) check.
+(`TheQuestClassic/tools/re`, with `QUEST_ENGINE=deluxe`) check.
 
 The classic port stays frozen as the faithful version. New stories, items, creatures, classes,
 spells and mechanics go into packs and into Deluxe.

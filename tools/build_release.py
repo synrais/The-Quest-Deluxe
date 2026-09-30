@@ -1,16 +1,20 @@
 """Build the Windows release zips: one for each edition, each standing on its own.
 
-    python tools/build_release.py 7            ->  dist/TheQuest-Classic-7.zip   (the faithful port)
+    python tools/build_release.py 7            ->  dist/TheQuestClassic-7.zip    (the faithful port)
                                                    dist/TheQuestDeluxe-7.zip      (engine, editor, packs, docs)
-    python tools/build_release.py 7 --play     ->  dist/TheQuest-Classic-7.zip
+    python tools/build_release.py 7 --play     ->  dist/TheQuestClassic-7.zip
                                                    dist/TheQuestDeluxe-7-play.zip (engine and packs only)
     python tools/build_release.py 7 notes.txt  ->  the same, with "what is new" in each READ ME FIRST.txt
     --classic / --deluxe                           only that edition
+    python tools/build_release.py --launchers  ->  only (re)write the launchers in the edition folders
 
-Each zip holds one folder: TheQuest-Classic/ (run_quest2.py, engine/, sprites/, packs/TheQuest/, the
+Each zip holds one folder: TheQuestClassic/ (run_quest2.py, engine/, sprites/, packs/TheQuest/, the
 original as released) or TheQuestDeluxe/ (run_deluxe.py, engine/, packs/, and in the full zip
 run_editor.py, editor/, docs/).
-The Quest Deluxe needs nothing of the classic edition. Double-clicking a launcher finds Python (or
+The Quest Deluxe needs nothing of the classic edition. The launchers ("Play The Quest.bat", "Play The Quest
+Deluxe.bat", "The Quest Deluxe Editor.bat") live in the edition folders too, made from
+tools/launcher.bat by write_launchers(), so a copy of the repository plays on Windows as well (without
+the bundled wheels, the launcher downloads pygame-ce). Double-clicking a launcher finds Python (or
 offers to install it with winget), sets up pygame-ce from the bundled wheels the first time, and
 starts the program. The wheels are downloaded from PyPI once and cached in build/wheels/.
 """
@@ -29,7 +33,7 @@ PY_VERSIONS = ('3.12', '3.13')         # 3.12 is what the launcher installs; oth
 
 # edition: (source folder, zip folder, files, dirs, files and dirs of the full zip only, launchers)
 EDITIONS = {
-    'classic': ('classic', 'TheQuest-Classic', ['run_quest2.py'], ['engine', 'sprites', 'packs'], [], {
+    'classic': ('TheQuestClassic', 'TheQuestClassic', ['run_quest2.py'], ['engine', 'sprites', 'packs'], [], {
         'Play The Quest.bat': ('The Quest', 'run_quest2.py', False)}),
     'deluxe': ('TheQuestDeluxe', 'TheQuestDeluxe', ['run_deluxe.py'], ['engine', 'packs'], ['run_editor.py', 'editor', 'docs'], {
         'Play The Quest Deluxe.bat': ('The Quest Deluxe', 'run_deluxe.py', False),
@@ -121,6 +125,18 @@ def crlf(path: str) -> bytes:
         return fh.read().replace(b'\r\n', b'\n').replace(b'\n', b'\r\n')
 
 
+def write_launchers() -> list[str]:
+    """Each edition folder's double-click launchers, from tools/launcher.bat."""
+    written = []
+    for src, _, _, _, _, launchers in EDITIONS.values():
+        for bat, (title, program, tk) in launchers.items():
+            path = os.path.join(ROOT, src, bat)
+            with open(path, 'wb') as fh:
+                fh.write(launcher(title, program, tk))
+            written.append(path)
+    return written
+
+
 def build(edition: str, name: str, notes: str = '', play: bool = False) -> str:
     src, top, files, dirs, full, launchers = EDITIONS[edition]
     src = os.path.join(ROOT, src)
@@ -143,7 +159,7 @@ def build(edition: str, name: str, notes: str = '', play: bool = False) -> str:
                         z.write(p, f'{top}/{os.path.relpath(p, src)}'.replace(os.sep, '/'))
         for bat, (title, program, tk) in launchers.items():
             if program in files:
-                z.writestr(f'{top}/{bat}', launcher(title, program, tk))
+                z.write(os.path.join(src, bat), f'{top}/{bat}')
         extra = f'\nWhat is new in this build:\n{notes}\n' if notes else ''
         z.writestr(f'{top}/READ ME FIRST.txt', README[edition].format(extra=extra).replace('\n', '\r\n'))
         for w in wheels():
@@ -154,8 +170,10 @@ def build(edition: str, name: str, notes: str = '', play: bool = False) -> str:
 if __name__ == '__main__':
     flags = {a for a in sys.argv[1:] if a.startswith('--')}
     args = [a for a in sys.argv[1:] if not a.startswith('--')]
+    for path in write_launchers():
+        print(f'{os.path.relpath(path, ROOT)}')
     if not args:
-        sys.exit(__doc__)
+        sys.exit(0 if '--launchers' in flags else __doc__)
     notes = open(args[1], encoding='utf-8').read() if len(args) > 1 else ''
     editions = [e for e in EDITIONS if f'--{e}' in flags] or list(EDITIONS)
     for e in editions:

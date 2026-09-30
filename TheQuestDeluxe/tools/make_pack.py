@@ -2,7 +2,7 @@
 
     python tools/make_pack.py            ->  packs/TheQuest/
 
-Sources: ../classic/packs/TheQuest (the original's data files, decoded), engine/content (the level scripts and
+Sources: ../TheQuestClassic/packs/TheQuest (the original's data files, decoded), engine/content (the level scripts and
 the monsdeath2() rewards ported from the exe) and sprites/ (the pictures, whose file names also
 carry the names). The pack is plain text, JSON and PNG, so it can be read, edited and compared
 by hand; docs/QUEST_PACKS.md describes every file. Deluxe playing this pack plays exactly like
@@ -17,7 +17,7 @@ import shutil
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))                     # TheQuestDeluxe/
-CLASSIC = os.path.join(os.path.dirname(ROOT), 'classic')      # the original's data and the port's sprites
+CLASSIC = os.path.join(os.path.dirname(ROOT), 'TheQuestClassic')      # the original's data and the port's sprites
 sys.path.insert(0, ROOT)                                      # engine: The Quest Deluxe's
 
 

@@ -1,9 +1,9 @@
 # Findings: what we learned about The Quest
 
-Everything here was found by reading `TheQuest.exe` with the tools in `classic/tools/re/`, by running
+Everything here was found by reading `TheQuest.exe` with the tools in `TheQuestClassic/tools/re/`, by running
 its own code in an emulator, and by comparing the port with screenshots of the original in DOSBox.
 The function-by-function notes (rules, formulas, screens, saves) are in
-[classic/docs/REVERSE_ENGINEERING.md](../classic/docs/REVERSE_ENGINEERING.md); this page collects the
+[TheQuestClassic/docs/REVERSE_ENGINEERING.md](../TheQuestClassic/docs/REVERSE_ENGINEERING.md); this page collects the
 discoveries, the original's bugs, and the corrections they led to.
 
 ## The program

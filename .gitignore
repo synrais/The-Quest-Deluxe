@@ -3,12 +3,12 @@ __pycache__/
 # made when playing: The Quest Deluxe's saves (TheQuestDeluxe/saves/)
 saves/
 # the reverse-engineering tools' output, and test output
-classic/tools/re/out/
+TheQuestClassic/tools/re/out/
 **/tests/out/
 .deps/
 # release building
 build/
 dist/
 # the classic port's saves, in the original's data folder as the original keeps them
-classic/packs/TheQuest/data/[sS][aA][vV][eE]*.[dD][aA][tT]
-classic/packs/TheQuest/data/trash*.dat
+TheQuestClassic/packs/TheQuest/data/[sS][aA][vV][eE]*.[dD][aA][tT]
+TheQuestClassic/packs/TheQuest/data/trash*.dat

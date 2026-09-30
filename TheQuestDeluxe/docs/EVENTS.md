@@ -11,11 +11,11 @@ packs/<name>/levels/<n>/script.qs      each level's settings and events; TheQues
 ```
 
 The editor's Events tab edits them (its Map tab sets START, STORIES, SHOPS, TELEPORT and the other
-settings). The classic port keeps the same scripts in ../classic/engine/content/levels/.
+settings). The classic port keeps the same scripts in ../TheQuestClassic/engine/content/levels/.
 
 The original seven were ported line by line from the decompiled code. Then they were checked
 against the real exe, which runs in an emulator (the repository's
-`classic/tools/re/verify_events.py` and `verify_deaths.py`, with `QUEST_ENGINE=deluxe` for Deluxe). In thousands of random game states, every conversation and every
+`TheQuestClassic/tools/re/verify_events.py` and `verify_deaths.py`, with `QUEST_ENGINE=deluxe` for Deluxe). In thousands of random game states, every conversation and every
 death gave exactly the same result: the message, the quest counters, reputation, gold, bag, map
 and creatures.
 

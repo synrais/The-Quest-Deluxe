@@ -12,9 +12,9 @@
 
 | Document | What it covers |
 |---|---|
-| [classic/README.md](../classic/README.md) | Running the faithful port, what is in its folder, keys, saves. |
-| [classic/docs/REVERSE_ENGINEERING.md](../classic/docs/REVERSE_ENGINEERING.md) | How the original works, function by function: data files, structs, rules and formulas, screens and animations, the inventory and shops, saves, levels and events, and its quirks. |
-| [classic/tools/re/README.md](../classic/tools/re/README.md) | The reverse-engineering tools: the debug-symbol reader, disassembler, lifter, emulator and verifiers. |
+| [TheQuestClassic/README.md](../TheQuestClassic/README.md) | Running the faithful port, what is in its folder, keys, saves. |
+| [TheQuestClassic/docs/REVERSE_ENGINEERING.md](../TheQuestClassic/docs/REVERSE_ENGINEERING.md) | How the original works, function by function: data files, structs, rules and formulas, screens and animations, the inventory and shops, saves, levels and events, and its quirks. |
+| [TheQuestClassic/tools/re/README.md](../TheQuestClassic/tools/re/README.md) | The reverse-engineering tools: the debug-symbol reader, disassembler, lifter, emulator and verifiers. |
 
 ## The Quest Deluxe
 

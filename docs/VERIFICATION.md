@@ -2,7 +2,7 @@
 
 "Exact" is checked, not assumed. There are three kinds of check:
 
-1. **Against the original exe.** The verifiers in `classic/tools/re/` load `TheQuest.exe` into the
+1. **Against the original exe.** The verifiers in `TheQuestClassic/tools/re/` load `TheQuest.exe` into the
    Unicorn x86 emulator and run the original's own functions next to the port, with the same
    arguments and the same `rand()` seed, then compare what both did.
 2. **Against the original on screen.** Screenshots of the original in DOSBox, compared with the port
@@ -12,7 +12,7 @@
 
 ## Against the original exe
 
-Run from `classic/tools/re/`. Each checks the classic port; with `QUEST_ENGINE=deluxe` it checks
+Run from `TheQuestClassic/tools/re/`. Each checks the classic port; with `QUEST_ENGINE=deluxe` it checks
 The Quest Deluxe (playing `packs/TheQuest`) instead.
 
 | Verifier | What it compares | Latest result (classic / Deluxe) |
@@ -23,10 +23,10 @@ The Quest Deluxe (playing `packs/TheQuest`) instead.
 | `verify_deaths.py` | Deaths: random screens from every level with random creatures dead, a random killer and random quest counters and positions, through the original's `deadenemycheck()`: messages, experience, gold and items dropped, bodies, reputation, poison, quest counters, the hero's square, every map square and the creature list. | 280/280 / 280/280 |
 | `verify_invshop.py` | The inventory and the shops (`inventory()`, `peddler()`) with random bags, shops and key presses: the drawing, tones, drops, purchases and the resulting bag. | inventory 60/60, shops 60/60 / the same |
 | `verify_saves.py` | The original's `save()` and `load2()` on random game states: the saved text character for character, the loaded values, and a real save from the original (`SAVE01.DAT`) round-tripped. | saves 40/40, loads 40/40, SAVE01.DAT identical / the same |
-| `sprite_check.py` | Every picture in `classic/sprites/` against what the original's drawing function draws. | All identical, except the invisible wraith, which the original never draws. |
+| `sprite_check.py` | Every picture in `TheQuestClassic/sprites/` against what the original's drawing function draws. | All identical, except the invisible wraith, which the original never draws. |
 
 ```
-cd classic/tools/re
+cd TheQuestClassic/tools/re
 python verify_bgi.py                        # the classic port
 QUEST_ENGINE=deluxe python verify_events.py # The Quest Deluxe
 ```
@@ -58,9 +58,9 @@ Run from the top of the repository.
 
 | Test | What it checks |
 |---|---|
-| `classic/tests/test_phase3.py` | Play: a creature chasing and fighting, a Mage casting from the F-keys, a Rogue shooting, buying in a shop, a level-up, saving and loading. |
-| `classic/tests/test_anims.py` | Every place the game plays one of the original's animations or sounds. |
-| `classic/tests/test_saves.py` | The save system in play: a new game taking a slot, the silent save after creation, "Want to save?", "Want to load?", the Available Games list, "Want to quit?", loading after death. |
+| `TheQuestClassic/tests/test_phase3.py` | Play: a creature chasing and fighting, a Mage casting from the F-keys, a Rogue shooting, buying in a shop, a level-up, saving and loading. |
+| `TheQuestClassic/tests/test_anims.py` | Every place the game plays one of the original's animations or sounds. |
+| `TheQuestClassic/tests/test_saves.py` | The save system in play: a new game taking a slot, the silent save after creation, "Want to save?", "Want to load?", the Available Games list, "Want to quit?", loading after death. |
 | `TheQuestDeluxe/tests/test_packs.py` | `packs/TheQuest` goes through the editor's model and back byte for byte; a blank pack; a new weapon picked up, worn and bought; a new class killing a new monster. |
 | `TheQuestDeluxe/tests/test_editor.py` | The editor's window driven by simulated clicks: painting, undo, every tab, the painter, the 3D preview, saving. |
 | `TheQuestDeluxe/tests/test_standalone.py` | A copy of `TheQuestDeluxe/` alone, somewhere empty, plays the title, the stories, a level, the bag, the spell book, FPS mode and the last level, opening nothing outside itself. |

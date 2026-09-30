@@ -24,7 +24,7 @@ rebuilds them. Because code() copies the file one character at a time until the 
 is set, the last character (a newline) is written twice, so every save ends with a blank line.
 
 newsave() gives each new game the first free slot 01..20 and reserves it with a file holding -1.
-classic/tools/re/verify_saves.py (QUEST_ENGINE=deluxe) checks this module against the exe's own save() and load2().
+TheQuestClassic/tools/re/verify_saves.py (QUEST_ENGINE=deluxe) checks this module against the exe's own save() and load2().
 """
 from __future__ import annotations
 

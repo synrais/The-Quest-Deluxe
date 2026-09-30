@@ -4,7 +4,7 @@
 
 **The Quest (classic)** is a preservation copy. Its job is to be the original: the same screens, rules,
 random numbers, saves and bugs, proven against the original exe. It reads the original's own files
-(`classic/packs/TheQuest`, the game as released), and it is **locked**: it only changes when it is
+(`TheQuestClassic/packs/TheQuest`, the game as released), and it is **locked**: it only changes when it is
 found to differ from the original.
 
 **The Quest Deluxe** is where the game grows. It began as a copy of the classic engine and was changed
@@ -85,7 +85,7 @@ port.
 
 ## Sharing
 
-The engines and the editor are this project's own work. `classic/packs/TheQuest` is the original game
+The engines and the editor are this project's own work. `TheQuestClassic/packs/TheQuest` is the original game
 and `TheQuestDeluxe/packs/TheQuest` is its content converted (Alex Kutsenok's maps, story, text and
 pictures, and Borland's font files). Sharing either publicly needs the rights holder's permission; a
 public release of The Quest Deluxe could instead ship only new quests.

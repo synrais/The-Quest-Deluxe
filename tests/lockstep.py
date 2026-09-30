@@ -36,7 +36,7 @@ def load_edition(alias: str, folder: str):
     return module
 
 
-load_edition('classic', 'classic')             # classic.game, classic.rules ...: The Quest, the faithful port
+load_edition('classic', 'TheQuestClassic')             # classic.game, classic.rules ...: The Quest, the faithful port
 load_edition('deluxe', 'TheQuestDeluxe')       # deluxe.game, deluxe.rules ...: The Quest Deluxe
 
 pygame.init()

@@ -14,13 +14,14 @@ python run_quest2.py                start at the title
 python run_quest2.py --level 3      start on level 3 (testing)
 ```
 
-It needs Python 3.10+ and pygame-ce. On Windows, `tools/build_release.py` in the repository builds a
-zip with a double-click launcher, "Play The Quest.bat".
+It needs Python 3.10+ and pygame-ce. On Windows, double-click **Play The Quest.bat**: the first time
+it finds Python (or offers to install it) and sets up pygame-ce.
 
 ## What is here
 
 | Path | What it is |
 |---|---|
+| `Play The Quest.bat` | The Windows launcher. |
 | `run_quest2.py` | Starts the game. |
 | `engine/` | The port's code: the rules, the screens, the original's animations and sounds, BGI graphics, saves. |
 | `engine/content/` | The level scripts (`levels/*.qs`) and the tables the original hardcodes. |

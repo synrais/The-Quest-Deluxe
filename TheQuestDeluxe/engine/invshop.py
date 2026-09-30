@@ -14,7 +14,7 @@ nothing the pages do to it survives), level, tell(item, column) (itemtell), pric
 recompute() (the inline statusupdate() on the copy), put3(item) (drop at the hero's square) and
 bagdraw(i, ii, a) (the drawing of one item).
 
-classic/tools/re/verify_invshop.py runs both next to the exe with scripted keys.
+TheQuestClassic/tools/re/verify_invshop.py runs both next to the exe with scripted keys.
 """
 from __future__ import annotations
 

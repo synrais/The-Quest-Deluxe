@@ -14,8 +14,9 @@ python run_deluxe.py --quick 1 --level 2   start at once with a Knight on level 
 python run_editor.py                       The Quest Deluxe Editor (needs tkinter)
 ```
 
-It needs Python 3.10+ and pygame-ce. On Windows, `tools/build_release.py` in the repository builds a
-zip with "Play The Quest Deluxe.bat" and "The Quest Deluxe Editor.bat".
+It needs Python 3.10+ and pygame-ce. On Windows, double-click **Play The Quest Deluxe.bat** or
+**The Quest Deluxe Editor.bat**: the first time they find Python (or offer to install it) and set up
+pygame-ce.
 
 ## What it adds to the original
 
@@ -26,19 +27,20 @@ zip with "Play The Quest Deluxe.bat" and "The Quest Deluxe Editor.bat".
 | **Quest packs** | | Everything the original hardcodes (items, creatures and their traits, classes, spells, tiles, stories, dialogue, shops, level scripts) is data in the pack. |
 | **The editor** | | Maps and level settings, items, creatures, classes, spells, tiles, shops, dialogue, stories and events; a 16-colour painter for every picture; a 3D preview; Play (F5) test-plays from the clicked square; new packs. |
 
-The original's keys all work as in [the classic edition](../classic/README.md#keys).
+The original's keys all work as in [the classic edition](../TheQuestClassic/README.md#keys).
 
 ## What is here
 
 | Path | What it is |
 |---|---|
+| `Play The Quest Deluxe.bat`, `The Quest Deluxe Editor.bat` | The Windows launchers. |
 | `run_deluxe.py`, `run_editor.py` | Start the game and the editor. |
 | `engine/` | The Quest Deluxe's code (a fork of the classic port's engine, reading everything from a pack). |
 | `editor/` | The editor (tkinter). |
 | `packs/TheQuest/` | The original quest as a pack. |
 | `docs/QUEST_PACKS.md` | Every file of a pack, and every field. |
 | `docs/EVENTS.md` | The level scripts: the language, the handlers and the functions they can call. |
-| `tools/make_pack.py` | Rebuilds `packs/TheQuest` from the original (the only thing here that reads `../classic`). |
+| `tools/make_pack.py` | Rebuilds `packs/TheQuest` from the original (the only thing here that reads `../TheQuestClassic`). |
 | `tests/` | `test_packs.py`, `test_editor.py` (under `xvfb-run` on Linux), and `test_standalone.py`: a copy of this folder alone must play, opening nothing outside itself. |
 
 Saves go to `saves/<pack>/save01.dat` to `save20.dat`. A `sound.txt` here containing `0` turns the
