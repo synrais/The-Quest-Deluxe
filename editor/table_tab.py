@@ -16,8 +16,10 @@ from .art import photo, to_ega, bag_cell
 
 
 class Field:
-    def __init__(self, key, label, kind='int', choices=None, when=None, hint='', default=None, width=8):
+    def __init__(self, key, label, kind='int', choices=None, when=None, hint='', default=None, width=8,
+                 fmt=None, parse=None):
         self.key, self.label, self.kind = key, label, kind
+        self.fmt, self.parse = fmt, parse        # 'custom': row -> text, text -> value (ValueError if wrong)
         self.choices = choices            # [(value, label)] for 'choice' and 'multi'
         self.when = when                  # row -> bool: does the field apply to this entry?
         self.hint, self.default, self.width = hint, default, width
@@ -46,6 +48,9 @@ class TableTab(ttk.Frame):
 
     def uses(self, row) -> list[str]:
         return []
+
+    def duplicate_id(self, row) -> int:
+        return self.app.project.next_id(self.TABLE, row['id'] + 1)
 
     def label(self, row) -> str:
         return f'{row["id"]}  {row.get("name", "")}'
@@ -132,6 +137,31 @@ class TableTab(ttk.Frame):
         if sel and (self.row is None or str(self.row['id']) != sel[0]):
             self._show(next((r for r in self.rows if str(r['id']) == sel[0]), None))
 
+    # ── fields, with dotted keys for nested values ('look.colour') ──────────
+    @staticmethod
+    def get(row, key, default=None):
+        for part in key.split('.')[:-1]:
+            row = row.get(part) or {}
+        return row.get(key.split('.')[-1], default)
+
+    @staticmethod
+    def put(row, key, value):
+        *path, last = key.split('.')
+        for part in path:
+            row = row.setdefault(part, {})
+        row[last] = value
+
+    @staticmethod
+    def drop(row, key):
+        *path, last = key.split('.')
+        for part in path:
+            row = row.get(part) or {}
+        row.pop(last, None)
+
+    def preview(self, row):
+        """A picture drawn rather than stored (the hero's look), or None."""
+        return None
+
     # ── the form ────────────────────────────────────────────────────────────
     def _show(self, row):
         self.row = row
@@ -154,7 +184,7 @@ class TableTab(ttk.Frame):
             line += 1
 
     def _widget(self, f: Field, row):
-        value = row.get(f.key, f.default)
+        value = self.get(row, f.key, f.default)
         if f.kind == 'readonly':
             return ttk.Label(self.form, text=str(value))
         if f.kind == 'bool':
@@ -174,11 +204,12 @@ class TableTab(ttk.Frame):
                 var = tk.BooleanVar(value=v in chosen)
                 ttk.Checkbutton(w, text=lab, variable=var,
                                 command=lambda v=v, var=var: self._toggle(f, v, var.get())).grid(
-                    row=i // 4, column=i % 4, sticky='w', padx=(0, 10))
+                    row=i // 3, column=i % 3, sticky='w', padx=(0, 10))
             return w
         else:
-            var = tk.StringVar(value='' if value is None else str(value))
-            w = ttk.Entry(self.form, textvariable=var, width=f.width if f.kind == 'int' else 30)
+            text = f.fmt(row) if f.kind == 'custom' else ('' if value is None else str(value))
+            var = tk.StringVar(value=text)
+            w = ttk.Entry(self.form, textvariable=var, width=f.width if f.kind == 'int' else 30 if f.kind == 'str' else 38)
             w.bind('<FocusOut>', lambda e: self._typed(f, var, w))
             w.bind('<Return>', lambda e: self._typed(f, var, w))
         self.widgets[f.key] = (w, var)
@@ -196,12 +227,22 @@ class TableTab(ttk.Frame):
                     w.configure(foreground='red') if isinstance(w, tk.Entry) else None
                     self.app.status(f'{f.label}: "{s}" is not a number')
                     return
+        elif f.kind == 'custom':
+            try:
+                value = f.parse(s)
+            except (ValueError, KeyError, IndexError) as e:
+                self.app.status(f'{f.label}: {e}')
+                from tkinter import messagebox
+                messagebox.showerror(f.label, f'{s!r}: {e}\n\nThe hint beside it shows the form.')
+                return
+            if value == self.get(self.row, f.key):
+                return
         else:
             value = s
         self._set(f, value)
 
     def _toggle(self, f: Field, v, on):
-        cur = list(self.row.get(f.key) or [])
+        cur = list(self.get(self.row, f.key) or [])
         if on and v not in cur:
             cur.append(v)
         elif not on and v in cur:
@@ -213,20 +254,27 @@ class TableTab(ttk.Frame):
         row = self.row
         if row is None:
             return
-        old = row.get(f.key, f.default)
-        if value == old or (value in (None, '', False, []) and f.key not in row):
+        old = self.get(row, f.key, f.default)
+        missing = self.get(row, f.key, KeyError) is KeyError
+        if value == old or (f.kind != 'bool' and value in (None, '', []) and missing):
             return
-        if value is None or (value == '' and f.kind != 'str') or (value is False and f.kind == 'bool') or \
-                (value == [] and f.kind == 'multi'):
-            row.pop(f.key, None)
+        if f.kind == 'bool':
+            if value == bool(f.default):
+                self.drop(row, f.key)                 # the default: left out of the file
+            else:
+                self.put(row, f.key, value)
+        elif value is None or (value == '' and f.kind != 'str') or (value == [] and f.kind == 'multi'):
+            self.drop(row, f.key)
         else:
-            row[f.key] = value
+            self.put(row, f.key, value)
         self.after_change(row, f.key, old)
         self.app.project.touch(self.TABLE)
         self.app.changed()
         self.list.item(str(row['id']), text='  ' + self.label(row))
         if any(g.when for g in self.fields()):
             self._show(row)                           # which fields apply may have changed
+        else:
+            self._show_pictures()                     # a drawn preview may have changed
 
     # ── pictures ────────────────────────────────────────────────────────────
     def _show_pictures(self):
@@ -236,6 +284,14 @@ class TableTab(ttk.Frame):
         if self.row is None:
             return
         p, v = self.app.project, self.row['id']
+        drawn = self.preview(self.row)
+        if drawn is not None:
+            ph = photo(pygame.transform.scale(drawn, (80, 80)))
+            self._pic_images.append(ph)
+            box = ttk.Frame(self.pics)
+            box.grid(row=0, column=len(self.PICTURES), padx=(0, 18), sticky='n')
+            ttk.Label(box, text='How it looks').pack(anchor='w')
+            ttk.Label(box, image=ph).pack(anchor='w')
         for i, (label, folder, is_bag) in enumerate(self.PICTURES):
             box = ttk.Frame(self.pics)
             box.grid(row=0, column=i, padx=(0, 18), sticky='n')
@@ -299,7 +355,7 @@ class TableTab(ttk.Frame):
             return
         import copy
         row = copy.deepcopy(self.row)
-        row['id'] = self.app.project.next_id(self.TABLE, self.row['id'] + 1)
+        row['id'] = self.duplicate_id(self.row)
         if 'name' in row:
             row['name'] = f'{row["name"]} (copy)'
         self._add(row)

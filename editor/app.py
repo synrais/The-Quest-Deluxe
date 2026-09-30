@@ -17,6 +17,8 @@ from .project import Project
 from .map_tab import MapTab
 from .text_tabs import EventsTab, TextTab
 from .items_tab import ItemsTab
+from .creatures_tab import CreaturesTab
+from .classes_tab import ClassesTab
 
 SETTINGS = os.path.join(os.path.expanduser('~'), '.quest_editor.json')
 
@@ -103,8 +105,12 @@ class App:
         self.text_tab = TextTab(self.tabs, self)
         self.quest_tab = QuestTab(self.tabs, self)
         self.items_tab = ItemsTab(self.tabs, self)
+        self.creatures_tab = CreaturesTab(self.tabs, self)
+        self.classes_tab = ClassesTab(self.tabs, self)
         self.tabs.add(self.map_tab, text='  Map  ')
         self.tabs.add(self.items_tab, text='  Items  ')
+        self.tabs.add(self.creatures_tab, text='  Creatures  ')
+        self.tabs.add(self.classes_tab, text='  Classes  ')
         self.tabs.add(self.events_tab, text='  Events  ')
         self.tabs.add(self.text_tab, text='  Text  ')
         self.tabs.add(self.quest_tab, text='  Quest  ')
@@ -183,7 +189,8 @@ class App:
         classes = [f'{c["id"]} {c["name"]}' for c in self.project.tables['classes']]
         self.play_class.config(values=classes)
         self.play_class.set(classes[0] if classes else '')
-        for tab in (self.map_tab, self.events_tab, self.text_tab, self.quest_tab, self.items_tab):
+        for tab in (self.map_tab, self.events_tab, self.text_tab, self.quest_tab, self.items_tab, self.creatures_tab,
+                    self.classes_tab):
             tab.load()
         self._title()
 
@@ -253,6 +260,8 @@ class App:
 
     def _tab_changed(self):
         tab = self.tabs.nametowidget(self.tabs.select())
+        if tab is self.classes_tab:
+            self.play_class.config(values=[f'{c["id"]} {c["name"]}' for c in self.project.tables['classes']])
         if tab is self.events_tab:
             self.events_tab.load()
         elif tab is self.map_tab:

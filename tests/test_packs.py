@@ -70,6 +70,16 @@ g.get(5, 2)[3] = -5
 blank.shops[1] = {1: '1001 1 3\n'}
 blank.touch(('shops', 1))
 blank.set_constant(1, 'SHOPS', {(1, 1): 1})
+# a new monster (one blow kills it; it always leaves item 11) and a new class
+blank.tables['creatures'].append({'id': 101, 'name': 'Test Slime', 'life': 1, 'power': 1, 'atk': 0, 'def': 0,
+                                  'warm': 0, 'marm': 0, 'range': 1, 'att': 9, 'exp': 77,
+                                  'loot': [[0, 100, 'item', 11]], 'bleeds': False, 'corpse': 'none'})
+blank.touch('creatures')
+g.get(3, 8)[3] = 101
+blank.tables['classes'].append({'id': 5, 'name': 'Tester', 'life': 99, 'mana': 9, 'str': 30, 'int': 5, 'dex': 12,
+                                'acc': 12, 'growth': [5, 1], 'skill': 'bar', 'look': {'colour': 14},
+                                'bag': {'12,4': 1001}, 'spells': [1]})
+blank.touch('classes')
 blank.touch(('map', 1))
 n = blank.add_level()
 blank.save()
@@ -107,4 +117,17 @@ press(pygame.K_RETURN, pygame.K_ESCAPE)                 # buy the sword
 assert game.player.inv.coins == 50 and list(game.player.bag.values()).count(1001) == 2
 game.renderer.draw(game)
 print('Deluxe on the blank pack: a new weapon picked up, worn (power 20) and bought for 50 gold')
+
+game.quick_start(5, 1, (3, 7))                          # the new class, next to the new monster
+h = game.player.hero
+assert h.type == 5 and h.mlife == 99 and game.player.item((12, 4)) == 1001 and game.player.spells[1] == 1
+exp = h.exper
+for _ in range(20):                                     # hit it until it falls
+    if not game.world.sq(3, 8).mon:
+        break
+    press(pygame.K_DOWN)
+assert game.world.sq(3, 8).mon == 0 and game.world.sq(3, 8).item == 11 and game.world.sq(3, 8).deco == 0
+assert h.exper == exp - 77
+game.renderer.draw(game)
+print('a new class (Tester) killed a new monster: 77 experience, its loot, and no body (corpse: none)')
 print('all pack checks passed')

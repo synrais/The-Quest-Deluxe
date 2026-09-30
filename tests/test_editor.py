@@ -113,6 +113,40 @@ it.delete()
 assert 'level 1 map' in asked[0] and not any(r['id'] == 201 for r in it.rows)
 print('items: new weapon, rename, launcher, picture, ammo kind, delete with its uses listed: ok')
 
+# the Creatures tab: a trait that defaults to on, loot rules, a new person's number
+ct = app.creatures_tab
+app.tabs.select(ct)
+pump()
+ct.select(32)
+row = ct.row
+bleeds = next(f for f in ct.fields() if f.key == 'bleeds')
+ct._set(bleeds, True)
+assert 'bleeds' not in row                               # the default (it bleeds) is left out of the file
+ct._set(bleeds, False)
+assert row['bleeds'] is False
+loot = next(f for f in ct.fields() if f.key == 'loot')
+w, var = ct.widgets['loot']
+var.set('10-60: gold 5+2; 60-70: item 620')
+ct._typed(loot, var, w)
+assert row['loot'] == [[10, 60, 'gold', 5, 2], [60, 70, 'item', 620]]
+simpledialog.askinteger = lambda *a, **k: 2              # a person
+ct.new()
+assert -99 <= ct.row['id'] <= -1 and ct.row['id'] != -5 and ct.row['att'] == -2
+print('creatures: traits, loot, a new person: ok')
+
+# the Classes tab: a new class with a starting kit
+cl = app.classes_tab
+app.tabs.select(cl)
+pump()
+cl.new()
+bag = next(f for f in cl.fields() if f.key == 'bag')
+w, var = cl.widgets['bag']
+var.set('weapon: 1001; backpack: 230 620')
+cl._typed(bag, var, w)
+cl._set(next(f for f in cl.fields() if f.key == 'look.colour'), 14)
+assert cl.row['bag'] == {'12,4': 1001, '12,8': 230, '13,8': 620} and cl.row['look']['colour'] == 14
+print('classes: a new class, its kit and colour: ok')
+
 assert app.dirty
 app.save()
 assert os.path.exists(os.path.join(pack, 'sprites', 'items', '1001.png'))
