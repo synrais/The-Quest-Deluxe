@@ -124,6 +124,15 @@ class Pack:
     def spell(self, s: int) -> dict:
         return self.spells.get(s, {})
 
+    def extra_potions(self) -> dict:
+        """Potions 9 and 10 (keys 9 and 0), which the original doesn't have: quest.json's "potions",
+        {"9": {"name", "colour", "life", "mana", "cure_poison", "berserk"}, ...}. 1-8 are the original's."""
+        out = {}
+        for k, v in (self.quest.get('potions') or {}).items():
+            if str(k) in ('9', '10') and isinstance(v, dict):
+                out[int(k)] = v
+        return out
+
     def spell_count(self) -> int:
         """How many spells the spell book must hold: the highest spell number, at least 20."""
         return max([20] + list(self.spells))

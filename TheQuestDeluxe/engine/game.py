@@ -17,7 +17,8 @@ from dataclasses import asdict
 import pygame
 
 from .formats import GameData, Square, MAP_SIZE
-from .state import Status, Player, Hero, Inventory, Skills, new_player, POTION_FIELDS, KNIGHT, Enemy
+from .state import (Status, Player, Hero, Inventory, Skills, new_player, POTION_FIELDS, KNIGHT, Enemy,
+                    potions, add_potions)
 from .world import World, screen_of, room_origin
 from .savefile import SaveData, Slots
 from . import savefile
@@ -74,7 +75,7 @@ class ScreenHost(anim.Host):
 
 
 class PageHost:
-    """What the inventory and shop pages (deluxe.invshop) work on: the player's own bag, gold and
+    """What the inventory and shop pages (engine.invshop) work on: the player's own bag, gold and
     potions, a copy of the hero (the original passes it by value), and a BGI on the page's surface."""
 
     def __init__(self, game, layer, store):
@@ -85,7 +86,7 @@ class PageHost:
         self.g = BGI(layer, game.data.src)
         self.g._fonts = game.renderer.bgi._fonts
         self.layer = layer
-        self.bag, self.store, self.inv, self.skill = p.bag, store, p.inv, p.skill
+        self.bag, self.store, self.inv, self.skill, self.more = p.bag, store, p.inv, p.skill, p.more
         self.hero = replace(p.hero)
         self.level = game.world.level
         self.tell = game.items.tell
@@ -209,7 +210,7 @@ class Game:
         self.play('reput2', delta)
 
     def play(self, name: str, *args, on_move=None, redraw=True, raw=False):
-        """Run one of the original's animations now (deluxe.anim), blocking like the original.
+        """Run one of the original's animations now (engine.anim), blocking like the original.
         Its rand() draws happen even when drawing is skipped, so the random sequence stays the same.
         redraw=False keeps drawing over what the previous animation left on the screen."""
         self.anim_host.on_move = on_move
@@ -391,6 +392,8 @@ class Game:
             acted = self.pick_up()
         elif pygame.K_1 <= k <= pygame.K_8:
             acted = self.drink(k - pygame.K_0)
+        elif k in (pygame.K_9, pygame.K_0) and (10 if k == pygame.K_0 else 9) in self.pack.extra_potions():
+            acted = self.drink(10 if k == pygame.K_0 else 9)          # The Quest Deluxe's potions 9 and 10
         elif k in (pygame.K_SPACE, pygame.K_TAB):
             acted = self.ranged(choose=k == pygame.K_TAB)
         elif pygame.K_F1 <= k <= pygame.K_F9:
@@ -544,8 +547,7 @@ class Game:
             self.report(f'You pick up {q.gold} gold.', 14)
             q.gold = 0
         if pk.item_type(q.item) == 'potion':
-            f = POTION_FIELDS[pk.item(q.item)['potion']]
-            setattr(p.inv, f, getattr(p.inv, f) + 1)
+            add_potions(p, pk.item(q.item)['potion'])
             self.report(f'You pick up {self.a_name(q.item)}.', 15)
             q.item = 0
         if pk.item_type(q.item) == 'key':
@@ -569,6 +571,8 @@ class Game:
 
     def drink(self, n: int) -> bool:
         p, h, inv = self.player, self.player.hero, self.player.inv
+        if n not in POTION_FIELDS:
+            return self.drink_extra(n)
         f = POTION_FIELDS[n]
         if getattr(inv, f) <= 0 or (n == 7 and not h.poisoned):
             return False
@@ -596,7 +600,38 @@ class Game:
         self.tones((740, 100))
         return True
 
-    # ── the inventory and the shops: the original's own pages (deluxe.invshop) ──
+    def drink_extra(self, n: int) -> bool:
+        """Potion 9 or 10, as the pack defines it (quest.json "potions"): life and mana ("half", "full"
+        or a number), cure_poison, berserk (turns of doubled power and armour, like potion 8)."""
+        p, h = self.player, self.player.hero
+        pot = self.pack.extra_potions().get(n)
+        if not pot or potions(p, n) <= 0:
+            return False
+        heals = pot.get('life') or pot.get('mana') or pot.get('berserk')
+        if pot.get('cure_poison') and not heals and not h.poisoned:
+            return False                                  # like Cure Poison: only when poisoned
+        add_potions(p, n, -1)
+
+        def gain(cur, mx, how):
+            if how == 'full':
+                return mx
+            if how == 'half':
+                return cur + mx // 2 + (mx % 2)
+            return cur + int(how or 0)
+        h.life = gain(h.life, h.mlife, pot.get('life'))
+        h.mana = gain(h.mana, h.mmana, pot.get('mana'))
+        if pot.get('cure_poison') and h.poisoned:
+            h.poisoned = 0
+            self.play('ampoisoned2', 0)
+        if pot.get('berserk'):
+            self.status.powboost = self.status.armboost = int(pot['berserk'])
+        h.life, h.mana = min(h.life, h.mlife), min(h.mana, h.mmana)
+        rules.status_update(p, self.status, self.items)
+        self.report(f'You drink the {pot.get("name", f"potion {n}").lower()}.', 10)
+        self.tones((740, 100))
+        return True
+
+    # ── the inventory and the shops: the original's own pages (engine.invshop) ──
     def page_layer(self) -> pygame.Surface:
         """The screen as it is when a page opens; the page draws over its right side and strip."""
         self.renderer.draw(self)

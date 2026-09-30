@@ -520,6 +520,6 @@ class Events:
         self.g.autosave(slot)
 
     def f_effect(self, name, *args):
-        """One of the original's animations (deluxe.anim: dcast2, asskeleton, screen_flash ...), played
+        """One of the original's animations (engine.anim: dcast2, asskeleton, screen_flash ...), played
         now, at 1-based screen squares. It has no game effect."""
         self.g.play(name, *args)

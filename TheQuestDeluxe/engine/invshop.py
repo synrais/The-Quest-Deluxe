@@ -1,8 +1,8 @@
 """The original's inventory and shop pages, ported call for call: inventory() (the i key, and the
 shop's "Store: Sell" page) and peddler() ("Store: Buy"), with dempty(), bagdraw() and itemdisp().
 
-Both are generators. They draw through `h.g` (deluxe.bgi.BGI), play tones through `h.asound()` /
-`h.nosound()` and yield each delay() in milliseconds, like deluxe.anim. When they need a key they
+Both are generators. They draw through `h.g` (engine.bgi.BGI), play tones through `h.asound()` /
+`h.nosound()` and yield each delay() in milliseconds, like engine.anim. When they need a key they
 yield None and are resumed with the key the original's getch() would return: letters as ASCII,
 Enter 13, Esc 27, Backspace 8, and the arrows as 0 followed by the scan code (72 up, 80 down,
 75 left, 77 right). They return the last key, which the callers (the RPG.CPP wrappers) use to
@@ -463,8 +463,8 @@ def peddler(h):
             if h.inv.coins >= price and (s != (0, 0) or potion):
                 h.inv.coins -= price
                 if potion:
-                    f = ('rose', 'red', 'purple', 'blue', 'yellow', 'white', 'cyan', 'black')[potion - 1]
-                    setattr(h.inv, f, getattr(h.inv, f) + 1)
+                    from .state import add_potions
+                    add_potions(h, potion)                   # 9 and 10: The Quest Deluxe's own
                 else:
                     h.bag[s] = it
                 yield from tones(h, (600, 100), (700, 100))

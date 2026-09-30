@@ -1,6 +1,6 @@
 """The original's animations (FUNCS.CPP / FUNCS2.CPP), ported call for call.
 
-Each animation is a generator. It draws through `h.g` (a deluxe.bgi.BGI on the real screen), plays
+Each animation is a generator. It draws through `h.g` (a engine.bgi.BGI on the real screen), plays
 tones with `h.asound(freq)` / `h.nosound()`, and yields every delay() in milliseconds, so the caller
 decides how to wait. A few animations also redraw a square (`h.clean2(x, y)`), the hero
 (`h.guy2(x, y)`), or move the hero partway through (`h.move_hero(x, y)`).

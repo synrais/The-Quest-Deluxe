@@ -80,8 +80,11 @@ class ItemsTab(TableTab):
             Field('power_x2', 'Double power', 'bool', when=is_('ammo'), hint="doubles a launcher's power (poisoned arrows)"),
             Field('power_bonus', 'Adds its power to', 'choice', [(None, 'nothing'), ('melee', 'melee blows'),
                                                                  ('ranged', 'ranged shots')], when=is_('amulet')),
-            Field('potion', 'Potion', 'choice', POTIONS, when=is_('potion'),
-                  hint='the belt has 8 potions: this item is one of them'),
+            Field('potion', 'Potion', 'choice', POTIONS + [
+                (int(k), f'{k} {v.get("name", "")}') for k, v in sorted(
+                    (self.app.project.quest.get('potions') or {}).items(), key=lambda kv: int(kv[0]))],
+                  when=is_('potion'),
+                  hint="the belt's potions 1-8 are the original's; 9 and 10 are defined on the Quest tab"),
             Field('key', 'Opens', 'choice', [('yellow', 'gold-key doors'), ('red', 'red-key doors'),
                                             ('blue', 'blue-key doors')], when=is_('key')),
             Field('quest', 'Quest item', 'bool', hint="can't be sold or dropped", when=is_('treasure', 'weapon', 'launcher', 'armour',

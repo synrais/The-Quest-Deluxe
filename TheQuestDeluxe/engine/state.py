@@ -68,6 +68,23 @@ class Inventory:
 POTION_FIELDS = {1: 'rose', 2: 'red', 3: 'purple', 4: 'blue', 5: 'yellow', 6: 'white', 7: 'cyan', 8: 'black'}
 
 
+def potions(p: 'Player', n: int) -> int:
+    """How many of potion n the hero has: 1-8 the original's, 9 and 10 The Quest Deluxe's."""
+    if n in POTION_FIELDS:
+        return getattr(p.inv, POTION_FIELDS[n])
+    return p.more.get('potions', {}).get(str(n), 0)
+
+
+def add_potions(p: 'Player', n: int, count: int = 1):
+    if n in POTION_FIELDS:
+        setattr(p.inv, POTION_FIELDS[n], getattr(p.inv, POTION_FIELDS[n]) + count)
+    else:
+        held = p.more.setdefault('potions', {})
+        held[str(n)] = held.get(str(n), 0) + count
+        if not held[str(n)]:
+            del held[str(n)]
+
+
 @dataclass
 class Skills:
     amb: int = 0   # Ambidexterity
@@ -189,7 +206,10 @@ def new_player(cls: int, skill: int = 0, fault: int = 0, pack=None) -> Player:
     h.bstr, h.bintl, h.bdex, h.bacc = c['str'], c['int'], c['dex'], c['acc']
     h.type, h.level, h.rep, h.exper, h.invisible, h.poisoned = cls, 1, 0, 100, -1, 0
     for n, count in pack.quest.get('start_potions', {}).items():
-        setattr(p.inv, POTION_FIELDS[int(n)], count)
+        if int(n) in POTION_FIELDS:
+            setattr(p.inv, POTION_FIELDS[int(n)], count)
+        elif int(n) in pack.extra_potions():
+            add_potions(p, int(n), count)
     for cell, it in c.get('bag', {}).items():
         p.bag[tuple(int(v) for v in cell.split(','))] = it
     for n, s in enumerate(c.get('spells', [])):

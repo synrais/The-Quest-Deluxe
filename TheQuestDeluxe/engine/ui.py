@@ -871,7 +871,7 @@ def getch_codes(ev) -> list[int]:
 
 
 class Page(Overlay):
-    """One of the original's own key loops (deluxe.invshop): the generator draws on its own copy of
+    """One of the original's own key loops (engine.invshop): the generator draws on its own copy of
     the screen and waits for keys; when it returns, then(key it returned) runs."""
     covers_map = True
 

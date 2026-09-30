@@ -94,7 +94,7 @@ class Renderer:
                 pygame.draw.circle(surf, EGA[12] if q.mon > 0 else EGA[11], (px + 20, py + 20), 12)
 
     def draw_hero(self, scr, game, hx, hy):
-        """guy2(), ported call for call (deluxe.anim.draw_guy2), at pixel position (hx, hy)."""
+        """guy2(), ported call for call (engine.anim.draw_guy2), at pixel position (hx, hy)."""
         p, st = game.player, game.status
         self.bgi.s = scr
         anim.draw_guy2(self.bgi, hx // TILE + 1, hy // TILE + 1, p.hero.type, p.hero.invisible, p.hero.poisoned,
@@ -103,7 +103,7 @@ class Renderer:
 
     # ── the original's animations ─────────────────────────────────────────────
     def play(self, game, gen, fast=False, redraw=True, raw=False):
-        """Run an animation generator (deluxe.anim) on top of the current frame, blocking, as the
+        """Run an animation generator (engine.anim) on top of the current frame, blocking, as the
         original does. Each yielded value is a delay() in ms; time is kept exactly, and frames are
         only shown when there's time (or at least every 1/60 s)."""
         if fast:
@@ -404,7 +404,7 @@ class Renderer:
         if game.messages:
             self.hud.draw_messages([(m, getattr(m, 'colour', 15)) for m in game.messages])
         else:
-            self.hud.draw_belt(game.player.inv)
+            self.hud.draw_belt(game.player, self.pack.extra_potions() if self.pack else None)
 
     def btext(self, scr, s, pos, colour: int, style=(8, 1), center=False):
         """Text in one of the game's BGI fonts: style = (settextstyle font, size), colour = EGA index."""

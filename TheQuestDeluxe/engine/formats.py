@@ -1,4 +1,4 @@
-"""Readers for the data in the original's formats, as a quest pack serves them (deluxe.pack's
+"""Readers for the data in the original's formats, as a quest pack serves them (engine.pack's
 PackSource answers under the original's file names: Talk.dat, Items.dat, L00003.dat, ...).
 
 The original's save files keep its light cipher: each byte except space, CR and LF is stored as
@@ -136,7 +136,7 @@ def parse_monsters(rows: list[list[int]]) -> dict[int, MonsterStats]:
 @dataclass
 class GameData:
     """Everything the engine needs from the original game, loaded once."""
-    src: object = None                            # a deluxe.pack.PackSource
+    src: object = None                            # a engine.pack.PackSource
     talk: dict = field(default_factory=dict)
     story: dict = field(default_factory=dict)
     monsters: dict = field(default_factory=dict)
@@ -146,7 +146,7 @@ class GameData:
 
     @classmethod
     def load(cls, src=None) -> 'GameData':
-        """Everything from a quest pack (deluxe.pack), served under the original's file names."""
+        """Everything from a quest pack (engine.pack), served under the original's file names."""
         if src is None:
             from .pack import Pack, PackSource
             src = PackSource(Pack())

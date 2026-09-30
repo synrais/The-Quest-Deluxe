@@ -51,9 +51,26 @@ class QuestTab(ttk.Frame):
         ttk.Entry(self, textvariable=self.potions, width=40).grid(row=n + 1, column=1, sticky='w')
         ttk.Label(self, text='potion number: count, ... (6: 1 is one Full Restoration Potion)',
                   foreground='#555').grid(row=n + 2, column=1, sticky='w')
-        ttk.Button(self, text='Apply', command=self.apply).grid(row=n + 3, column=1, sticky='w', pady=8)
+        # potions 9 and 10: The Quest Deluxe's own (keys 9 and 0)
+        box = ttk.LabelFrame(self, text='Potions 9 and 10 (keys 9 and 0; 1-8 are the original\'s)', padding=6)
+        box.grid(row=n + 3, column=0, columnspan=2, sticky='w', pady=8)
+        self.pots = {}
+        for c, label in enumerate(('', 'Name', 'Colour (0-15)', 'Life', 'Mana', 'Cures poison', 'Berserk turns')):
+            ttk.Label(box, text=label).grid(row=0, column=c, sticky='w', padx=3)
+        for r, k in enumerate(('9', '10'), start=1):
+            ttk.Label(box, text=f'Potion {k}').grid(row=r, column=0, sticky='w')
+            v = {f: tk.StringVar() for f in ('name', 'colour', 'life', 'mana', 'berserk')}
+            v['cure_poison'] = tk.BooleanVar()
+            for c, f, w in ((1, 'name', 22), (2, 'colour', 5), (3, 'life', 7), (4, 'mana', 7)):
+                ttk.Entry(box, textvariable=v[f], width=w).grid(row=r, column=c, sticky='w', padx=3)
+            ttk.Checkbutton(box, variable=v['cure_poison']).grid(row=r, column=5)
+            ttk.Entry(box, textvariable=v['berserk'], width=5).grid(row=r, column=6, sticky='w', padx=3)
+            self.pots[k] = v
+        ttk.Label(box, text='Life and mana: half, full or a number. An empty name: no such potion.',
+                  foreground='#555').grid(row=3, column=0, columnspan=7, sticky='w', pady=(4, 0))
+        ttk.Button(self, text='Apply', command=self.apply).grid(row=n + 4, column=1, sticky='w', pady=8)
         self.info = ttk.Label(self, text='', foreground='#555', justify='left')
-        self.info.grid(row=n + 4, column=0, columnspan=2, sticky='w', pady=12)
+        self.info.grid(row=n + 5, column=0, columnspan=2, sticky='w', pady=12)
 
     def load(self):
         q = self.app.project.quest
@@ -61,6 +78,11 @@ class QuestTab(ttk.Frame):
             self.vars[key].set('' if q.get(key) is None else str(q.get(key)))
         self.reclass.set(bool(q.get('reclass')))
         self.potions.set(', '.join(f'{k}: {v}' for k, v in q.get('start_potions', {}).items()))
+        for k, v in self.pots.items():
+            pot = (q.get('potions') or {}).get(k, {})
+            for f in ('name', 'colour', 'life', 'mana', 'berserk'):
+                v[f].set('' if pot.get(f) is None else str(pot.get(f)))
+            v['cure_poison'].set(bool(pot.get('cure_poison')))
         p = self.app.project
         self.info.config(text=f'Pack folder: {p.root}\n{p.levels} levels, {len(p.tables["items"])} items, '
                               f'{len(p.tables["creatures"])} creatures, {len(p.tables["spells"])} spells, '
@@ -78,8 +100,28 @@ class QuestTab(ttk.Frame):
                     k, v = part.split(':')
                     pots[str(int(k))] = int(v)
             q['start_potions'] = pots
+            extra = {}
+            for k, v in self.pots.items():
+                name = v['name'].get().strip()
+                if not name:
+                    continue
+                pot = {'name': name, 'colour': int(v['colour'].get() or 7)}
+                for f in ('life', 'mana'):
+                    s = v[f].get().strip().lower()
+                    if s:
+                        pot[f] = s if s in ('half', 'full') else int(s)
+                if v['cure_poison'].get():
+                    pot['cure_poison'] = True
+                if v['berserk'].get().strip():
+                    pot['berserk'] = int(v['berserk'].get())
+                extra[k] = pot
+            if extra:
+                q['potions'] = extra
+            else:
+                q.pop('potions', None)
         except ValueError:
-            messagebox.showerror('Quest', 'The year and first level are numbers; potions are like "6: 1".')
+            messagebox.showerror('Quest', 'The year and first level are numbers; potions are like "6: 1"; a potion\'s '
+                                          'colour and berserk turns are numbers, its life and mana half, full or a number.')
             return
         q['reclass'] = self.reclass.get()
         self.app.project.touch('quest')

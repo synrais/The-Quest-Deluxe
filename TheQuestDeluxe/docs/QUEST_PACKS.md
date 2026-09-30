@@ -42,6 +42,7 @@ well. Fields that are left out take the default given below.
 | `levels` | How many levels (`levels/1` .. `levels/<n>`). After the last one come the ending stories and the credits. |
 | `first_level` | Where a new game starts. |
 | `start_potions` | Potions a new hero carries: `{"potion number": count}`. |
+| `potions` | Potions 9 and 10, which the original doesn't have (1-8 are its own): `{"9": {"name": "Elixir", "colour": 10, "life": "full", "mana": 5, "cure_poison": true, "berserk": 5}}`. `life` and `mana` are `"half"`, `"full"` or an amount; `cure_poison` cures (a potion that only cures can only be drunk when poisoned); `berserk` is turns of doubled power and armour, like potion 8. Keys 9 and 0 drink them, the belt shows ten bottles, and items and shops can hold them (`"potion": 9`). Their counts go in the save's DELUXE block. |
 | `story_order` | Which skills and faults story 1 mentions, in order (their `story` lines in skills.json). |
 | `reclass` | `true`: at each level-up the class follows the stats (Quest I's rule, between classes 1-4). |
 

@@ -5,6 +5,8 @@
     classic part of such a save still loads in the classic port's reader (as in the original's).
   - More than 20 spells: the spell book grows pages, a level-up offers the new spells, a spell on page
     2 is shown, chosen and cast, and the lot saves and loads.
+  - Potions 9 and 10: defined in quest.json, started with, drunk with keys 9 and 0, picked up, on a belt
+    of ten, saved and loaded.
 
     python tests/test_limits.py
 """
@@ -148,9 +150,49 @@ def spells():
     print('more than 20 spells: a second page, learnt, shown, cast, saved and loaded: ok')
 
 
+def potions():
+    from engine.state import potions as held
+
+    def more_potions(folder, json):
+        path = os.path.join(folder, 'quest.json')
+        q = json.load(open(path))
+        q['potions'] = {'9': {'name': 'Elixir of Life', 'colour': 10, 'life': 'full', 'mana': 5},
+                        '10': {'name': 'Rage Draught', 'colour': 13, 'berserk': 5}}
+        q['start_potions'] = {'6': 1, '9': 2}
+        json.dump(q, open(path, 'w'))
+        path = os.path.join(folder, 'items.json')
+        items = json.load(open(path))
+        items['items'].append({'id': 950, 'name': 'Rage Draught', 'type': 'potion', 'potion': 10, 'price': 30})
+        json.dump(items, open(path, 'w'))
+    g = pack_copy(more_potions)
+    g.quick_start(1, 1)
+    g.combat_log = True
+    p, h = g.player, g.player.hero
+    assert held(p, 9) == 2 and held(p, 6) == 1 and held(p, 10) == 0
+    h.life, h.mana = 3, 0
+    press(g, pygame.K_9)
+    assert held(p, 9) == 1 and h.life == h.mlife and h.mana == min(5, h.mmana), (h.life, h.mana)
+    assert any('elixir of life' in t for t, _, _ in g.log_lines)
+    press(g, pygame.K_0)                                  # none of potion 10 yet: nothing happens
+    assert g.status.powboost <= 0
+    q = g.world.sq(p.X, p.Y)
+    q.item = 950
+    press(g, pygame.K_RETURN)                             # picked up
+    assert held(p, 10) == 1 and q.item == 0
+    press(g, pygame.K_0)
+    assert held(p, 10) == 0 and g.status.powboost > 0
+    g.renderer.draw(g, present=False)                     # the belt of ten
+    d = savefile.from_bytes(savefile.to_bytes(g.to_save()))
+    assert d.extra['more']['potions'] == {'9': 1}, d.extra
+    g.from_save(d, 1)
+    assert held(g.player, 9) == 1
+    print('potions 9 and 10: started with, drunk (keys 9 and 0), picked up, on the belt, saved and loaded: ok')
+
+
 def main():
     saves()
     spells()
+    potions()
     print('all limit checks passed')
 
 

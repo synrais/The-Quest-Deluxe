@@ -44,6 +44,7 @@ KEYS = [('bkey', 1, -30, -15), ('rkey', 4, 42, -40), ('ykey', 14, 116, -15)]
 # dpotions2(): liquid colour for potions 1-8, and which labels are drawn in black.
 POTION_COLOURS = [12, 4, 5, 1, 14, 15, 3, 0]
 DARK_LABELS = (5, 6, 7)
+LIGHT_COLOURS = (3, 7, 10, 11, 14, 15)          # potions 9 and 10: a dark number on these
 
 
 class Hud:
@@ -215,19 +216,25 @@ class Hud:
         del px
 
     # ── bottom strip ────────────────────────────────────────────────────────
-    def draw_belt(self, inv):
-        """dpotions2(): eight potion bottles with their number inside and the count beside."""
-        from .state import POTION_FIELDS
-        counts = tuple(getattr(inv, POTION_FIELDS[n]) for n in range(1, 9))
-        if counts != self._belt_key:
-            self._belt_key = counts
+    def draw_belt(self, player, extra=None):
+        """dpotions2(): eight potion bottles with their number inside and the count beside. A pack with
+        potions 9 and 10 (extra: pack.extra_potions()) gets ten, closer together (keys 9 and 0)."""
+        from .state import potions
+        extra = extra or {}
+        slots = 10 if extra else 8
+        counts = tuple(potions(player, n) for n in range(1, slots + 1))
+        colours = POTION_COLOURS + [int(extra.get(n, {}).get('colour', 7)) for n in (9, 10)]
+        key = (counts, tuple(colours[:slots]))
+        if key != self._belt_key:
+            self._belt_key = key
+            step = 80 if slots == 8 else 64                   # the original's 80, or 64 for ten
             surf = pygame.Surface((640, 480))
             g = BGI(surf, self.g._source)
             g._fonts = self.g._fonts
             g.setfillstyle(1, 0)
             g.bar(0, 411, 640, 500)
-            for n in range(1, 9):
-                bx, y = 80 * n - 68, 420
+            for n in range(1, slots + 1):
+                bx, y = step * n - (68 if slots == 8 else 58), 420
                 g.setcolor(15)
                 g.arc(bx + 20, y + 30, 180, 0, 7)
                 g.line(bx + 13, y + 30, bx + 13, y + 20)
@@ -236,7 +243,7 @@ class Hud:
                 g.arc(bx + 27, y + 14, 180, 270, 5)
                 g.line(bx + 18, y + 14, bx + 18, y + 12)
                 g.line(bx + 22, y + 14, bx + 22, y + 12)
-                g.setfillstyle(1, POTION_COLOURS[n - 1])
+                g.setfillstyle(1, colours[n - 1])
                 g.ellipse(bx + 20, y + 12, 0, 180, 2, 1)
                 g.floodfill(bx + 20, y + 20, 15)
                 g.setfillstyle(1, 6)
@@ -244,14 +251,14 @@ class Hud:
                 g.bar(bx + 19, y + 10, bx + 21, y + 13)
                 g.setcolor(15)
                 g.ellipse(bx + 20, y + 12, 180, 360, 2, 1)
-                if n in DARK_LABELS:
+                if n in DARK_LABELS or (n > 8 and colours[n - 1] in LIGHT_COLOURS):
                     g.setcolor(0)
                 g.settextstyle(0, 0, 1)
-                g.outtextxy(80 * n - 51, 443, str(n))
+                g.outtextxy(bx + 17, 443, str(n % 10))       # potion 10 is key 0
             g.setcolor(15)
             g.settextstyle(7, 0, 2)
-            for n in range(1, 9):
-                g.outtextxy(80 * n - 37, 440, str(counts[n - 1]))
+            for n in range(1, slots + 1):
+                g.outtextxy(step * n - (68 if slots == 8 else 58) + 31, 440, str(counts[n - 1]))
             self._belt.blit(surf, (0, 0), pygame.Rect(0, 411, 640, 69))
         self.screen.blit(self._belt, (0, 411), pygame.Rect(0, 0, 640, 69))   # dpotions2() starts at row 411
 
