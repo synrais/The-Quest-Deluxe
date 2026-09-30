@@ -23,7 +23,7 @@ pygame-ce.
 | Feature | Keys | What it does |
 |---|---|---|
 | **FPS mode** | F | The world through the hero's eyes: a retro EGA raycaster drawn from the pack's own pictures. Up/Down walk, Left/Right turn (a free action), Q/E or `,` `.` step sideways, the panel's Map box shows the screen from above (M: the level map), the weapon in hand swings, thrusts or shoots as you attack, and the hero's bust by the coins shows his class, his eye colours and his amulet. The rules don't change: walking is the classic move, so bumping fights, talks and opens doors. |
-| **Combat log** | D | "You hit the imp for 4.", "The orc hits you for 3.", misses, spells, pick-ups, locked doors ("You need the gold key.") and deaths over the bottom of the map; in FPS mode the damage also rises off whoever took it. |
+| **Combat log** | D | "You hit the imp for 4.", "The orc hits you for 3.", misses, spells, pick-ups, locked doors ("You need the gold key.") and deaths over the bottom of the map; in FPS mode the damage can also rise off whoever took it (`floating_numbers` in settings.ini). |
 | **Quest packs** | | Everything the original hardcodes (items, creatures and their traits, classes, spells, tiles, stories, dialogue, shops, level scripts) is data in the pack. |
 | **Bug fixes** | | The original's bugs (the Shield / Ring of Ice swap, the shop memory, questionnaire ties, the item in a tree and more) are fixed: `settings.ini` has them on for every pack, or leaves it to each pack, whose author picks them one by one. `packs/TheQuest` itself keeps them all, so the tests can hold it to the original. |
 | **Past the original's limits** | 9, 0 | More than 20 spells (a spell book with pages), potions 9 and 10, more key colours, and new classes in class changes and the questionnaire. |
@@ -57,6 +57,7 @@ The player's settings, in this folder:
 | `fixes` | `on` (shipped): the original's bugs are fixed in every pack, and the title screen says "Bug fixes: on". `off`: every bug kept, exactly as the original plays. `pack`: as each quest pack says (the editor's Quest tab). |
 | `sound` | `on` or `off`: the PC-speaker tones. Without it, a `sound.txt` holding `0` turns them off, as in the original. |
 | `items_on_top` | `on` (shipped): gold and items are drawn over a creature or the hero standing on them. `off`: under them, as the original draws them. Blood, remains and footprints stay underneath either way. In FPS mode they are always in front. |
+| `floating_numbers` | `off` (shipped): in FPS mode the combat log's lines only. `on`: the damage, "miss" and the like also rise off whoever took them. |
 
 `run_deluxe.py --fixes on|off|pack` and `--sound on|off` override them for one game. The tests never
 read this file: they play each pack as it is.

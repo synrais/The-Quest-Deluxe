@@ -411,7 +411,8 @@ class Renderer:
             g.setcolor(colour)
             g.outtextxy(4, y, text)
             y += 10
-        if not three_d:                             # the rising numbers are FPS mode's; from above, the log
+        if not three_d or (getattr(game, 'settings', None) or {}).get('floating_numbers') != 'on':
+            # the rising numbers are FPS mode's, and only with settings.ini floating_numbers = on
             game.floaters = [f for f in game.floaters if f.get('key') == game.log_key]
             return
         now = pygame.time.get_ticks()

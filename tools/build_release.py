@@ -100,6 +100,7 @@ settings.ini (open it in Notepad):
                   them, exactly as the original plays; pack does what each quest pack says
   sound = on      PC-speaker tones like the original; off for none
   items_on_top = on   gold and items drawn over whoever stands on them; off as the original
+  floating_numbers = off   on: FPS mode's damage and misses also rise off whoever took them
 Saves: saves\\<pack>\\save01.dat to save20.dat.
 {{extra}}""",
 }

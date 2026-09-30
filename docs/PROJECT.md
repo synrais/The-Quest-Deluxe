@@ -63,8 +63,8 @@ game:
   have its own `sprites/bust.png`): the hood in the class colour, the eyes in guy2()'s colours
   (poison, killer, berserk), the necklace in the colour of the amulet worn, only the eyes when
   invisible.
-- On a square, gold and items stand in front of the creature on it; the combat log's rising
-  numbers are plain pixel text, without an edge.
+- On a square, gold and items stand in front of the creature on it. The combat log's rising
+  numbers (plain pixel text) are off unless settings.ini says `floating_numbers = on`.
 - Steps and turns glide over 140 ms. Turning is free (not a game action); a step is the classic move,
   so the rules don't change: `tests/test_view3d.py` plays the same random games from above and in FPS
   mode and requires identical game state after every key.
@@ -79,7 +79,7 @@ test now walks and turns every way in real time with a watchdog.
 
 "You hit the imp for 4.", "The orc hits you for 3.", misses, parries, the Shield absorbing blows,
 spells by name, creatures fighting each other, poison, deaths with the experience gained, pick-ups and
-locked doors, over the bottom of the map; in FPS mode the damage also rises off whoever took it. It
+locked doors, over the bottom of the map; in FPS mode the damage can also rise off whoever took it (`floating_numbers`, off as shipped). It
 only reports: `tests/test_combat_log.py` plays the same games with it off and on and requires the same
 state after every key. It is off in scripted runs, so the lockstep screens still match the classic
 port.
