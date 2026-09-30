@@ -19,6 +19,7 @@ os.environ.setdefault('SDL_VIDEODRIVER', 'dummy')
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.dirname(os.path.dirname(HERE)))
+import engine                                       # noqa: E402,F401  (QUEST_ENGINE=deluxe checks Deluxe)
 
 import pygame  # noqa: E402
 
@@ -48,8 +49,7 @@ def run_case(emu, g, level, grid0, hero, state, dead, killer, seed):
     p.hero.rep, p.hero.exper, p.hero.poisoned = state['rep'], 500, 0
     p.hero.life = p.hero.mlife = 50
     p.skill.hon = state['hon']
-    g.talk_queue = []
-    g.overlay = True
+    g.talk_log = []
     ox, oy = g.world.origin
     emu.load_map(grid0)
     emu.load_room_from_map(hx, hy)
@@ -77,7 +77,7 @@ def run_case(emu, g, level, grid0, hero, state, dead, killer, seed):
     g.combat.check_dead(att_enemy)
     diffs = []
     mine = []
-    for t in g.talk_queue:
+    for t in g.talk_log:
         if t:
             mine += [t[0], t[1]]
     theirs = [t for t in emu.texts]

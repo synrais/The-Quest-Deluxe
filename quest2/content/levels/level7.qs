@@ -5,6 +5,7 @@ START = (36, 98)
 STORIES = [7]                      # newmap() shows story 7
 SHOPS = {(3, 9): 1, (5, 9): 2}
 ASK_TO_LEAVE = False                # newmap() doesn't ask "Want to travel further?" on level 7
+LEAVE_JINGLE = False               # nor when leaving level 7
 
 
 def talk(npc):

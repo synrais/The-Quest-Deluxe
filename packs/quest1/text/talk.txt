@@ -1,0 +1,368 @@
+0 -6 1 "Hello.;
+0 -6 2 "Good day.;
+0 -6 3 "A farmer's life is simple but satisfying.;
+0 -7 1 "What a pleasant day.;
+0 -7 2 "There's scarcely any gossip nowadays.;
+0 -7 3 "You sure are an odd fellow.;
+0 -8 1 "These are dangerous times.;
+0 -8 2 "Traveling is not safe these days.;
+0 -8 3 "I do not wish to talk.;
+0 -9 1 "The fish ain't biting today.;
+0 -9 2 "Got any worms? I'm all out.;
+0 -9 3 "If I had more money,I'd buy me some new clothes.;
+0 -10 1 "Forgive life and life will forgive you.;
+0 -10 2 "The mind is one's greatest weapon.;
+0 -10 3 "Live and let live.;
+0 -11 1 "I will not give you any money,so don't even try begging.;
+0 -11 2 "Don't breath on me. You probably have some disease.;
+0 -11 3 "My,my. How bold the commoners are these days!;
+0 -12 1 "Don't even think of trying to steal my jewelry.;
+0 -12 2 "Leave me alone before I call the guards!;
+0 -12 3 "How dare you approach me? Can't you see I am busy!;
+0 -13 1 "You funny,hi hi hi!;
+0 -13 2 "Where is my mommy?;
+0 -13 3 "sdfhsd ha ha werf hei hie hie ha hi!;
+0 -14 1 "It is our duty to devote our lives to faith.;
+0 -14 2 "The Sanctuary of Light awaits you.;
+0 -14 3 "Live your life without sin and you will be rewarded!;
+0 -100 1 "Serving,master.;
+0 -100 2 "Why did you bring me back from the dead?;
+0 -100 3 "I will slay your enemies.;
+0 -101 1 "Show me your enemies,I will crush them!;
+0 -101 2 "I fear nothing!;
+0 -101 3 "A true warrior is made of stone.;
+0 -102 1 "...;
+0 -102 2 "...;
+0 -102 3 "...;
+
+1 -6 10 "My daughter has been kidnapped two days ago. If you see her,please"
+"bring her back. I will give you all the money I have if you find her!;
+1 -6 11 "My daughter!!! You brought her back! Thank you,brave lad!"
+"Here is the money I promised. Take it,please.;
+1 -6 12 "My love's father wouldn't let us get married,he's a cruel man."
+"Please,if you find her,take her to me and not to her father.;
+1 -6 13 "My love,you're alive! I don't know how to thank you,good man. We'll"
+"never forget your help. We must run away now,but keep this. Farewell!;
+1 -6 14 "Greedy bastard,you know not the meaning of love! We will"
+"never be able get married now.;
+1 -6 15 "I saw a bunch of monsters taking a girl somewhere. I think they"
+"were headed south. I wish I could help her,but so many of them... ;
+1 -6 16 "My wife and I worked this land for 15 years. We earn"
+"our money and no hooligan is going to take it from us.;
+1 -6 17 "There's a small shop by the river to the east."
+"I heard they sell all kinds of potions there.;
+1 -7 10 "You saved me! They were gonna kill me. I was so scared. Thank"
+"you! Thank you! Please take me back to my village up north.;
+1 -7 11 "I wonder how the town across the river is faring."
+"Its been months since we last heard from them.;
+1 -8 10 "There were too many of them! We gathered an army but couldn't stop"
+"them. The village was overrun,everyone,killed! Women,children!!;
+1 -8 11 "My death is near,I can fight no longer. Take my weapon"
+"and revenge all those who lost their lives here. Go!;
+1 3 10 "Hehe! Looks like we got ourselves some easy money."
+"We mean you no harm,traveler. All we want is your gold!;
+
+2 -6 10 "There's an old mansion south of here. It used to belong to a rich man."
+"But some say its been overrun by the Bamun refugees. Who knows?;
+2 -6 11 "I wish our local lord,Hamen,would do something about the bandits"
+"in these woods. I was ambushed by them once and barely got away.;
+2 -6 12 "Its been 2 days since my foolish son had gone off to that mansion. I"
+"fear that something awful happened to my boy. I wonder if he's still alive.;
+2 -7 10 "Welcome to Boscan. We are a fishing village located close to the Bamun"
+"border. I heard that there have been sightings of the undead near here.;
+2 -7 11 "My cousin and his son have a house east of here. Please give them"
+"my greetings if you happen to see them. ;
+2 -8 10 "Ah hhh... ahh.. can't... Lord Hamen sent us out here to die! There is"
+"not enough of us out here to protect the villages. Get help,lad! ahh..;
+2 -9 10 "Ay,mate. Don't let mi wife scare ya. There ain't nothing but a few"
+"deer in these woods. Boscan is the safest place in Coholon.;
+2 -9 11 "If you ever encounter a crazy man that lives with animals,beware. I"
+"heard that he's a cannibal. We had to chase him out of our village once.;
+2 -9 12 "There's an island in the middle of the forest. There's something"
+"on it,alright,but how you suppose one can get across the water?;
+2 -9 13 "I heard that there was treasure in that mansion,so I goes to find it."
+"Little did I know that the old place was locked. I got to get me the key.;
+2 -9 14 "Hey there,mate. I've been fishin' here since dawn. Got any"
+"food for me? I forgot my lunch at home and man am I hungry!;
+2 -9 15 "Well! I'll be glad to take that meat of your hands. Thanks a lot,you're"
+"one kind guy. A word of advice for you: stay away from that cannibal.;
+2 -9 16 "How dare you enter our house? You will pay for this with your"
+"flesh. I am going to tare you apart and eat you! Die,deer killer!!!;
+2 -9 17 "I've heard of folk like you! Slaying monsters around these parts and"
+"helping folks out. Here is a gift from me,please take it and good luck.;
+2 8 10 "You've caused enough trouble. These woods belong to us,Bamuns!"
+"You will pay for trying to interfere with Fatebringer's business!;
+
+3 -6 10 "Our town contains many monks. The most intelligent is our leader."
+"He makes all sorts of treaties with the tribes so that we are not attacked.;
+3 -6 11 "Our town is surrounded by 4 tribal keeps. The southwest one"
+"is by far the biggest. It is the stronghold of the tribal king.;
+3 -7 10 "Thank you for trying to save me,I've been in this jail for 2 months."
+"However,we can't escape. We'll never make it out of this keep.;
+3 -7 11 "Half the monks that used to live in our town left. I think that the tribal"
+"lords convinced them to join their side. If that's true,we are doomed.;
+3 -7 12 "I am sorry,our leader is busy right now. No one is allowed in. He never"
+"sleeps anymore. I hate those Golags! They bring us so much grief.;
+3 -7 13 "Wow,I thought we were all gonna die! You came out of nowhere! Are you"
+"married? I'm not. My father has a lot of money...we could move and...;
+3 -8 10 "Hello,stranger. I am truly surprised that you have survived in the desert."
+"The Golags hardly ever let anyone through. Their patrols are everywhere.;
+3 -8 11 "We are guarding the only outpost of civilization in these parts. You are"
+"lucky you found our town,the tribal lords control almost everything here.;
+3 -8 12 "A good friend of mine has been captured and will be executed in the"
+"southeast castle. I can't leave my post here. Please help him if you can.;
+3 -8 13 "Who are you? Well,it doesn't matter. Thank you for your help."
+"Run now! Before they can recover!;
+3 -8 14 "Look here,John,this lad saved my life. I was a goner,they were about"
+"to swing the axe when this guy showed up. I owe you one,lad.;
+3 -8 15 "The Golag king is secretly gathering his armies to make an attack."
+"I sent for help,but I doubt anyone will help us. It seems this is the end.;
+3 -9 10 "Did you know some of those scorpions have gems? I found one on a dead one"
+"a year ago. You don't believe me? Heh! It's your loss.;
+3 -10 10 "Peace to you. As you can see our town is threatened by tribes from all"
+"sides. The only thing keeping us from being attacked is our wise leader.;
+3 -10 11 "I've been waiting so long for this day! Perhaps,too long. If you manage"
+"to escape,go southwest and you'll see a town. Now go!;
+3 -10 12 "This Golag messenger wanted me to surrender the town and betray my"
+"people. The day has come for us to fight. There can be no peace!;
+3 -10 13 "It is no great secret that many of our brethren have been consumed with"
+"greed because of the promises of the tribal lords. It's a disgrace to us all!;
+3 -10 14 "The corrupt monks must be killed,all of them. They have desecrated all that"
+"we stand for. Take upon yourself this mission and you will be rewarded.;
+3 -10 15 "You have done well. I take pride in knowing that one such as yourself"
+"is willing to make the world better. Here is something that will help you.;
+3 -10 16 "They had us cornered,I doubt that we would have lasted much longer."
+"Thank you for your help and may your life be long and prosperous.;
+3 -10 17 "Your help was truly a blessing. Remember,good deeds are seldom"
+"forgotten. Your services will be welcome to our cause.;
+3 -10 18 "You have fought well. If my judgment does not deceive me,you"
+"might have a use for this. Goodbye and may your journey be safe.;
+3 -10 19 "We sent one of our monks as a spy,to keep an eye on the corrupt"
+"ones. Make sure that you do not harm him,for he is one of us.;
+3 -10 20 "Keep it down,someone might hear. If you're wondering,it was me who"
+"helped you in that jail. Now,return the favor by helping my people.;
+3 -10 21 "Young man,on behalf of all the people living in our village,I thank you for your"
+"bravery and your heroic deeds. May the sun and the moon shine upon your path!;
+3 15 10 "Ho ho ho,we have a visitor. You've come after my treasure,have you?"
+"Well,you'll have to go through me!;
+
+4 -6 10 "If the Coholon military can't handle a few robbers and thieves,I hate"
+"to see what would happen if we are invaded by a real army.;
+4 -6 11 "Lord Hamen controls the western part of Coholon. Unfortunately,he is"
+"lazy and foolish. He cares not about the people but only his treasury.;
+4 -6 12 "We know who you are. And I am sure you have seen the state in which"
+"Lord Hamen allows the countryside to be in. Refugees,robbers,thieves...;
+4 -6 13 "Be swift. Do not worry about your reputation. Remember,you are doing"
+"this for the people. As reward,we will give you access to the north road.;
+4 -6 14 "There are 4 lords. They control different parts of Coholon. The king"
+"resides over them. The nobles are below the lords in the hierarchy.;
+4 -6 15 "Shhh...okay. Listen,this noble bought a very rare amulet and gave it"
+"to his wife. Steal it from her and I will give you good money for it.;
+4 -6 16 "Ahhh...you have it! Here is the money,its more than those shops will"
+"give you for it. Nice doing business with you.;
+4 -6 17 "I am so nervous!;
+4 -6 18 "I am sorry,but I knew you couldn't be trusted,so we killed Hamen and"
+"framed you. Soon,every guard will be looking to kill you. You must flee!;
+4 -6 19 "You did it! I doubted your determination,but I guess I was wrong. You"
+"must hurry out of here,soon every guard will be looking to kill you.;
+4 -6 20 "You know what you must do. Now do it! You want to get out of the city,"
+"right?;
+4 -6 21 "One noble has a secret passage out of his house. You must push on"
+"one of the walls and a door will open. Good luck to you.;
+4 -6 22 "Beware of the guards,they are ruthless. Don't think twice about killing"
+"them. They will not think twice about killing you or anyone else in their way.;
+4 -7 10 "Welcome to the capital of Coholon,stranger. Souter is divided into"
+"4 parts: Lower Souter,Upper Souter,Royal Souter,and the slums.;
+4 -7 11 "Please buy something from my husband. He had been unjustly accused"
+"of robbing someone and was hurt by the guards. What poor fortune!;
+4 -7 12 "Hurry,time is being wasted. Do this for all those that are suffering!;
+4 -7 13 "I can't believe that they are not letting us go the Upper City!"
+"This better not last long,I need to stop at the bank.;
+4 -7 14 "I heard that even the guards are afraid to go to the slums.;
+4 -7 15 "I am so nervous!;
+4 -8 10 "Welcome to Souter,traveler. This majestic city is the biggest in all of"
+"Coholon and is the capital. The lords and the king reside here.;
+4 -8 11 "There has not been much trade as of late,many sailors are starving."
+"Some have become pirates and try to steal from city folk. ;
+4 -8 12 "The king has decided to decrease the size of our army. That left many"
+"soldiers,especially archers,homeless. Now they have become brigands.;
+4 -8 13 "Some of the bandits managed to get inside the city. Patrols were sent,"
+"of course,but you should still keep an eye out for shady characters.;
+4 -8 14 "The north road is being blocked off to prevent any more bandits from"
+"getting into Souter. No one can enter or leave the city there.;
+4 -8 15 "Commoners are not allowed to enter Upper Souter. Step away from the"
+"gate.;
+4 -8 16 "Due to recent assassination threats and reports of robbers,his majesty"
+"has ordered that only well-to-do individuals are allowed to enter.;
+4 -8 17 "This is Lord Hamen's palace.;
+4 -8 18 "Unless you were given the palace key,you cannot enter.;
+4 -8 19 "This is Lord Jonn's palace.;
+4 -8 20 "This is Lord Ronan's palace.;
+4 -8 21 "This is Lord Beck's palace.;
+4 -8 22 "Royal Souter is beyond this gate. You cannot pass.;
+4 -8 23 "Glub...Glub..I am so happy! I...glub...got promoted today! Hold this"
+"for me while I go celebrate. Glub...want more wine,girls? I'll go get some.;
+4 -8 24 "You may not leave the city here.;
+4 -8 25 "Heh,no one escapes from the Souter guards.;
+4 -8 26 "What are you doing here? No one is allowed to be in the throne room while Lord"
+"Hamen is meditating.;
+4 -9 10 "I don't trust those guards. They aren't trying to protect us,they are"
+"just doing what they are paid for and nothing more.;
+4 -9 11 "You know what the slums are? Nasty place,trust me. Its dark and all"
+"sorts of scum lives there. At least,that's what I heard.;
+4 -9 12 "As you probably understand,Lord Hamen must be relieved of his duties."
+"You must kill him as soon as possible. Only you can do this difficult task.;
+4 -9 13 "Help! Help! My house is being robbed! Do something! I just came back"
+"from fishing and I find them in my house. Help!;
+4 -9 14 "Thanks a lot,I owe you one.;
+4 -9 15 "Seems that you figured out how we thieves get to Upper Souter. Don't"
+"get us confused with those pirates,though. We have families to feed.;
+4 -9 16 "There is not much to hunt near Souter. A lot of scorpions from the"
+"desert but few deer.;
+4 -10 10 "Listen,I am searching for my daughter. You must help me. Those that stole"
+"her took the northern road out of the city 2 days ago. We must follow them!;
+4 -10 11 "I unite these two as husband and wife and may they forever live in"
+"peace and harmony.;
+4 -11 10 "Did you hear what happened in the desert? Some person defeated the"
+"tribal king and his army all by himself! I'd like to meet that man.;
+4 -11 11 "He was probably sent by Lord Hamen. And people say that lord does"
+"not fulfill his duty! Heh,beating the Golags is quite an accomplishment.;
+4 -11 12 "I need to drop off some money here.;
+4 -11 13 "There is a secret passage to the north road inside my house. Of course,"
+"only I know how to use it. Now get out of here,I have things to do.;
+4 -11 14 "Who are you? How dare you interrupt my thoughts?;
+4 -12 10 "This is the bank,but I doubt you have much to leave there.;
+4 -12 11 "There have been rumors of tribal people in the area near Souter. I wonder"
+"what they are looking for this far from the desert? Oh well...just rumors.;
+4 -12 12 "Help! Help! They almost stole my new amulet. Are they gone?;
+4 15 10 "There he is! Get him!;
+5 -6  10 "I am a jeweler and I need an emerald. If you find one,bring"
+"it to me and I will give you a diamond in return. How about it?;
+5 -6  11 "You have an emerald for me! Good,good,here is a ruby for you."
+"Take it to my brother up north and he will make you necklace out of it.;
+5 -6  12 "You are the second person I've seen come out of these caves. Heh,the"
+"first was an old man. He was in a hurry and didn't stop at our village.;
+5 -6  13 "My brother lives in a village south of here. We are both jewelers."
+"If you have a ruby and 50 coins,I can make you a good necklace.;
+5 -6  14 "I will take 50 coins and your ruby so that I can make your necklace."
+"...Here you go.;
+5 -6  15 "You are...oh...Please don't kill me! I got a family. Please! You want directions? The"
+"nearest west is village of here,and if you follow the citadel you will find the road!;
+5 -7  10 "Magical creatures inhabit the caves. I suggest that you wear magical"
+"armor if you want to go there. But then,why am I helping a murderer?;
+5 -7  11 "This man had a stroke. His heart is too old to take it. He will die."
+"There is nothing I can do...;
+5 -8  10 "Let me open the gate for you,the only way one can follow the road"
+"is to go through the citadel. Wait a minute! You're the assassin!;
+5 -8  11 "You,the treacherous assassin,have come to rescue me? What fate!"
+"I cannot kill you. Here,take this key and go. I have no honor...;
+5 -9  10 "Hey,aren't you that guy the soldiers are looking for? You are a dead"
+"man. They will not let you escape. The only way out is through the citadel.;
+5 -9  11 "A group of armed men came through here a few days ago. They had a"
+"bunch of women with them,all tied up. I didn't like em much.;
+5 -9  12 "Did you hear what happened? An evil ritual was performed here by some"
+"foreign men. The bastards massacred women as a sacrifice.;
+5 -9  13 "These men have fled on a boat that was headed toward Cair. They are"
+"long gone. The closest port is in Souter,but I fear pursuit it's useless.;
+5 -10 10 "I...I was too late! I am sorry...they killed all of them but one. I...am"
+"dying,you must find them! They have my daughter,Amarilla. Please...;
+6 -6  10 "Dear sir,my wife was separated from me during the attack. I know this"
+"is too much to ask,but can you try to find her. I will be forever grateful.;
+6 -6  11 "You found her! Thank you,thank you so much for bringing my wife to"
+"me! I am so glad she is safe.;
+6 -7  10 "You've come to save me from these monsters! Is there a safe place"
+"here? I will go with you until we find it.;
+6 -7  11 "This man said he was my husband?;
+6 -8  10 "Ohh...you must help me. I have a horrible disease. I can barely move."
+"My skin is starting to rot. You must save me. Find the cure!;
+6 -8  11 "Damn! We are too late. The vanguard is probably decimated. They"
+"divided our forces and now it's hopeless... the city is lost!;
+6 -8  12 "I know who you are! If it wasn't for you,the whole army would have"
+"been in Souter during the attack. We would have held them back!;
+6 -8  13 "The cure!! It works,I feel better. Keep this as a gift. However,I think"
+"there is another disease about. A day ago I saw a woman drinking blood.;
+6 -9  10 "We've been hiding here for days. I wonder how long we have until the"
+"Bamuns find us. Have you any news on how the war is going?;
+6 -9  11 "Hmmm,I didn't think I'd see you here again. The way to the slums is"
+"blocked off. One of Fatebringer's generals resides there now.;
+6 -10 10 "The capture of Souter was a horrible thing. So many people died."
+"I saw a couple I married just days ago die before my very eyes.;
+6 -11 10 "My house was ransacked by these monsters. So much wealth...now is."
+"all gone. What should I do? Tell me! I am worthless. What do I do??;
+6 -12 10 "You are such a strong man. Promise me that if we are attacked you"
+"will defend me! You are the only hope I have. I don't want to die here!;
+6 -12 11 "A plague is rampant in the city. However,I think I found the cure. If"
+"you become ill,eat seaweed and it will hopefully destroy the toxins.;
+6  34 11 "Thought you killed me?? Hahaha! I will heal myself! Die,fool!;
+6  34 10 "Thought you killed me?? Haha...what's this? Not enough mana?! No!!!"
+"Ohh..ahh..ohh..hehe...oh..hehe...beware! Beware of the gi..ohh;
+6  35 10 "Hahaha! You finally figured out it was me! Hahaha! You might have"
+"killed some skeletons,but have you what it takes to slay a demon?;
+6  36 10 "Noooo!!! You? You have killed the mighty Fatebringer? Death,this is"
+"what you look like? Hahaha...it will not be long until you join me...;
+7 -6  10 "Welcome to Cair,traveler. Make sure that you follow our laws,and your"
+"stay here will be pleasant. We are a society of order and justice.;
+7 -6  11 "A man known as the Deceiver serves as the link between the two"
+"factions. He has the responsibility of maintaining unity and peace.;
+7 -6  12	"The Deceiver has recently been on a journey into foreign lands."
+"I heard that he has brought with a him a beauty of a woman.;
+7 -7  10 "The prosperity of our country can only be attributed to the delicate balance of"
+"power between the Holy Order and the Damned. Seldom are there any disputes.;
+7 -7  11 "Did you hear the news? Deathbringer's brother,Fatebringer,was killed"
+"in Coholon. This must be so painful to him,they were so close.;
+7 -9  10 "I ain't got nothin' to say to you. Just watch your tongue in front"
+"of the Holy Order,and they won't bother you.;
+7 -9 11	"I guess she's his gift to Deathbringer for the Moonlight Feast."
+"It's such a shame that they'll sacrifice her. Oh well.;
+7 -10 10 "Long ago,Cair was in constant war between the Damned and the Holy"
+"Order. Eventually,they united and we've lived in harmony ever since.;
+7 -11 10 "Shh...I must entrust you with a task. There is a corrupt paladin inside the"
+"Sanctuary of Light. Kill him and I will reward you beyond your imagination!;
+7 -11 11 "Good work,lad. I knew you could do it. The filthy traitor wanted to overthrow"
+"Lightbringer. Here is the reward I promised. Farewell.;
+7 -11 12 "Good work and all,but unfortunately Lightbringer is dead and I am no longer"
+"involved with the Holy Order. I'll contact you if your services are needed again.;
+7 -11 13 "Ahha! Fancy meeting you here. Such good fortune to witness your brave acts."
+"I'm not all mouth,you see. Here is something for you. Goodbye,young hero!;
+7 -11 14 "Now who are you? Wait... no. Thought I knew you.;
+7 -12 10 "It's true. Remember when Deathbringer went to Bamun to visit his"
+"brother? Its just heartbreaking! What's the world coming to?!;
+7 -12 11 "The Holy Order soldiers are guarding something west of here. I wonder what it is?"
+"Probably,something very expensive.;
+7 -14 10 "This is the assassin from Coholon we've been looking for! Murder is an"
+"ugly sin,boy,and it's time for retribution! In the name of the Holy Order!;
+7 -14 11 "Wait! Listen,child. Lightbringer must be destroyed for his has brought shame"
+"upon the Holy Order. He had broken his vow of chastity! I saw him with a woman!;
+7 -14 12 "Child,you do not understand! Lightbringer must not lead the Holy Order. He has"
+"tainted himself. Kill him for me and I will try to aid you in your quest.;
+7 -14 13 "You have done well. The girl you are searching for is in Deathbringer's temple."
+"To save her,you must enter it through a hidden passage in the north-west side.;
+7 -15 10 "Sir,you came all the way here to save me? I am forever grateful! Let us flee this"
+"retched country. No? Then,with all my heart I hope you will be triumphant.;
+7 -15 11 "Alas,my hero,you are too late to save me. Why is it so dark? So cold? I...I"
+"am dying. Save yourself! I bless you in my dying breath! Go and destroy Him!;
+7  41 10 "Ah,the famed assassin finally comes to kill me. Well,I am no easy target,fiend!"
+"I see fear in your eyes. By my honor,you will live no more!;
+7  41 11 "Mercy! I beg you,spare my life! Please,if there is still good left in"
+"you,let me live! Here,take this key to Deceiver's palace.;
+7  41 12 "I damn thee!;
+7  43 10 "Look who's come to our feast! It's my brother's murderer from Coholon! You dare"
+"show your face in my court? I have no choice but to slay you. Prepare to die!;
+7  43 11 "You are not of this earth! You do not belong here. You are too strong!"
+"I am sorry,brother. I failed...I could not revenge you...;
+7  45 10 "Looks like we finally meet. The hero from Coholon comes to avenge the untimely"
+"death of his young wife. Hehe! Soon you shall join her,fool. You are trapped!;
+7  45 11 "I am the master of deception. You have no chance! Who am I now?;
+7  45 12 "The scorpions are coming out of the walls! Look at them! You think they are just"
+"illusions? Haha... Destroy Him!!;
+7  45 13 "All right! No more foolishness. You are a worthy opponent,but this fight no longer"
+"amuses me. It's time to do battle. Face my unmatched strength and despair!;
+7  45 14 "O...ooh...what is the? Blood...is it mine? How? No more tricks left. I fear that you"
+"have killed me. Will we meet again? To battle in eternity?;
+
+
+
+
+
+
+

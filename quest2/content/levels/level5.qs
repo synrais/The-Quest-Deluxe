@@ -5,6 +5,7 @@ START = (85, 95)
 STORIES = [5]                      # newmap() shows story 5
 SHOPS = {(4, 10): 1, (3, 10): 2, (9, 4): 2}
 TELEPORT = (20, 0)                  # teleporter1(): the pad (item 999) moves the hero 20 squares east
+LEAVE_JINGLE = False               # newmap() plays no jingle when leaving level 5
 
 
 def talk(npc):

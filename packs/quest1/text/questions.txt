@@ -1,0 +1,75 @@
+When you were 10,a sickly boy who was not liked by other
+kids attended your school and was in your class. One day,
+you saw 2 kids your age hitting this boy.
+A. You went to tell the teacher what was happening.
+1
+B. You ignored the incident and walked away.
+10
+C. You rushed to his aid.
+1000
+When you were 12,you went to see a magician's performance.
+After the show:
+
+A. You felt bad that you can't do magic.
+10
+B. You tried to find the mage to ask him how he does magic.
+100
+C. Told your friends that anyone can do those silly tricks.
+1000
+When you were 13,you and a friend were called names by a
+group of  kids. Your reaction was:
+
+A. Ignore them and continue with your business.
+1
+B. Call them names in return.
+1000
+C. Ask the kids why they are being so hostile.
+100
+A famous knight was traveling through your town and stopped
+at the inn for the night.
+
+A. You thought that this wasn't exciting and went to sleep.
+100
+B. You tried to sneak past the innkeeper to look at the knight.
+1000
+C. You checked his saddle for anything he might not need.
+10
+One day when you were 14,your mother asked you to go to the
+neighboring town to buy some seeds and then plant them.
+
+A. You did as you were told.
+1
+B. You asked a friend that owed you a favor to do the task for you.
+100
+C. You refused to do it and said you were too old to plant flowers.
+10
+One night,a friend woke you up at midnight and asked you if
+you wanted to help him find his dog that ran away a few hours
+ago.
+A. You went with him to find the dog.
+10
+B. You told him you were too sleepy.
+1000
+C. You told him it'll be easier to find the dog in the morning.
+1
+When you were 17,a girl that you knew was in a relationship with
+your friend asked you if you wanted to help her pick roses in the
+forest.
+A. You gladly accepted her invitation.
+10
+B. You did not want to risk losing a friend over a girl and refused.
+100
+C. You calmly told her that roses don't grow in the nearby forest.
+1
+During a hunting trip,you were separated from the group and got
+lost. Suddenly,some dark shape started to emerge from behind a
+tree.
+A. You turned and ran,shouting for help.
+100
+B. You waited for it to get closer so that you have a better look.
+1
+C. You quickly shot it with a bow,not giving it a chance to attack.
+1000
+
+
+

@@ -85,9 +85,13 @@ def monsmove(g: 'Game') -> None:
                     e.type = 23
                     w.sq(e.x, e.y).mon = 23
                 dmg = monster_vs_monster(e, o)
+                mw = 1 if e.x > o.x else 3 if e.x < o.x else 4 if o.y > e.y else 2
                 if dmg > 0:
+                    g.play_at('ahit', o.x, o.y, mw, 1)
                     o.life -= dmg
                     g.combat.check_dead(e)
+                else:
+                    g.play_at('bhit', o.x, o.y, mw)
                 e.moved = True
                 fought = not ranok
                 break

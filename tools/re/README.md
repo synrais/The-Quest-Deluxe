@@ -10,7 +10,7 @@ Python 3.10+ and `pip install capstone`.
 | Script | What it does |
 |---|---|
 | `tds.py` | Parses the TDS debug tables (symbols, modules, scopes, types, members, names). |
-| `types.py` | Prints the game's structs (`heroo`, `inve`, `monsters`, `skills`, `statuss`, `square`). |
+| `structs.py` | Prints the game's structs (`heroo`, `inve`, `monsters`, `skills`, `statuss`, `square`). |
 | `qdis.py` | Annotated disassembly. Writes `out/asm/<SEG>_<func>.asm`. Call names, globals, locals and string literals are resolved. |
 | `lift.py` | "Lifts" the unoptimised Borland code into pseudo-C with gotos. Writes `out/pc/<SEG>_<func>.c`. This is the easiest way to read the game logic. |
 
@@ -49,6 +49,11 @@ matching `.asm` file.
 |---|---|
 | `emu.py` | Loads the exe into the Unicorn x86 emulator and calls any game function. BGI calls are intercepted and drawn with `quest2/bgi.py`. `draw_tile(floor=…, wall=…, mon=…, item=…, deco=…, gold=…)` runs `clean2()` on one map square. |
 | `sprite_check.py` | Compares every PNG in `sprites/` with what the game draws. It writes `out/sprites/report.txt`, plus an image (original, PNG, diff) for each sprite that differs. |
+| `verify_anims.py` | Runs every animation, jingle and hero drawing in `quest2/anim.py` next to the original (`aflame()`, `ahit()`, `guy2()`, `song_key()` ...) with many arguments and the same `rand()` seed, and checks that both make exactly the same BGI calls, tones and delays. |
+| `verify_saves.py` | Runs the exe's own `save()` and `load2()` on random game states next to `quest2/savefile.py`: the saved text must match character for character, and the loaded values must match. Also round-trips `data/SAVE01.DAT`. |
+| `verify_bgi.py` | Runs the Borland graphics kernel inside the exe (it clips lines, draws thick lines, and does the arcs, ellipses, sectors, polygons and `bar3d` that EGAVGA.BGI leaves to it) with a recording stand-in for the driver, and compares the result pixel for pixel with `quest2/bgi.py` for random lines, rectangles, bars, `bar3d`, ellipses and arcs (1 and 3 pixels), `fillellipse`, `sector`, `drawpoly` and `fillpoly`. |
+| `verify_invshop.py` | Runs the exe's `inventory()` and `peddler()` next to `quest2/invshop.py` with random bags, shops and key presses: the same drawing, tones, drops, purchases and resulting bag. |
+| `bag_icons.py` | Renders the item pictures `bagdraw()` uses in the bag and the shop into `sprites/bag/`. |
 
 ```bash
 pip install unicorn
@@ -56,7 +61,8 @@ python sprite_check.py            # all sprites
 python sprite_check.py enemy_2    # just one
 ```
 
-`bgi.py` matches Borland's lines, midpoint circles, fill patterns and 4-way flood fill exactly. It
-approximates ellipses whose two radii differ, thick (3-pixel) curves, and `bar3d`/`fillpoly`. Where
-a sprite uses one of those, a small difference is usually the emulator, not the sprite. The DOSBox
-screenshots settled Wishing Well, Table and Moose that way.
+`bgi.py` draws every shape the game uses exactly as the original: lines (clipped as the kernel
+clips them), rectangles, bars and fill patterns, `bar3d`, ellipses and arcs of any radii at 1 or 3
+pixels, `fillellipse`, `sector`/`pieslice`, `drawpoly`, `fillpoly` and 4-way flood fill
+(`verify_bgi.py` checks the kernel-drawn ones). So `sprite_check.py` differences are in the PNGs.
+All sprites match except the invisible wraith, which the game never draws.

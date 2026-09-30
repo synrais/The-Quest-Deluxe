@@ -7,10 +7,10 @@ import re
 import pygame
 
 from .formats import ROOT
-from .state import CLASS_NAMES
 from .world import ROOM
 from .bgi import BGI
 from .hud import Hud
+from . import anim
 
 SPRITES_DIR = os.path.join(ROOT, 'sprites')
 W, H = 640, 480
@@ -26,6 +26,7 @@ _SPRITE_RE = re.compile(r'^(floor|wall|enemy|object|extra|spell)_(-?\d+)_?(?:\[(
 class Sprites:
     def __init__(self):
         self.images: dict[tuple[str, int], pygame.Surface] = {}
+        self.bag: dict[int, pygame.Surface] = {}
         self.names: dict[tuple[str, int], str] = {}
         self.hero: dict[str, pygame.Surface] = {}
         self.gold = None
@@ -45,6 +46,12 @@ class Sprites:
                 self.hero[stem[5:]] = pygame.image.load(path).convert_alpha()
             elif stem == 'gold':
                 self.gold = pygame.image.load(path).convert_alpha()
+        # bagdraw()'s own pictures (tools/re/bag_icons.py): a whole 40x40 cell, grey background included
+        bag_dir = os.path.join(SPRITES_DIR, 'bag')
+        if os.path.isdir(bag_dir):
+            for f in os.listdir(bag_dir):
+                if f.startswith('bag_') and f.endswith('.png'):
+                    self.bag[int(f[4:-4])] = pygame.image.load(os.path.join(bag_dir, f)).convert()
 
     def get(self, kind: str, n: int):
         return self.images.get((kind, n))
@@ -85,44 +92,83 @@ class Renderer:
             else:
                 pygame.draw.circle(surf, EGA[12] if q.mon > 0 else EGA[11], (px + 20, py + 20), 12)
 
+    def draw_hero(self, scr, game, hx, hy):
+        """guy2(), ported call for call (quest2.anim.draw_guy2), at pixel position (hx, hy)."""
+        p, st = game.player, game.status
+        self.bgi.s = scr
+        anim.draw_guy2(self.bgi, hx // TILE + 1, hy // TILE + 1, p.hero.type, p.hero.invisible, p.hero.poisoned,
+                       st.killer, st.powboost, st.Shield, st.fShield)
+
+    # ── the original's animations ─────────────────────────────────────────────
+    def play(self, game, gen, fast=False, redraw=True):
+        """Run an animation generator (quest2.anim) on top of the current frame, blocking, as the
+        original does. Each yielded value is a delay() in ms; time is kept exactly, and frames are
+        only shown when there's time (or at least every 1/60 s)."""
+        if fast:
+            for _ in gen:
+                pass
+            return
+        if redraw:
+            self.draw(game)
+        self.bgi.s = self.screen
+        clock = pygame.time.get_ticks
+        target = shown = clock()
+        for ms in gen:
+            target += max(0, ms)
+            now = clock()
+            if now < target or now - shown >= 16:
+                self.present()
+                shown = clock()
+            pygame.event.pump()                  # keys pressed meanwhile stay queued, like the BIOS buffer
+            wait = target - clock()
+            if wait > 0:
+                pygame.time.wait(wait)
+        self.present()
+
+    def wait(self, surface, ms, fast=False):
+        """delay(ms) while an original key loop owns the screen: show its surface, then wait."""
+        if fast:
+            return
+        self.screen.blit(surface, (0, 0))
+        self.present()
+        pygame.event.pump()
+        pygame.time.wait(max(0, ms))
+
+    def wait_talk(self, game, text, fast=False):
+        """talk()'s getch loop: the message stays in the strip until Space is pressed."""
+        if fast:
+            return
+        from .ui import TalkBox
+        box = TalkBox(text)
+        clock = pygame.time.Clock()
+        while game.running:
+            self.draw(game, present=False)
+            box.draw(self, self.screen)
+            self.present()
+            for ev in pygame.event.get():
+                if ev.type == pygame.QUIT:
+                    game.running = False
+                elif ev.type == pygame.KEYDOWN and ev.key == pygame.K_SPACE:
+                    return
+            clock.tick(30)
+
     # ── frame ─────────────────────────────────────────────────────────────────
-    def draw(self, game):
+    def draw(self, game, present=True):
         self.game = game
         scr = self.screen
         scr.fill((0, 0, 0))
         if game.overlay and game.overlay.covers_map or not game.world.grid:
             if game.overlay:
                 game.overlay.draw(self, scr)
-            self.present()
+            if present:
+                self.present()
             return
         w, p = game.world, game.player
         ox, oy = w.origin
         for x, y in w.room_tiles():
             self.draw_tile(scr, (x - ox) * TILE, (y - oy) * TILE, w.grid[x][y])
-        hero = self.sprites.hero.get(CLASS_NAMES[p.hero.type])
         hx, hy = (p.X - ox) * TILE, (p.Y - oy) * TILE
-        if hero:
-            if p.hero.invisible > 0:
-                ghost = hero.copy()
-                ghost.set_alpha(110)
-                scr.blit(ghost, (hx, hy))
-            else:
-                scr.blit(hero, (hx, hy))
-        else:
-            pygame.draw.circle(scr, EGA[15], (hx + 20, hy + 20), 14)
-        if game.status.Shield > 0 or game.status.fShield > 0:
-            pygame.draw.circle(scr, EGA[9] if game.status.Shield > 0 else EGA[12], (hx + 20, hy + 20), 21, 2)
-        for kind, sid, x, y in game.fx:
-            if kind == 'spell' and w.in_room(x, y):
-                icon = self.sprites.get('spell', sid)
-                if icon:
-                    fx = icon.copy()
-                    fx.set_alpha(170)
-                    scr.blit(fx, ((x - ox) * TILE, (y - oy) * TILE))
-            elif kind == 'teleport' and w.in_room(x, y):
-                cx = (x - ox) * TILE                   # teleporter1/2: three blue rings, top to bottom
-                for ry in (9, 18, 27):
-                    pygame.draw.ellipse(scr, EGA[1], (cx + 10, (y - oy) * TILE + ry - 2, 20, 4), 1)
+        self.draw_hero(scr, game, hx, hy)
         t = game.target
         if t is not None and t in w.enemies:
             pygame.draw.rect(scr, EGA[12], ((t.x - ox) * TILE, (t.y - oy) * TILE, TILE, TILE), 1)
@@ -134,7 +180,8 @@ class Renderer:
         self.draw_message(scr, game)
         if game.overlay:
             game.overlay.draw(self, scr)
-        self.present()
+        if present:
+            self.present()
 
     def draw_message(self, scr, game):
         """The bottom strip shows this turn's messages, or the potion belt when there are none."""

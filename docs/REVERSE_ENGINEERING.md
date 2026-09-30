@@ -140,6 +140,73 @@ stroke fonts and the 8×8 ROM font. `quest2/hud.py` ports `stats()`, `dlife2()`,
 `dcoins()`, `dmoney()`, `dkeys2()`, `dmap()` and `dpotions2()` call for call. The fonts the game uses:
 Gothic (4) for page titles, Complex (8) for the stat sheet, Simplex (6) for story and talk,
 Triplex (1) for the spellbook, Triplex Script (7) for the message strip, and Sans (3) for gold.
+
+EGAVGA.BGI itself only puts pixels, 1-pixel lines and bars. The Borland kernel in the exe (after
+`__GRP_ovr`) sits in front of it as a pseudo-driver: it clips every line to the screen first
+(Cohen-Sutherland, the slope taken once from the whole line, intersections rounded toward zero, so
+a clipped line's pixels can differ from the visible part of the whole line), draws a 3-pixel line
+as three 1-pixel lines offset across it, and draws `rectangle()` as four `line()` calls. The
+driver's ARC, PIESLICE, FILLED ELLIPSE, FILLPOLY and BAR3D entries are "emulate" slots, which the
+kernel patches at start-up with a far call into its own code, so those shapes are the kernel's:
+
+- **1-pixel arcs and ellipses:** an integer midpoint ellipse scaled by 100 × max(rx, ry)²; an arc
+  keeps the pixels whose cheap "pseudo-angle" (one quadrant per 2000) lies between those of its
+  end points. A sweep under 2 degrees plots just the end point.
+- **`fillellipse`:** a bar across each row the ellipse steps reach, then the outline as an arc.
+- **`fillpoly`:** a scan-line fill from the lowest y up to (not including) the highest, each edge
+  counted on rows min(y) ≤ row < max(y), crossings rounded toward zero and filled in pairs; then
+  the outline.
+- **`sector`/`pieslice`:** the angles are taken mod 360 and put in increasing order (so a start
+  above the end draws the other wedge). Each quadrant's arc pixels plus the centre are filled as a
+  polygon and the arc outlined; then the two radii.
+- **`bar3d`:** the fill inside the front face only, the face outlined, and the side and top raised by
+  depth × 3 / 4.
+
+Thick (3-pixel) circles and arcs, such as the key outlines in `dkeys2()`, work differently. The
+kernel takes one point per degree from start to end: x = cx + (rx × sin(a + 90)) and
+y = cy − (ry × sin(a)), with sin from its own table of sin × 32768 values (rounded down), and each
+product rounded down. It collects the points as a polygon: a repeat of the first point is dropped
+while it is still the only point, and returning to the first point closes the path. It then draws
+each segment as a thick line, including zero-length ones. So the ring is a pixel narrower than a
+brushed circle and slightly lopsided, and the top of a circle gets one stray pixel above it.
+
+`bgi.py` does all of this, and `tools/re/verify_bgi.py` checks it against the kernel code. The key
+panel matches the DOSBox screenshots exactly, and every sprite matches what the game draws.
+
+### Animations and sound
+
+The original has **no combat text**. Hits, misses, blocks, spells and deaths show only as short
+animations drawn over the map, with PC-speaker tones. They block the game while they play, like
+everything in the original. `quest2/anim.py` ports all of them call for call as generators that yield
+each `delay()`, and `tools/re/verify_anims.py` checks each one against the exe: the same BGI calls,
+tones and delays, in the same order, with the same `rand()` draws.
+
+- **Hero melee (`main2`):** `ahit(square, side, 1)` (white stroke, high tone) on a hit and
+  `bhit(square, side)` (grey disc) on a miss. The side is where the blow comes from: 1 right,
+  2 below, 3 left, 4 above. There's a 100 ms pause around the Ambidexterity weapon swap and before a
+  double strike. A ranged weapon in melee beeps (150 Hz). A magic weapon rings when it deals damage
+  (`herohit`).
+- **Enemy melee:** `ahit(hero, side, 2)` (low tone) on a hit, `bhit2(hero, side)` for a parry, and
+  two falling tones when the Shield spell absorbs the blow (`monhit`, `hurt`). Before the enemies act,
+  `main2` waits 100 ms (50 ms with no hostiles on screen).
+- **Missiles:** `sthit` (sling), `arhit` (bows) and `bolthit` (crossbow). The hero's miss is
+  `bhit(6)` plus a 150 Hz beep; a monster's miss shows nothing.
+- **Spells (`cast`):** `dcast()` (the caster's eyes flicker) for every cast, then the spell's own
+  animation. A fizzle is `dcast()` plus a 50 Hz beep. A spell that does no damage shows `bhit(5)`.
+  Monsters' spells hurt first and animate after.
+- **Deaths:** every death beeps (200 then 500 Hz, `deadenemycheck`). The hero's are `dying2()`
+  ("You are bleeding!") and `death2()`. `death()` then asks "Want to load?". On No, a black box
+  grows from the middle of the screen and the title menu returns.
+- **Other beeps:** doors (400 Hz), picking things up (300/400), a full backpack (150), potions
+  (740), conversations (a 500/600/500 chime), and the `reput2`, `honor`, `cantsave` and `noarrows2`
+  warnings. The jingles are `song_key()` for a key, `song_jazz()` for a level-up, and
+  `song_bevcop()` for a new level, except when leaving levels 5 and 7.
+- **The hero (`guy2`)** is drawn in code, not from a sprite. While invisible **only the eyes are
+  drawn**. The eyes are green when poisoned, red with the killer switch, and light red under a
+  Berserker potion. The Shield spell adds a yellow triple ring, Shield of Fire a red one.
+- **Sound on/off:** `asound()` reads `sound.txt` on every call and beeps only if it holds 1 (the
+  manual: "1=sound, 0=no sound"). Quest II reads `sound.txt` from the game folder, then `data/`, then
+  `TheQuest.zip` (which ships 1).
 - **Kills (`monsdeath2`):** the hero's remaining exp-to-level goes down by the monster's
   experience value, and the loot table is rolled. Both are now in `quest2/content/monsters.json`.
 - **Reputation:** killing an NPC while at least one other NPC is on the screen costs 3 reputation
@@ -151,8 +218,63 @@ Triplex (1) for the spellbook, Triplex Script (7) for the message strip, and San
 - **Honour (fault):** attacking or casting at an enemy sets `hon` 1→2. While `hon == 2` and hostiles
   remain, you can't leave the screen ("It is not honorable to flee from your enemy!"). A kill or a
   new screen resets it to 1.
-- **Teleporter (item 999):** on level 5 the pad moves the hero 20 tiles east. On other levels it
-  only plays the effect.
+- **Teleporter (item 999):** `teleporter1()` plays on the pad (after a 500 ms pause), then on level 5
+  the hero moves 20 tiles east, and `teleporter2()` plays where they land. On other levels only the
+  rings play.
+
+## The inventory and the shops
+
+`inventory()` and `peddler()` are ported call for call in `quest2/invshop.py`, and
+`tools/re/verify_invshop.py` runs them next to the exe with random bags, shops and key presses.
+The drawing, tones, drops, prices and resulting bag all match.
+
+- **Inventory (i):** the cursor starts on the first backpack cell. Enter uses an item if the hero is
+  strong and clever enough (a chime), or beeps (100 Hz). Where an item goes depends on its number:
+  101-199 body, 201-299 weapon, 301-399 off-hand, 401-499 head, 501-599 neck, 601-699 off-hand ammunition,
+  topping up a worn stack of the same kind. With Ambidexterity a light second weapon, or a second
+  shield, goes in the other hand. A two-handed weapon empties the off-hand, and is undone if the
+  backpack is full. Backspace takes a worn item off, or drops a backpack item on the ground (quest
+  items, 900 and up, only beep). i or Esc closes.
+- **The hero is passed by value.** Whatever `inventory()` does to the hero's max life and mana (it
+  adds and removes items' STR and INT there) is thrown away when the page closes, and
+  `statusupdate()` rebuilds the stats. So items never raise max life or mana.
+- **Shops:** `peddler()` shows 4 x 10 wares, with a red X on what the hero can't afford. Potions cost
+  `price * 2 * (level - 1)` after level 1, and Bargaining takes 30% off everything else. Enter buys (600
+  then 700 Hz) or beeps (100 Hz). s or i opens the selling page (`inventory(2)`, 60% of the price,
+  Backspace sells). b returns to buying, and Esc leaves. A shop file with fewer than 40 wares
+  leaves the rest empty.
+- **Pictures:** in the bag and the shop, items are drawn by different routines from the map, bigger
+  and with the count for ammunition. `tools/re/bag_icons.py` renders them from the exe into
+  `sprites/bag/`.
+
+## Saving and loading
+
+The original keeps **one save file per game**: `data\saveNN.dat`, NN = 01..20. Quest II uses the same
+files, so saves from the original load in Quest II and the other way round (`quest2/savefile.py`;
+`tools/re/verify_saves.py` checks it against the exe's own `save()` and `load2()`).
+
+- **New game (`newgame()`):** after story 0, `newsave()` takes the first slot with no file and reserves
+  it with a file holding `-1` (plain text). A reserved slot is reused by the next new game. With all 20
+  taken: "Error: you have too many save files! You need to delete at least one to play." It reserves
+  the slot even if Esc leaves the story. After creation and story 1 the game saves itself silently.
+- **Home / v:** "Want to save? (Y)es (N)o", unless monsters are about (`cantsave()`). Yes plays a
+  chime and shows "Saving. . .". **Insert / l:** "Want to load? (Y)es (N)o" reloads the game's own
+  slot. **Esc:** "Want to quit? (Y)es (N)o" goes back to the title without saving.
+- **Load Game (`loadscreen()`):** "Available Games" lists slots 1, 2, 3... with class and level, and
+  **stops at the first missing or reserved slot**, so games after a gap are not listed. Up/Down click,
+  Enter loads without asking.
+- **Death:** `death()` calls `load()`, so "Want to load?" reloads the last save.
+- **Level 7:** one conversation asks "Want to save?" by itself.
+- **The file:** numbers as text, encoded like the level files (byte + 0x51, except space, CR and LF).
+  It holds the header `level class`, the 10,000 map squares (the current screen as it was on arrival),
+  the 100 live squares of the current screen, `X Y ax ay`, the hero (`mlife life mmana mana bstr bintl
+  bdex bacc rep exper`), the inventory (`bkey rkey ykey coins rose red purple blue yellow white cyan
+  black`), 100 creature records, the bag and book cells, spells, the automap (each value followed by a
+  blank line), the F-keys (two blank lines each), skills, `mons ems killer armboost powboost Shield level
+  mission1`, `invisible poisoned mission2 fShield`, and `p1 p2 p3`. The derived stats (dex, acc, intl,
+  str, def, atk, power, warm, marm) are rebuilt on load. `save()` hands `fprintf` five numbers for
+  four `%d`s, so `st.saveslot` is never written. `code()` writes the last newline twice, so every
+  save ends with a blank line. The full layout is at the top of `quest2/savefile.py`.
 
 ## How levels and events work
 

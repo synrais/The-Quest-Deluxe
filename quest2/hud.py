@@ -261,8 +261,8 @@ class Hud:
             g.settextstyle(7, 0, 2)
             for n in range(1, 9):
                 g.outtextxy(80 * n - 37, 440, str(counts[n - 1]))
-            self._belt.blit(surf, (0, 0), pygame.Rect(0, 410, 640, 70))
-        self.screen.blit(self._belt, (0, 410))
+            self._belt.blit(surf, (0, 0), pygame.Rect(0, 411, 640, 69))
+        self.screen.blit(self._belt, (0, 411), pygame.Rect(0, 0, 640, 69))   # dpotions2() starts at row 411
 
     def draw_messages(self, lines):
         """Messages go where the belt is, in the game's message font (settextstyle(7,0,2) at 9,413)."""

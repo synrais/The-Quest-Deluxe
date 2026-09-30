@@ -61,7 +61,7 @@ def check(w):
         room(e.x, e.y).mon = 35
         room(7, 5).mon = 31
         talk(35)
-        effect('flash')
+        effect('screen_flash', 2)                 # the screen flashes green
         poison()
         restart()                                 # the original starts the scan again (at index 1)
         attacker = 0                              # ...and from now on credits kills to creature 0

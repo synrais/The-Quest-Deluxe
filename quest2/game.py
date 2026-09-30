@@ -7,7 +7,7 @@ Keys (as in the original):
   s                 spell book       F1-F9      cast bound spell
   i                 inventory        c          character sheet
   k                 killer switch    v / Home   save      l / Insert  load
-  Esc               menu
+  Esc               quit to the title (asks first)
 """
 from __future__ import annotations
 
@@ -17,28 +17,107 @@ from dataclasses import asdict
 
 import pygame
 
-from .formats import GameData, Square, MAP_SIZE
-from .state import (Status, Player, Hero, Inventory, Skills, new_player, POTION_FIELDS, BACKPACK, KNIGHT,
-                    SLOT_WEAPON, SLOT_OFFHAND, IT_REQ_STR, IT_REQ_INT, IT_KIND, IT_STR, IT_INT, Enemy)
-from .world import World, screen_of
+from .formats import GameData, Square, MAP_SIZE, DATA_DIR
+from .state import Status, Player, Hero, Inventory, Skills, new_player, POTION_FIELDS, KNIGHT, Enemy
+from .world import World, screen_of, room_origin
+from .savefile import SaveData, Slots
+from . import savefile
 from . import rules
 from .rules import SP_RANGE, SP_INT
 from .combat import Combat
 from .magic import Magic
 from .ai import monsmove
 from .events import Events
-from .render import Renderer
+from .render import Renderer, TILE
+from .speaker import Speaker, sound_setting
+from . import anim
+from . import invshop
 from . import ui
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CONTENT = os.path.join(os.path.dirname(__file__), 'content')
-SAVE_DIR = os.path.join(ROOT, 'saves')
-
-DEATH_LINES = ['You fell to the ground at the feet of your enemies...', 'How does the agony of defeat taste?',
-               'Life is a dream. One day we must all wake up. (WoT)']
 
 DIRS = {pygame.K_LEFT: (-1, 0), pygame.K_RIGHT: (1, 0), pygame.K_UP: (0, -1), pygame.K_DOWN: (0, 1),
         pygame.K_KP4: (-1, 0), pygame.K_KP6: (1, 0), pygame.K_KP8: (0, -1), pygame.K_KP2: (0, 1)}
+
+
+class ScreenHost(anim.Host):
+    """Where the original's animations draw in the game: the real screen, the speaker, and the
+    renderer's tiles for clean2()/guy2() (1-based screen squares)."""
+
+    def __init__(self, game):
+        super().__init__(game.renderer.bgi)
+        self.game = game
+        self.on_move = None
+
+    def asound(self, freq):
+        self.game.speaker.sound(freq)
+
+    def nosound(self):
+        self.game.speaker.nosound()
+
+    def clean2(self, x, y):
+        w, r = self.game.world, self.game.renderer
+        ox, oy = w.origin
+        r.draw_tile(r.screen, (x - 1) * TILE, (y - 1) * TILE, w.grid[ox + x - 1][oy + y - 1])
+
+    def guy2(self, x, y):
+        r = self.game.renderer
+        r.draw_hero(r.screen, self.game, (x - 1) * TILE, (y - 1) * TILE)
+
+    def move_hero(self, x, y):
+        if self.on_move:
+            self.on_move(x, y)
+
+
+class PageHost:
+    """What the inventory and shop pages (quest2.invshop) work on: the player's own bag, gold and
+    potions, a copy of the hero (the original passes it by value), and a BGI on the page's surface."""
+
+    def __init__(self, game, layer, store):
+        from dataclasses import replace
+        from .bgi import BGI
+        self.game = game
+        p = game.player
+        self.g = BGI(layer, game.data.src)
+        self.g._fonts = game.renderer.bgi._fonts
+        self.layer = layer
+        self.bag, self.store, self.inv, self.skill = p.bag, store, p.inv, p.skill
+        self.hero = replace(p.hero)
+        self.level = game.world.level
+        self.tell = game.items.tell
+        self._prices = {r[0]: r[1] for r in game.data.prices if len(r) > 1}
+        self.recompute()
+
+    def price(self, it):
+        return self._prices.get(it, 0)
+
+    def recompute(self):
+        tmp = Player(hero=self.hero, inv=self.inv, skill=self.skill)
+        tmp.bag = self.bag
+        rules.status_update(tmp, self.game.status, self.game.items)
+
+    def asound(self, f):
+        self.game.speaker.sound(f)
+
+    def nosound(self):
+        self.game.speaker.nosound()
+
+    def bagdraw(self, i, ii, a):
+        it = (self.store if a == 2 else self.bag).get((i, ii), 0)
+        img = self.game.renderer.sprites.bag.get(it) if it else None
+        if img:
+            self.layer.blit(img, invshop.icon_pos(i, ii, a))
+
+    def put3(self, it):
+        """put3(): drop the item at the hero's square (or the nearest free one) and redraw it."""
+        g, p = self.game, self.game.player
+        g.put_item(p.X, p.Y, it)
+        r = g.renderer
+        ox, oy = g.world.origin
+        for x, y in g.world.room_tiles():
+            r.draw_tile(self.layer, (x - ox) * TILE, (y - oy) * TILE, g.world.grid[x][y])
+        r.draw_hero(self.layer, g, (p.X - ox) * TILE, (p.Y - oy) * TILE)
 
 
 class Msg(str):
@@ -58,6 +137,11 @@ class Game:
         with open(os.path.join(CONTENT, 'monsters.json')) as fh:
             self.rewards = {int(k): v for k, v in json.load(fh).items() if not k.startswith('_')}
         self.renderer = Renderer(window, self.data.src)
+        self.slots = Slots(DATA_DIR)                 # data\\save01.dat .. save20.dat, as in the original
+        # scripted runs (tests, the dummy video driver) play animations instantly and silently
+        self.fast = os.environ.get('SDL_VIDEODRIVER') == 'dummy'
+        self.speaker = Speaker(enabled=not self.fast and sound_setting(self.data.src))
+        self.anim_host = ScreenHost(self)
         self.world = World(self.data)
         self.status = Status()
         self.player = new_player(KNIGHT)
@@ -67,12 +151,10 @@ class Game:
         self.start_level = start_level
         self.levels = self.data.level_count()
         self.messages: list[str] = []
-        self.fx: list = []
         self.target: Enemy | None = None
         self.cursor = None
         self.overlay = None
-        self.effects: list = []            # original visual effects requested by level scripts
-        self.talk_queue: list = []         # NPC lines waiting to be shown, oldest first
+        self.talk_log: list = []           # every talk() message shown, in order (read by the verifiers)
         self.last_shop = 0                 # peddler()'s remembered shop number
         self.pending_next_level = False    # set by a level script (e.g. the end of level 7)
         self.overlay = ui.TitleScreen()     # title() / mastermind()
@@ -86,10 +168,31 @@ class Game:
     def change_rep(self, delta: int):
         """hero.rep += delta, then reput()'s message."""
         self.player.hero.rep += delta
-        if delta < 0:
-            self.log('Your reputation has become worse!', 4)
-        else:
-            self.log('Your reputation has become better!', 2)
+        self.play('reput2', delta)
+
+    def play(self, name: str, *args, on_move=None, redraw=True):
+        """Run one of the original's animations now (quest2.anim), blocking like the original.
+        Its rand() draws happen even when drawing is skipped, so the random sequence stays the same.
+        redraw=False keeps drawing over what the previous animation left on the screen."""
+        self.anim_host.on_move = on_move
+        try:
+            self.renderer.play(self, getattr(anim, name)(self.anim_host, *args), fast=self.fast, redraw=redraw)
+        finally:
+            self.speaker.nosound()
+            self.anim_host.on_move = None
+
+    def tones(self, *seq):
+        """asound(f); delay(ms) ... nosound(): one of the original's short beeps."""
+        self.play('tones', *seq)
+
+    def on_screen(self, x: int, y: int) -> tuple[int, int]:
+        """Map square -> the original's 1-based screen square (ax, ay)."""
+        ox, oy = self.world.origin
+        return x - ox + 1, y - oy + 1
+
+    def play_at(self, name: str, x: int, y: int, *args, **kw):
+        """An animation at map square (x, y)."""
+        self.play(name, *self.on_screen(x, y), *args, **kw)
 
     def monster_name(self, t: int) -> str:
         return self.renderer.sprites.names.get(('enemy', t), 'creature').lower()
@@ -121,17 +224,30 @@ class Game:
 
     # ── setup ─────────────────────────────────────────────────────────────────
     def new_game(self):
-        """newgame(): story 0 (Esc leaves), then creation()."""
-        self.show_story(0, lambda: setattr(self, 'overlay', ui.ClassSelect()),
-                        esc=lambda: setattr(self, 'overlay', ui.TitleScreen()))
+        """newgame(): story 0, then newsave() takes the first free save slot (even when Esc leaves
+        the story, as in the original), then creation()."""
+        def reserve(then):
+            self.status = Status(saveslot=self.slots.new())
+            if not self.status.saveslot:
+                self.overlay = ui.Notice('Error: you have too many save files! You need to delete at least '
+                                         'one to play.', 15, lambda: setattr(self, 'overlay', ui.TitleScreen()))
+                return
+            then()
+        self.show_story(0, lambda: reserve(lambda: setattr(self, 'overlay', ui.ClassSelect())),
+                        esc=lambda: reserve(lambda: setattr(self, 'overlay', ui.TitleScreen())))
 
     def start_new(self, cls: int, skill: int = 0, fault: int = 0):
         """The end of creation() and newgame(): build the hero, then newmap() shows story 1."""
         self.player = new_player(cls, skill, fault)
-        self.status = Status(Shield=0, fShield=0, powboost=-1, armboost=-1)
+        self.status = Status(Shield=0, fShield=0, powboost=-1, armboost=-1, saveslot=self.status.saveslot)
         self.status.p1, self.status.p2, self.status.p3 = rules.jumble()
         rules.status_update(self.player, self.status, self.items)
-        self.show_story(1, lambda: self.goto_level(self.start_level), header=self.story_header())
+
+        def begin():
+            self.goto_level(self.start_level)
+            if self.status.saveslot:
+                self.save_game(ask=False)             # newgame(): save(0, ...) before play starts
+        self.show_story(1, begin, header=self.story_header())
 
     def story_header(self) -> list[str]:
         """story(1): who the hero became, in the original's order."""
@@ -146,8 +262,14 @@ class Game:
                 lines.append(text)
         return lines
 
+    def story_wipe(self):
+        """story()'s black circle, drawn over whatever the screen shows."""
+        self.play('story_circle', redraw=False)
+
     def show_story(self, sid: int, then=None, header=None, esc=None):
         if sid in self.data.story:
+            if sid not in (10, 11):                  # story() opens with the black circle (not 10 and 11)
+                self.story_wipe()
             self.overlay = ui.TextScreen('', self.data.story[sid], then, header=header, esc=esc)
         elif then:
             then()
@@ -157,11 +279,12 @@ class Game:
         rules.status_update(self.player, self.status, self.items)
         self.count_hostiles()
         self.target = None
-        self.log(f'Level {level}.')
         self.events.on_level_start()
         self.events.run('level_start')
 
     def next_level(self):
+        if self.world.level and self.events.meta(self.world.level, 'LEAVE_JINGLE', True):
+            self.play('song_bevcop')
         nxt = self.world.level + 1
         if nxt > self.levels:
             ending = [8, 9] if self.status.mission1 == 2 else [8]
@@ -193,12 +316,9 @@ class Game:
             return
         if self.overlay:
             self.overlay.key(self, ev)
-            if self.overlay is None and self.talk_queue:
-                self.next_talk()
             return
         k = ev.key
         self.messages = []
-        self.fx = []
         acted = False
         if k in DIRS:
             acted = self.try_move(*DIRS[k])
@@ -215,20 +335,18 @@ class Game:
         elif k == pygame.K_s:
             self.overlay = ui.SpellBook(self)
         elif k == pygame.K_i:
-            self.overlay = ui.Inventory(self)
+            self.open_inventory(1)
         elif k == pygame.K_c:
             self.overlay = ui.CharacterSheet()
         elif k == pygame.K_k:
             if self.events.ask('killer_allowed'):
                 self.status.killer ^= 1
         elif k in (pygame.K_v, pygame.K_HOME):
-            self.save_menu()
+            self.save_key()
         elif k in (pygame.K_l, pygame.K_INSERT):
-            self.load_menu()
+            self.load_game()
         elif k == pygame.K_ESCAPE:
-            self.overlay = ui.Menu('The Quest II', [('Resume', lambda: None), ('Save game', self.save_menu),
-                                                     ('Load game', self.load_menu), ('Quit', self.quit)],
-                                   cancel=lambda: None)
+            self.quit_prompt()
         if acted:
             self.end_turn()
         self.events.run('after_action', 'space' if k == pygame.K_SPACE else 'key')
@@ -252,10 +370,9 @@ class Game:
         if q.wall in (-1, -5, -6) or (q.wall == -2 and p.inv.ykey) or (q.wall == -3 and p.inv.rkey) \
                 or (q.wall == -4 and p.inv.bkey):
             q.wall, q.deco = 0, 1
-            self.log('The door opens.')
+            self.tones((400, 100))
             return True
-        if q.wall in (-2, -3, -4):
-            self.log('The door is locked.')
+        if q.wall in (-2, -3, -4):                   # locked: the original just doesn't move
             return True
         if q.mon < 0 and q.mon > -100:
             if p.hero.invisible == -1:
@@ -268,7 +385,7 @@ class Game:
             return False
         if not w.in_room(nx, ny):
             if p.skill.hon == 2 and st.ems > 0:
-                self.log('It is not honorable to flee from your enemy!')
+                self.play('honor')
                 return False
             w.leave_room()
             p.X, p.Y = nx, ny
@@ -283,10 +400,12 @@ class Game:
         self.events.on_step(p.X, p.Y)
         if q.item == 1000:
             if self.events.meta(w.level, 'ASK_TO_LEAVE', True):
-                self.overlay = ui.YesNo('Want to travel further?', self.next_level)
+                self.overlay = ui.YesNo('Want to travel further? (Y)es (N)o', self.next_level)
             else:
                 self.next_level()
         elif q.item == 999:
+            # teleporter1() on the pad, the jump (level 5), then teleporter2() where the hero lands
+            self.play_at('teleporter1', p.X, p.Y)
             ddx, ddy = self.events.meta(w.level, 'TELEPORT', (0, 0))
             if (ddx, ddy) != (0, 0) and w.in_map(p.X + ddx, p.Y + ddy):
                 w.leave_room()
@@ -296,28 +415,24 @@ class Game:
                 self.events.on_enter_room()
                 self.target = None
                 self.count_hostiles()
-                self.log('You are teleported!')
-            self.fx.append(('teleport', 0, p.X, p.Y))      # teleporter2(): rings where the hero lands
+            self.play_at('teleporter2', p.X, p.Y)
         return True
 
     def talk(self, npc: int, x: int, y: int):
         self.events.on_talk(npc, x, y)
 
     def show_talk(self, text):
-        """Queue one of talk()'s messages; each waits for Space in the message strip."""
-        self.talk_queue.append(text)
-        if self.overlay is None:
-            self.next_talk()
+        """The end of talk(): a chime, the message in the strip, then a wait for Space. Like the
+        original, nothing after the conversation happens until then (a scene's animations, the
+        next line, the monsters' turn)."""
+        self.talk_log.append(text)
+        self.tones((500, 50), (600, 50), (500, 50))
+        self.renderer.wait_talk(self, text, fast=self.fast)
 
-    def next_talk(self):
-        if self.talk_queue:
-            text = self.talk_queue.pop(0)
-            self.overlay = ui.TalkBox(text, self.next_talk)
-
-    def autosave(self, slot: int):
-        """The original saves the game itself at a few story points."""
-        if self.world.grid:
-            self.save(slot)
+    def autosave(self, ask: int):
+        """A story point where the original calls save() itself (ask = 1: 'Want to save?')."""
+        if self.world.grid and self.status.saveslot:
+            self.save_game(ask=bool(ask))
 
     # ── items ─────────────────────────────────────────────────────────────────
     def pick_up(self) -> bool:
@@ -326,6 +441,8 @@ class Game:
         checks (before, after a chest, after an item goes into the backpack)."""
         p, q = self.player, self.world.sq(self.player.X, self.player.Y)
         turn = bool(q.item or q.gold)
+        if turn:
+            self.tones((300, 50), (400, 50))
         self.events.run('before_pickup')
         if q.item == 15:
             p.inv.coins += rules.random(40) + 80
@@ -341,12 +458,16 @@ class Game:
         if q.item in (12, 13, 14):
             setattr(p.inv, {12: 'ykey', 13: 'rkey', 14: 'bkey'}[q.item], 1)
             q.item = 0
+            self.play('song_key')
         free = p.free_backpack_slot()
-        if free and q.item and q.item != 1000:
-            it = q.item
-            p.bag[free] = it
-            q.item = 0
-            self.events.run('took', it)
+        if free and q.item != 1000:
+            if q.item:
+                it = q.item
+                p.bag[free] = it
+                q.item = 0
+                self.events.run('took', it)
+        elif q.item:
+            self.tones((150, 150))                   # no room in the backpack
         return turn
 
     def drink(self, n: int) -> bool:
@@ -370,167 +491,78 @@ class Game:
             h.life, h.mana = h.mlife, h.mmana
         elif n == 7:
             h.poisoned = 0
-            self.log('The poison is cured!', 2)
+            self.play('ampoisoned2', 0)
         elif n == 8:
             self.status.powboost = self.status.armboost = 11
-            self.log('A berserker rage fills you!')
         h.life, h.mana = min(h.life, h.mlife), min(h.mana, h.mmana)
         rules.status_update(p, self.status, self.items)
+        self.tones((740, 100))
         return True
 
-    def equip(self, slot) -> str:
-        """Move a backpack item into its equipment slot (inventory(), Enter)."""
-        p, h, t = self.player, self.player.hero, self.items.tell
-        it = p.item(slot)
-        if it >= 900:
-            return "You can't use that."
-        if t(it, IT_REQ_STR) > h.str:
-            return 'You are not strong enough.'
-        if t(it, IT_REQ_INT) > h.intl:
-            return 'You are not intelligent enough.'
-        target = rules.item_slot(it)
-        if target is None:
-            return self.events.on_use_item(it, slot) or "You can't equip that."
-        wep = p.item(SLOT_WEAPON)
-        if 200 < it < 230 and p.skill.amb == 1 and 200 < wep < 230 and not p.item(SLOT_OFFHAND) \
-                and t(it, IT_REQ_STR) <= h.str // 2 and t(it, IT_KIND) < 5 and t(wep, IT_KIND) < 5:
-            target = SLOT_OFFHAND                      # second weapon with Ambidexterity
-        if target == SLOT_OFFHAND and 300 < it < 400 and t(wep, IT_KIND) >= 5:
-            return 'You need a free hand for a shield.'
-        if target == SLOT_WEAPON and t(it, IT_KIND) >= 5 and p.item(SLOT_OFFHAND):
-            msg = self.unequip(SLOT_OFFHAND)
-            if p.item(SLOT_OFFHAND):
-                return 'Two-handed: make room for your off-hand item first.'
-        if 600 < it < 700 and 600 < p.item(SLOT_OFFHAND) < 700 \
-                and (it - 601) // 20 == (p.item(SLOT_OFFHAND) - 601) // 20:
-            base = 601 + (it - 601) // 20 * 20
-            total = (it - base + 1) + (p.item(SLOT_OFFHAND) - base + 1)
-            p.bag[SLOT_OFFHAND] = base + min(total, 20) - 1
-            p.bag[slot] = base + total - 20 - 1 if total > 20 else 0
-            rules.status_update(p, self.status, self.items)
-            return 'Ammunition combined.'
-        old = p.item(target)
-        if old:
-            self.stat_bonus(old, -1)
-        p.bag[target] = it
-        p.bag[slot] = old
-        self.stat_bonus(it, +1)
-        rules.status_update(p, self.status, self.items)
-        return f'You equip the {self.item_name(it).lower()}.'
+    # ── the inventory and the shops: the original's own pages (quest2.invshop) ──
+    def page_layer(self) -> pygame.Surface:
+        """The screen as it is when a page opens; the page draws over its right side and strip."""
+        self.renderer.draw(self)
+        return self.renderer.screen.copy()
 
-    def stat_bonus(self, it: int, sign: int):
-        """STR items raise max life and INT items raise max mana while worn (inventory())."""
-        h = self.player.hero
-        h.mlife += sign * self.items.tell(it, IT_STR)
-        h.mmana += sign * self.items.tell(it, IT_INT)
-        h.life, h.mana = min(h.life, h.mlife), min(h.mana, h.mmana)
+    def open_inventory(self, mode: int = 1, store=None):
+        """inventory(mode): 1 from the i key, 2 as the shop's selling page. Afterwards
+        statusupdate(); 'b' on the selling page goes back to buying."""
+        layer = self.page_layer()
+        host = PageHost(self, layer, store or {})
 
-    def unequip(self, slot) -> str:
-        p = self.player
-        it = p.item(slot)
-        free = p.free_backpack_slot()
-        if not free:
-            return 'Your backpack is full.'
-        p.bag[free], p.bag[slot] = it, 0
-        self.stat_bonus(it, -1)
-        rules.status_update(p, self.status, self.items)
-        return f'You take off the {self.item_name(it).lower()}.'
+        def done(key):
+            rules.status_update(self.player, self.status, self.items)
+            if mode == 2 and key == ord('b'):
+                self.open_shop()
+        self.overlay = ui.Page(self, layer, invshop.inventory(host, mode), done)
 
-    def drop(self, slot) -> str:
-        p = self.player
-        it = p.item(slot)
-        if it >= 900:
-            return "You can't drop that."
-        q = self.world.sq(p.X, p.Y)
-        if q.item:
-            return 'There is already something here.'
-        if slot not in BACKPACK:
-            self.stat_bonus(it, -1)
-        q.item, p.bag[slot] = it, 0
-        rules.status_update(p, self.status, self.items)
-        return 'Dropped.'
-
-    # ── shops ─────────────────────────────────────────────────────────────────
     def open_shop(self):
+        """peddler(): the shop's wares come from S0000<level><n>.dat, n from the screen. The file-name
+        buffer keeps the last shop's number, so an unlisted screen sells the last shop's wares
+        (0: none). 's' or 'i' goes to the selling page."""
         sx, sy = screen_of(self.player.X, self.player.Y)
-        # peddler(): the shop number is kept from the last shop visited when this screen isn't listed
-        # (the original reuses its file-name buffer), and 0 means an empty shop.
         self.last_shop = self.events.meta(self.world.level, 'SHOPS', {}).get((sx, sy), self.last_shop)
-        n = self.last_shop
-        try:
-            rows = self.data.shop(self.world.level, n)
-        except FileNotFoundError:
-            rows = []
-        stock = [v for row in rows for v in row]
-        self.overlay = ui.Shop(self, stock)
+        store = {}
+        if self.last_shop:
+            try:
+                nums = [v for row in self.data.shop(self.world.level, self.last_shop) for v in row][:40]
+            except FileNotFoundError:
+                nums = []
+            store = {(12 + k % 4, 2 + k // 4): v for k, v in enumerate(nums)}
+        layer = self.page_layer()
+        host = PageHost(self, layer, store)
 
-    def base_price(self, it: int) -> int:
-        return next((r[1] for r in self.data.prices if r and r[0] == it), 0)
-
-    def buy_price(self, it: int) -> int:
-        price = self.base_price(it)
-        if 0 < it < 9 and self.world.level != 1:
-            price = price * 2 * (self.world.level - 1)
-        if self.player.skill.bar == 1 and it > 8:
-            price = price * 7 // 10
-        return price
-
-    def sell_price(self, it: int) -> int:
-        return self.base_price(it) * 6 // 10
-
-    def buy(self, it: int) -> str:
-        p = self.player
-        price = self.buy_price(it)
-        if p.inv.coins < price:
-            return 'You cannot afford that.'
-        if 1 <= it <= 8:
-            f = POTION_FIELDS[it]
-            setattr(p.inv, f, getattr(p.inv, f) + 1)
-        else:
-            free = p.free_backpack_slot()
-            if not free:
-                return 'Your backpack is full.'
-            p.bag[free] = it
-        p.inv.coins -= price
-        return f'Bought for {price} gold.'
-
-    def sell(self, slot) -> str:
-        p = self.player
-        it = p.item(slot)
-        if it >= 900:
-            return "You can't sell that."
-        if slot not in BACKPACK:
-            self.stat_bonus(it, -1)
-        price = self.sell_price(it)
-        p.bag[slot] = 0
-        p.inv.coins += price
-        rules.status_update(p, self.status, self.items)
-        return f'Sold for {price} gold.'
+        def done(key):
+            if key in (ord('s'), ord('i')):
+                self.open_inventory(2, store)
+        self.overlay = ui.Page(self, layer, invshop.peddler(host), done)
 
     # ── magic ─────────────────────────────────────────────────────────────────
     def begin_cast(self, spell: int):
-        self.messages, self.fx = [], []
-        why = self.magic.can_cast(spell)
-        if why:
-            self.log(why)
+        self.messages = []
+        if self.magic.can_cast(spell):              # unknown, too little mana or INT: the key does nothing
             return
-        if self.magic.fizzles(spell):
-            self.log('The spell fizzles!')
+        p = self.player
+        if self.magic.fizzles(spell):                 # dcast(), then a low beep; the spell is lost
+            self.play_at('dcast2', p.X, p.Y)
+            self.tones((50, 200))
             self.end_turn()
             return
+        self.play_at('dcast2', p.X, p.Y)              # dcast(): the hero's eyes flicker
         if self.spells.tell(spell, SP_RANGE) == 0:
             self.magic.cast_self(spell)
             self.end_turn()
             return
-        p = self.player
 
         def picked(x, y):
-            self.messages, self.fx = [], []
+            self.messages = []
             self.magic.cast_at(spell, x, y)
             self.end_turn()
         self.overlay = ui.Cursor(self, p.X, p.Y, f'Cast {rules.SPELL_NAMES[spell]}: choose a target',
                                  picked, allowed=lambda x, y: self.magic.in_range(spell, x, y),
-                                 can_pick=lambda x, y: self.magic.valid_target(spell, x, y))
+                                 can_pick=lambda x, y: self.magic.valid_target(spell, x, y),
+                                 on_cancel=self.end_turn)       # Esc: nothing cast, but the turn is used
 
     def learn_spell(self, s: int):
         p = self.player
@@ -539,19 +571,24 @@ class Game:
             free = next((i for i, v in enumerate(p.book) if not v), None)
             if free is not None:
                 p.book[free] = s
-        self.log(f'You begin memorising {rules.SPELL_NAMES[s]}.')
 
     # ── ranged ────────────────────────────────────────────────────────────────
     def ranged(self, choose: bool) -> bool:
         why = self.combat.can_shoot()
-        if why:
-            self.log(why)
+        if why == 'noarrows':
+            self.play('noarrows2')                    # a ranged weapon with nothing in the off-hand
             return False
+        if why:
+            # main2(): nothing is shot, but Space still uses the turn (so does Tab with a ranged
+            # weapon); only Tab without a ranged weapon is free
+            return not choose or why == 'badammo'
         p = self.player
         if self.target and (self.target not in self.world.enemies or
                             (abs(self.target.x - p.X) < 2 and abs(self.target.y - p.Y) < 2)):
             self.target = None
         cands = self.combat.ranged_candidates()
+        if choose and not cands:
+            return True                               # target() is only reached with someone in range
         if choose:
             start = self.target or (cands[0] if cands else None)
             sx, sy = (start.x, start.y) if start else (p.X, p.Y)
@@ -563,15 +600,15 @@ class Game:
                     (q.mon > 0 or self.status.killer or q.mon < -99)
 
             def picked(x, y):
-                self.messages, self.fx = [], []
+                self.messages = []
                 self.combat.shoot(self.world.enemy_at(x, y))
                 self.end_turn()
-            self.overlay = ui.Cursor(self, sx, sy, 'Choose a target', picked, can_pick=ok)
+            self.overlay = ui.Cursor(self, sx, sy, 'Choose a target', picked, can_pick=ok,
+                                     on_cancel=self.end_turn)   # target() cancelled: the turn is used
             return False
         e = self.target if self.target in cands else (cands[0] if cands else None)
         if not e:
-            self.log('Nothing to shoot at.')
-            return False
+            return True                               # nothing in range: the turn passes anyway
         self.combat.shoot(e)
         return True
 
@@ -592,16 +629,29 @@ class Game:
         # dying and death
         if h.life < 1:
             if h.life <= -5:
-                self.overlay = ui.Notice(DEATH_LINES[rules.random(3)], 4, self.quit)
+                self.death()
                 return
             h.life -= 1
             q = w.sq(p.X, p.Y)
             if q.deco == 0:
                 q.deco = 4
-            self.log('You are bleeding!', 4)
+            self.play('dying2')                       # "You are bleeding!", then the potion belt again
         self.upkeep()
         if h.exper <= 0 and not self.overlay:
             self.level_up()
+
+    def death(self):
+        """death(): the hero's body, death2()'s last words, then 'Want to load?'; No closes the
+        screen in a black box and goes back to the title (mastermind())."""
+        p = self.player
+        self.world.sq(p.X, p.Y).deco = 5
+        self.messages = []
+        self.play('death2')
+
+        def no():
+            self.play('death_wipe', redraw=False)
+            self.overlay = ui.TitleScreen()
+        self.load_game(on_no=no)
 
     def upkeep(self):
         """Top of the main2() loop after a turn: faults, poison, spell timers, boosts."""
@@ -641,9 +691,10 @@ class Game:
             new = rules.reclassify(p)
             rules.status_update(p, st, self.items)
             if new:
-                self.log(f'You have become a {rules_class_name(new)}!')
+                self.play('class_change', new)
             self.after_level_spells()
-        self.log(f'Level up! You are now level {p.hero.level}.')
+        self.play('alevelup')                         # "Level Up!" in the strip, then song_jazz()
+        self.play('song_jazz', redraw=False)
         self.overlay = ui.LevelUpScreen(self, gained, rules.choices_this_level(p), after_points)
 
     def after_level_spells(self):
@@ -653,9 +704,7 @@ class Game:
         for s in range(1, 21):
             if p.spells[s] > 1:
                 p.spells[s] -= 1
-                if p.spells[s] == 1:
-                    self.log(f'You have learnt {rules.SPELL_NAMES[s]}!')
-                else:
+                if p.spells[s] != 1:
                     finished_or_none = False
                 break
         if not finished_or_none:
@@ -665,84 +714,123 @@ class Game:
         if cands:
             self.overlay = ui.LearnSpell(cands, lambda: None)
 
-    # ── saving ────────────────────────────────────────────────────────────────
+    # ── saving: the original's data\\saveNN.dat, one slot per game ──────────────
     def can_save(self) -> bool:
         return not (self.status.ems > 0 and any(e.type > 0 and e.type != 22 for e in self.world.enemies))
 
-    def save_menu(self):
+    def save_key(self):
+        """Home / v in main2(): save() with its question, or cantsave() with monsters about."""
         if not self.world.grid:
             return
         if not self.can_save():
-            self.overlay = ui.Notice('You cannot save right now, there are enemies near!')
+            self.play('cantsave')
             return
-        self.overlay = ui.Menu('Save game', [(self.slot_label(n), lambda n=n: self.save(n)) for n in range(1, 6)],
-                               'Enter saves to the slot, Esc cancels', cancel=lambda: None)
+        self.save_game(ask=True)
 
-    def load_menu(self, back=None):
-        self.overlay = ui.Menu('Load game', [(self.slot_label(n), lambda n=n: self.load(n)) for n in range(1, 6)],
-                               'Enter loads the slot, Esc cancels', cancel=back or (lambda: None))
+    def save_game(self, ask: bool = False):
+        """save(type): type 1 asks 'Want to save? (Y)es (N)o'; type 0 (after creation) saves silently."""
+        def write():
+            if ask:
+                self.tones((500, 50), (600, 50))
+                self.play('strip_text', 'Saving. . .')
+            self.slots.write(self.status.saveslot, self.to_save())
+        if ask:
+            self.overlay = ui.YesNo('Want to save? (Y)es (N)o', write)
+        else:
+            write()
 
-    def slot_path(self, n: int) -> str:
-        return os.path.join(SAVE_DIR, f'slot{n}.json')
+    def load_game(self, on_no=None):
+        """load(): in a game it asks 'Want to load? (Y)es (N)o' (from the title's list it doesn't),
+        then load2() reads the game's own slot."""
+        def read():
+            if self.status.level:
+                self.play('strip_text', 'Loading. . .')
+            d = self.slots.read(self.status.saveslot)
+            if d is None:
+                return
+            self.tones((500, 50), (600, 50))
+            self.from_save(d, self.status.saveslot)
+            self.play('death_wipe', redraw=False)          # load2() ends by closing the screen
+        if self.status.level:
+            self.overlay = ui.YesNo('Want to load? (Y)es (N)o', read, on_no)
+        else:
+            read()
 
-    def slot_label(self, n: int) -> str:
-        path = self.slot_path(n)
-        if not os.path.exists(path):
-            return f'Slot {n}: empty'
-        try:
-            with open(path) as fh:
-                d = json.load(fh)
-            return f"Slot {n}: level {d['level']}, {d['summary']}"
-        except (OSError, ValueError, KeyError):
-            return f'Slot {n}: (unreadable)'
+    def quit_prompt(self):
+        """Esc: quit() asks 'Want to quit? (Y)es (N)o'; Yes returns to the title (without saving)."""
+        def yes():
+            self.tones((500, 50), (600, 50))
+            self.play('death_wipe', redraw=False)
+            self.world.grid = []
+            self.overlay = ui.TitleScreen()
+        self.overlay = ui.YesNo('Want to quit? (Y)es (N)o', yes)
 
-    def save(self, n: int):
-        os.makedirs(SAVE_DIR, exist_ok=True)
-        p, w = self.player, self.world
-        from .state import CLASS_NAMES
-        d = {
-            'version': 1, 'level': w.level,
-            'summary': f'{CLASS_NAMES[p.hero.type]} level {p.hero.level}',
-            'hero': asdict(p.hero), 'inv': asdict(p.inv), 'skill': asdict(p.skill), 'status': asdict(self.status),
-            'bag': [[x, y, v] for (x, y), v in p.bag.items() if v],
-            'spells': p.spells, 'book': p.book, 'fkey': p.fkey, 'X': p.X, 'Y': p.Y,
-            'visited': sorted(w.visited),
-            'grid': [[q.floor, q.wall, q.mon, q.item, q.gold, q.deco]
-                     for x in range(1, MAP_SIZE + 1) for q in w.grid[x][1:MAP_SIZE + 1]],
-            'events': self.events.save_state(),
-        }
-        with open(self.slot_path(n), 'w') as fh:
-            json.dump(d, fh)
-        self.log(f'Game saved to slot {n}.')
-
-    def load(self, n: int):
-        path = self.slot_path(n)
-        if not os.path.exists(path):
-            self.log('That slot is empty.')
-            return
-        with open(path) as fh:
-            d = json.load(fh)
-        p = Player(hero=Hero(**d['hero']), inv=Inventory(**d['inv']), skill=Skills(**d['skill']))
-        p.bag = {(x, y): v for x, y, v in d['bag']}
-        p.spells, p.book, p.fkey, p.X, p.Y = d['spells'], d['book'], d['fkey'], d['X'], d['Y']
-        self.player = p
-        self.status = Status(**d['status'])
-        w = self.world
-        w.level = d['level']
-        w.grid = [[Square() for _ in range(MAP_SIZE + 2)] for _ in range(MAP_SIZE + 2)]
-        cells = iter(d['grid'])
+    def to_save(self) -> SaveData:
+        """The game in save() terms: the current screen as map[] has it (as it was on arrival) and
+        as room[] has it (live), creatures in screen coordinates."""
+        p, st, w = self.player, self.status, self.world
+        ox, oy = w.origin
+        d = SaveData(hero=asdict(p.hero), inv=asdict(p.inv), skill=asdict(p.skill), st=asdict(st))
+        d.X, d.Y = p.X, p.Y
+        d.ax, d.ay = self.on_screen(p.X, p.Y)
+        shadow = self.events.shadow
         for x in range(1, MAP_SIZE + 1):
             for y in range(1, MAP_SIZE + 1):
-                f, wa, m, i, g, de = next(cells)
-                w.grid[x][y] = Square(f, wa, m, i, g, de)
-        w.visited = {tuple(v) for v in d['visited']}
-        w.enter_room(p, self.status)
-        self.events.on_enter_room()
-        self.events.load_state(d.get('events', {}))
-        self.count_hostiles()
+                q = w.grid[x][y]
+                if w.in_room(x, y) and (x, y) in shadow:
+                    v = shadow[(x, y)]
+                    d.map[(x, y)] = (v['floor'], v['wall'], v['item'], v['mon'], v['gold'], v['deco'])
+                else:
+                    d.map[(x, y)] = (q.floor, q.wall, q.item, q.mon, q.gold, q.deco)
+        for i in range(1, 11):
+            for ii in range(1, 11):
+                q = w.grid[ox + i - 1][oy + ii - 1]
+                d.room[(i, ii)] = (q.floor, q.wall, q.item, q.mon, q.gold, q.deco)
+        d.enemies = [{f: getattr(e, f) for f in savefile.ENEMY} for e in w.enemies]
+        for e in d.enemies:
+            e['x'], e['y'] = e['x'] - ox + 1, e['y'] - oy + 1
+        d.bag = {c: p.bag.get(c, 0) for c in savefile.BAG_CELLS}
+        d.book = {(13, 2 + k): p.book[k] for k in range(10)}
+        d.book.update({(16, 2 + k): p.book[10 + k] for k in range(10)})
+        d.spells = list(p.spells)
+        d.carta = {(sx + 1, sy + 1): 1 for sx, sy in w.visited}
+        d.fkey = list(p.fkey)
+        return d
+
+    def from_save(self, d: SaveData, slot: int):
+        """load2() into the game: map[] (with the current screen as it was on arrival), then room[]
+        (the screen as it is), the creatures as they were, and everything else."""
+        p = Player(hero=Hero(**{f: d.hero.get(f, getattr(Hero, f)) for f in Hero.__dataclass_fields__}),
+                   inv=Inventory(**d.inv), skill=Skills(**d.skill))
+        p.bag = {c: v for c, v in d.bag.items() if v}
+        p.book = [d.book.get((13, 2 + k), 0) for k in range(10)] + [d.book.get((16, 2 + k), 0) for k in range(10)]
+        p.spells, p.fkey = list(d.spells), list(d.fkey)
+        p.X, p.Y = d.X, d.Y
+        self.player = p
+        self.status = Status(**{f: d.st.get(f, 0) for f in Status.__dataclass_fields__})
+        self.status.saveslot = slot
+        w = self.world
+        w.level = self.status.level
+        w.grid = [[Square() for _ in range(MAP_SIZE + 2)] for _ in range(MAP_SIZE + 2)]
+        for (x, y), (fl, wa, it, mo, go, de) in d.map.items():
+            if w.in_map(x, y):
+                w.grid[x][y] = Square(fl, wa, mo, it, go, de)
+        w.visited = {(i - 1, ii - 1) for (i, ii), v in d.carta.items() if v}
+        w.origin = room_origin(p.X, p.Y)
+        self.events.snapshot()                          # map[] holds the arrival values
+        ox, oy = w.origin
+        for (i, ii), (fl, wa, it, mo, go, de) in d.room.items():
+            if 1 <= i <= 10 and 1 <= ii <= 10:
+                w.grid[ox + i - 1][oy + ii - 1] = Square(fl, wa, mo, it, go, de)
+        w.enemies = []
+        for e in d.enemies[:max(0, self.status.mons)]:
+            e = dict(e)
+            e['x'], e['y'] = e['x'] + ox - 1, e['y'] + oy - 1
+            w.enemies.append(Enemy(**e))
+        self.target = None
         rules.status_update(p, self.status, self.items)
         self.overlay = None
-        self.messages = [f'Game loaded from slot {n}.']
+        self.messages = []
 
     # ── loop ──────────────────────────────────────────────────────────────────
     def run(self):
@@ -753,7 +841,3 @@ class Game:
             self.renderer.draw(self)
             clock.tick(30)
 
-
-def rules_class_name(c: int) -> str:
-    from .state import CLASS_NAMES
-    return CLASS_NAMES[c]

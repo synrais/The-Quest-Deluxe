@@ -10,6 +10,10 @@ quest2/content/levels/level1.qs     ... level7.qs: the original story, ported
 quest2/content/levels/level8.qs     a new level: add L00008.dat and (optionally) this file
 ```
 
+In Quest Deluxe the same scripts live in the quest pack (docs/QUEST_PACKS.md):
+`packs/<name>/levels/common.qs` and `packs/<name>/levels/<n>/script.qs`, and the editor's Events
+tab edits them (its Map tab sets START, STORIES, SHOPS, TELEPORT and the other settings).
+
 The original seven were ported line by line from the decompiled code. Then they were checked
 against the real exe, which runs in an emulator (`tools/re/verify_events.py` and
 `tools/re/verify_deaths.py`). In thousands of random game states, every conversation and every
@@ -30,6 +34,8 @@ STORIES = [1]                  # story.dat entries shown on arrival (level 6: [6
 SHOPS = {(3, 2): 1}            # screen (column, row, 1-based) -> shop file S0000<level><n>.dat
 TELEPORT = (20, 0)             # how far a teleporter pad (item 999) moves the hero
 ASK_TO_LEAVE = True            # ask "Want to travel further?" at the exit (item 1000)
+LEAVE_JINGLE = True            # play song_bevcop() when leaving for the next level
+PEACEFUL_SCREENS = [(1, 1)]    # Deluxe: screens where people and allies don't attack monsters
 ```
 
 ### Handlers
@@ -79,7 +85,7 @@ ASK_TO_LEAVE = True            # ask "Want to travel further?" at the exit (item
 | `change_rep(d)` | Reputation plus or minus, with the original message. |
 | `hero_step(dx, dy)`, `poison()`, `hurt_hero(power, kind, w)` | Move the hero, poison them, or hurt them. |
 | `autosave(slot)`, `next_level()` | Save the game, or go to the next level. |
-| `effect(name, ...)` | One of the original's visual effects (e.g. `'dcast2'`). |
+| `effect(name, ...)` | Play one of the original's animations from `quest2/anim.py`, at 1-based screen squares: `effect('dcast2', e.x, e.y)`, `effect('asskeleton', 4, 1, 3)`, `effect('screen_flash', 2)`. It has no game effect. |
 | `range()`, `len()`, `min()`, `max()`, `abs()` | As in Python. |
 
 ### Things the original does that scripts keep

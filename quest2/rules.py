@@ -119,14 +119,17 @@ def hero_hit(p: Player, e: Enemy, items: ItemTable) -> int:
     return power
 
 
+SHIELDED = -1000     # mon_hit(): the blow was absorbed by the Shield spell (monhit() beeps)
+
+
 def mon_hit(e: Enemy, p: Player, st: Status, spells: SpellTable) -> int:
-    """monhit(): melee damage dealt by enemy e to the hero (0 = miss/blocked)."""
+    """monhit(): melee damage dealt by enemy e to the hero (0 = miss, SHIELDED = absorbed)."""
     h = p.hero
     if random(100) + 1 > e.atk - h.defense:
         return 0
     power = spread(e.power)
     if st.Shield > 0 and spells.tell(5, 4) >= power:
-        return 0
+        return SHIELDED
     power -= h.marm if e.type in (23, 24, 25) else h.warm
     return power
 

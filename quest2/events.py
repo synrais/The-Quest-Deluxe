@@ -513,12 +513,14 @@ class Events:
         p.Y += dy
 
     def f_poison(self):
+        """hero.poisoned = 1; ampoisoned(1), over whatever the screen shows (the original doesn't redraw)."""
         self.g.player.hero.poisoned = 1
-        self.g.log('You have been poisoned!', 4)
+        self.g.play('ampoisoned2', 1, redraw=False)
 
     def f_autosave(self, slot):
         self.g.autosave(slot)
 
     def f_effect(self, name, *args):
-        """A visual effect from the original (dcast2, asskeleton, ...); drawn later, no game effect."""
-        self.g.effects.append((name, args))
+        """One of the original's animations (quest2.anim: dcast2, asskeleton, screen_flash ...), played
+        now, at 1-based screen squares. It has no game effect."""
+        self.g.play(name, *args)
