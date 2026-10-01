@@ -30,14 +30,19 @@ def monster_vs_monster(att: Enemy, dfn: Enemy, pack) -> int:
 
 def wants_to_fight(e: Enemy, o: Enemy, g: 'Game') -> bool:
     t, trait = e.type, g.pack.trait
-    if e.range == 1 and not trait(t, 'explodes') and e.att != -4 and o.type < 0:
-        if t > 0 and not trait(t, 'animal'):
+    ot = o.type
+    if e.type > 0 and e.ally:
+        t = -100                                # a raised creature fights as a summoned ally does
+    if o.type > 0 and o.ally:
+        ot = -100
+    if e.range == 1 and not trait(e.type, 'explodes') and e.att != -4 and ot < 0:
+        if t > 0 and not trait(e.type, 'animal'):
             return True                         # monsters attack NPCs and summons
         if t < -99 and o.att > -1:
             return True                         # summons attack hostile NPCs
-        if o.type < -99 and e.att > -1:
+        if ot < -99 and e.att > -1:
             return True                         # hostile NPCs attack summons
-    if o.type > 0 and (o.att > -1 or o.att < -3) and t < 0:
+    if ot > 0 and (o.att > -1 or o.att < -3) and t < 0:
         # NPCs and summons attack hostile monsters (except on the level's peaceful screens)
         if t >= -99 and ((g.player.X - 1) // 10 + 1, (g.player.Y - 1) // 10 + 1) in \
                 g.events.meta(g.world.level, 'PEACEFUL_SCREENS', ()):
@@ -117,7 +122,7 @@ def monsmove(g: 'Game') -> None:
                 continue                                  # attacked this turn: no chase, no wandering
             if not ranok:
                 # ── chase ───────────────────────────────────────────────────
-                if e.type < -99 and e.att == -3:          # summons hunt the nearest hostile
+                if e.ally and e.att == -3:                # summons hunt the nearest hostile
                     best, bestd = None, 20
                     for o in w.enemies:
                         if o is e or g.pack.trait(o.type, 'invisible'):

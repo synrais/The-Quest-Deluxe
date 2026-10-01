@@ -153,7 +153,7 @@ class Combat:
             elif corpse == 'none':
                 q.deco = 0
         a = ev.attacker
-        by_ally = 0 <= a < len(w.enemies) and w.enemies[a].type <= -100
+        by_ally = 0 <= a < len(w.enemies) and w.enemies[a].ally
         gold = 0
         before = h.exper
         if a == -1 or by_ally:
@@ -174,6 +174,13 @@ class Combat:
             self.g.change_rep(-3)
         if e.type > 0 and not self.g.pack.trait(e.type, 'animal') and witness > 0 and h.rep <= -4 and a == -1:
             self.g.change_rep(1)
+        if (e.type > 0 or -100 < e.type < 0 and e.type != -5) and q.deco in (
+                pk.deco('remains'), pk.deco('remains2'), pk.deco('bones')) and q.deco:
+            corpses = self.p.more.setdefault('corpses', {})   # who lies where, for the Resurrect spell
+            corpses.pop(f'{w.level},{e.x},{e.y}', None)
+            corpses[f'{w.level},{e.x},{e.y}'] = e.type
+            while len(corpses) > 60:
+                corpses.pop(next(iter(corpses)))
         if pk.trait(e.type, 'regenerates_from_blood'):
             self.p.more.setdefault('reviving', []).append([w.level, e.x, e.y, e.type, -1, -1, 0])
         del w.enemies[i]
@@ -396,7 +403,7 @@ class Combat:
             d = distance(e.x - px, e.y - py)
             if not 2 <= d <= 14:
                 continue
-            if not (st.killer or e.type > 0 or e.att >= 0):
+            if e.ally or not (st.killer or e.type > 0 or e.att >= 0):
                 continue
             if e.att == -1 and st.ems > 0:
                 continue

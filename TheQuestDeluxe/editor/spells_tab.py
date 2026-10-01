@@ -10,6 +10,7 @@ EFFECTS = [('heal', 'heal: the hero gains life (power)'), ('bolt', 'bolt: damage
            ('dark_hour', 'dark hour: the ward, repeated; mana to 0'), ('earthquake', 'earthquake: a cross of blows'),
            ('freeze', 'freeze: a creature stops for a while'), ('drain', 'drain: damage, and the hero heals by it'),
            ('summon', 'summon: brings an ally'),
+           ('resurrect', 'resurrect: a dead creature (or person) rises and fights at the hero\'s side on this screen'),
            ('shadow_clones', 'shadow clones: an ally on every square around the hero'),
            ('disguise', "disguise: the hero becomes a random creature; monsters leave him alone, people may not"), ('teleport', 'teleport: the hero jumps to a square'),
            ('shield', 'shield: stops blows up to a power'), ('fire_shield', 'fire shield: burns creatures next to the hero'),
@@ -104,6 +105,8 @@ class SpellsTab(TableTab):
                                                         'effect': 'shadow_clones', 'clones_hero': 50}),
         ('Disguise (a random creature, the reverse of hostile)', {'range': 0, 'power': 0, 'duration': 25,
                                                                   'effect': 'disguise', 'npc_anger': 50}),
+        ('Resurrection (a body rises to fight beside the hero)', {'range': 4, 'power': 0, 'mana': 20,
+                                                                  'effect': 'resurrect', 'needs_target': False}),
         ('A blank spell', {'range': 3, 'power': 10, 'effect': 'bolt', 'anim': ['aflame', 0]}),
     ]
 

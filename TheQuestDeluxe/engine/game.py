@@ -501,7 +501,7 @@ class Game:
                 self.report('You are too big to squeeze through.', 7)
             return False
         e = w.enemy_at(nx, ny)
-        if e and (st.killer or e.att > -1 or e.type > 0):
+        if e and not e.ally and (st.killer or e.att > -1 or e.type > 0):
             self.combat.melee(e)
             return True
         door = wall.get('door')
@@ -842,7 +842,7 @@ class Game:
             def ok(x, y):
                 e = self.world.enemy_at(x, y)
                 q = self.world.sq(x, y)
-                return e is not None and max(abs(x - p.X), abs(y - p.Y)) > 1 and \
+                return e is not None and not e.ally and max(abs(x - p.X), abs(y - p.Y)) > 1 and \
                     (q.mon > 0 or self.status.killer or q.mon < -99)
 
             def picked(x, y):

@@ -161,6 +161,10 @@ class World:
     def leave_room(self) -> None:
         """goroom2 (first half): write-back rules applied to the screen being left."""
         pack = self.data.src.pack
+        for e in self.enemies:
+            if e.__dict__.get('_risen'):                   # the raised go back to rest when the hero leaves
+                for cx, cy in self.cells(e):
+                    self.grid[cx][cy].mon = 0
         for x, y in self.room_tiles():
             q = self.grid[x][y]
             hidden = pack.trait(q.mon, 'hides_as') if q.mon else None

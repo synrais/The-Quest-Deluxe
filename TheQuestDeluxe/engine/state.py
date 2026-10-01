@@ -157,6 +157,11 @@ class Enemy:
         return self.__dict__.setdefault('_effects', {})
 
     @property
+    def ally(self) -> bool:
+        """On the hero's side: a summoned ally, or a creature raised by the Resurrect spell (for this screen)."""
+        return self.type <= -100 or self.__dict__.get('_risen', False)
+
+    @property
     def is_npc(self) -> bool:
         return -100 < self.type < 0
 

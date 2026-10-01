@@ -63,6 +63,8 @@ class Magic:
     def valid_target(self, spell: int, x: int, y: int) -> bool:
         w, p, st = self.g.world, self.g.player, self.g.status
         q, eff = w.sq(x, y), self.effect(spell)
+        if eff == 'resurrect':
+            return self.corpse_at(x, y) is not None and (x, y) != (p.X, p.Y)
         water = self.g.pack.spell(spell).get('freezes_water') is not None and \
             self.g.pack.wall(q.wall).get('freezes_to') and q.mon == 0
         if (q.wall != 0 or self.g.pack.item_type(q.item) in ('teleporter', 'exit') + LINK_ITEMS) \
@@ -188,6 +190,35 @@ class Magic:
             if e:
                 self.strike(spell, e, x, y)
 
+    def corpse_at(self, x: int, y: int):
+        """The creature whose body lies at (x, y) on this level (recorded when it died), or None."""
+        g, w = self.g, self.g.world
+        kind = g.player.more.get('corpses', {}).get(f'{w.level},{x},{y}')
+        q = w.sq(x, y)
+        bodies = {g.pack.deco(r) for r in ('remains', 'remains2', 'bones')} - {0}
+        if kind is None or q.mon or q.deco not in bodies:
+            return None
+        return kind
+
+    def resurrect(self, spell: int, x: int, y: int):
+        """The body at (x, y) rises and fights at the hero's side for as long as he stays on this screen
+        (people too). The spell's power is the percent of its life it comes back with (0: all of it)."""
+        g, w = self.g, self.g.world
+        kind = self.corpse_at(x, y)
+        if kind is None:
+            return
+        self.anim(spell, x, y)
+        w.sq(x, y).deco = 0
+        g.player.more['corpses'].pop(f'{w.level},{x},{y}', None)
+        e = g.spawn(kind, x, y)
+        e.att = -3
+        e.__dict__['_risen'] = True
+        pct = self.tell(spell, SP_POWER)
+        if pct:
+            e.life = max(1, e.mlife * pct // 100)
+        g.count_hostiles()
+        g.report(f'The {g.monster_name(kind)} rises to fight at your side!', 11, (x, y), 'risen')
+
     def squares_around(self, x: int, y: int, r: int):
         """The squares of this screen within r (a square's distance) of (x, y)."""
         w = self.g.world
@@ -260,6 +291,9 @@ class Magic:
         if eff == 'summon':
             self.anim(spell, x, y)
             g.spawn(sp['creature'], x, y)
+            return
+        if eff == 'resurrect':
+            self.resurrect(spell, x, y)
             return
         if eff == 'teleport':
             def move(sx, sy):

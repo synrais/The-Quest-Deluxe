@@ -488,6 +488,62 @@ def shrinking():
     print('shrinking: a potion makes the hero small enough for a crack in the wall, and holds while inside: ok')
 
 
+def resurrection():
+    def spell(folder, json):
+        path = os.path.join(folder, 'spells.json')
+        data = json.load(open(path))
+        data['spells'].append({'id': 21, 'name': 'Resurrect', 'req_int': 1, 'mana': 5, 'range': 5, 'power': 0,
+                               'duration': 0, 'effect': 'resurrect'})
+        json.dump(data, open(path, 'w'))
+    from engine.ai import monsmove
+    g = with_changes(spell)
+    p, w, pk = g.player, g.world, g.pack
+    for e in list(w.enemies):
+        w.sq(e.x, e.y).mon = 0
+    w.enemies.clear()
+    ox, oy = w.origin
+    for x, y in w.room_tiles():
+        q = w.sq(x, y)
+        q.wall = q.mon = q.item = q.deco = q.gold = 0
+    p.X, p.Y = ox + 5, oy + 8
+    p.hero.mana, p.spells[21] = p.hero.mmana, 1
+    victim = g.spawn(1, ox + 4, oy + 8)                          # a monster dies beside the hero
+    person = g.spawn(-6, ox + 6, oy + 8)                         # and a farmer
+    person.att = -2
+    for e in (victim, person):
+        g.combat.hurt(1000, e, 3, by_hero=True)
+    assert not g.magic.valid_target(21, ox + 4, oy + 1)          # nothing lies there
+    assert g.magic.valid_target(21, ox + 4, oy + 8) and g.magic.valid_target(21, ox + 6, oy + 8)
+    g.magic.cast_at(21, ox + 4, oy + 8)
+    raised = w.enemy_at(ox + 4, oy + 8)
+    assert raised is not None and raised.type == 1 and raised.att == -3 and raised.ally
+    assert raised.life == raised.mlife and w.sq(ox + 4, oy + 8).deco == 0
+    assert not g.magic.valid_target(21, ox + 4, oy + 8)          # the body is gone
+    g.magic.cast_at(21, ox + 6, oy + 8)                          # and the person
+    friend = w.enemy_at(ox + 6, oy + 8)
+    assert friend is not None and friend.type == -6 and friend.ally
+    # a hostile monster comes: the raised creatures fight it, and the hero cannot hit his own side
+    orc = g.spawn(2, ox + 4, oy + 5)
+    orc.att = 9
+    start = orc.life
+    hp = raised.life
+    assert not g.try_move(-1, 0) and raised.life == hp           # bumping into him does not strike him
+    for _ in range(12):
+        monsmove(g)
+        for e in w.enemies:
+            e.moved = False
+        if orc not in w.enemies:
+            break
+        g.combat.check_dead()
+    assert orc not in w.enemies or orc.life < start, 'the raised creature fought the orc'
+    # leaving the screen: the raised go back to rest
+    risen = [(e.x, e.y) for e in w.enemies if e.ally]
+    assert risen
+    w.leave_room()
+    assert all(w.sq(x, y).mon == 0 for x, y in risen)
+    print('resurrection: a dead creature and a dead person rise at full life, fight beside the hero, rest when he leaves: ok')
+
+
 if __name__ == '__main__':
     fire()
     ice()
@@ -495,6 +551,7 @@ if __name__ == '__main__':
     blood_regen()
     foresight()
     clones()
+    resurrection()
     shrinking()
     disguise()
     event_code_text()
