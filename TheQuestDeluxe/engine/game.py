@@ -496,7 +496,9 @@ class Game:
         wall = self.pack.wall(q.wall)
         if wall.get('needs_item') and self.use_on_wall(q, wall):
             return True
-        if wall.get('solid'):
+        if wall.get('solid') and not (wall.get('small_only') and self.shrunk()):
+            if wall.get('small_only'):
+                self.report('You are too big to squeeze through.', 7)
             return False
         e = w.enemy_at(nx, ny)
         if e and (st.killer or e.att > -1 or e.type > 0):
@@ -712,7 +714,7 @@ class Game:
         pot = self.pack.extra_potions().get(n)
         if not pot or potions(p, n) <= 0:
             return False
-        heals = pot.get('life') or pot.get('mana') or pot.get('berserk') or pot.get('foresight')
+        heals = pot.get('life') or pot.get('mana') or pot.get('berserk') or pot.get('foresight') or pot.get('shrink')
         if pot.get('cure_poison') and not heals and not h.poisoned:
             return False                                  # like Cure Poison: only when poisoned
         add_potions(p, n, -1)
@@ -730,6 +732,9 @@ class Game:
             self.play('ampoisoned2', 0)
         if pot.get('berserk'):
             self.status.powboost = self.status.armboost = int(pot['berserk'])
+        if pot.get('shrink'):
+            p.more['shrunk'] = int(pot['shrink']) + 1             # this turn's upkeep takes one
+            self.report('You shrink!', 13)
         if pot.get('foresight'):
             p.more['foresight'] = int(pot['foresight']) + 1       # this turn's upkeep takes one
             self.report('Your eyes open: nothing hides from you.', 13)
@@ -896,6 +901,11 @@ class Game:
             self.overlay = ui.TitleScreen()
         self.load_game(on_no=no)
 
+    def shrunk(self) -> bool:
+        """Is the hero shrunk (a potion with `shrink` turns)? He is small enough to go through walls that are
+        `small_only`."""
+        return bool(self.player.more.get('shrunk', 0) > 0)
+
     def disguised(self) -> bool:
         """Is the hero in another creature's shape (the Disguise spell)?"""
         return self.player.hero.invisible > 0 and bool(self.player.more.get('disguise'))
@@ -951,6 +961,15 @@ class Game:
         """Top of the main2() loop after a turn: faults, poison, spell timers, boosts."""
         p, h, st, sk = self.player, self.player.hero, self.status, self.player.skill
         self.thaw()
+        if p.more.get('shrunk'):
+            p.more['shrunk'] -= 1
+            if p.more['shrunk'] <= 0:
+                inside = self.pack.wall(self.world.sq(p.X, p.Y).wall).get('small_only')
+                if inside:
+                    p.more['shrunk'] = 1                          # not while squeezed into a wall
+                else:
+                    p.more.pop('shrunk')
+                    self.report('You grow back to your size.', 7)
         if p.more.get('foresight'):
             p.more['foresight'] -= 1
             if p.more['foresight'] <= 0:

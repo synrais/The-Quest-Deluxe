@@ -418,6 +418,17 @@ form = app.items_tab.pics.master                                # the form's sid
 assert getattr(form, '_wheel_handler', None) is not None
 form._wheel_handler(2, False, False)                            # (the handler runs without error)
 assert getattr(app.quest_tab, '_wheel_handler', None) is not None
+# the wheel over a drop-down's own list: Tk's popdown is unknown to tkinter and must not raise
+class Over:
+    x_root = y_root = 5
+    state = 0
+    delta = -120
+orig = root.winfo_containing
+def boom(x, y):
+    raise KeyError('popdown')
+root.winfo_containing = boom
+assert _route(root, Over, 1) is None
+root.winfo_containing = orig
 print('the wheel: the map scrolls, zooms and has a square grid; the forms scroll: ok')
 
 # the event wizard writes a rule into the script and the words into the Dialogue

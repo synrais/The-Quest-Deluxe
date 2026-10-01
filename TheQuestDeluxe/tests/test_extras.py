@@ -451,6 +451,43 @@ def disguise():
     print('disguise: a random shape, monsters leave him, a friendly person turns on him, and it wears off: ok')
 
 
+def shrinking():
+    def setup(folder, json):
+        path = os.path.join(folder, 'quest.json')
+        q = json.load(open(path))
+        q['potions'] = {'9': {'name': 'Shrinking', 'colour': 11, 'shrink': 3}}
+        json.dump(q, open(path, 'w'))
+        path = os.path.join(folder, 'tiles.json')
+        tiles = json.load(open(path))
+        tiles['walls'].append({'id': 42, 'name': 'Crack', 'solid': True, 'small_only': True})
+        json.dump(tiles, open(path, 'w'))
+        shutil.copy(os.path.join(folder, 'sprites', 'walls', '1.png'), os.path.join(folder, 'sprites', 'walls', '42.png'))
+    from engine.state import add_potions
+    g = with_changes(setup)
+    p, w = g.player, g.world
+    for e in list(w.enemies):
+        w.sq(e.x, e.y).mon = 0
+    w.enemies.clear()
+    for dx in (1, 2):
+        sq = w.sq(p.X + dx, p.Y)
+        sq.wall = sq.mon = sq.item = 0
+    w.sq(p.X + 1, p.Y).wall = 42
+    x0 = p.X
+    assert not g.shrunk() and not g.try_move(1, 0) and p.X == x0           # too big
+    add_potions(p, 9, 1)
+    assert g.drink_extra(9) and g.shrunk()
+    assert g.try_move(1, 0) and p.X == x0 + 1                              # through the crack
+    g.renderer.draw(g, present=False)                                      # drawn small, inside the wall
+    for _ in range(4):
+        g.upkeep()
+    assert g.shrunk()                                                      # not while he is inside it
+    assert g.try_move(1, 0) and p.X == x0 + 2
+    g.upkeep()
+    assert not g.shrunk()
+    assert not g.try_move(-1, 0) and p.X == x0 + 2                         # and big again, he can't go back
+    print('shrinking: a potion makes the hero small enough for a crack in the wall, and holds while inside: ok')
+
+
 if __name__ == '__main__':
     fire()
     ice()
@@ -458,6 +495,7 @@ if __name__ == '__main__':
     blood_regen()
     foresight()
     clones()
+    shrinking()
     disguise()
     event_code_text()
     links()

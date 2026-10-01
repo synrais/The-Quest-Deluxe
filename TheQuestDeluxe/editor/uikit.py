@@ -8,6 +8,8 @@ scroll themselves and are left alone.
 """
 from __future__ import annotations
 
+import tkinter as tk
+
 NATIVE = ('Text', 'Listbox', 'Treeview', 'TCombobox', 'Spinbox', 'TSpinbox')
 
 
@@ -34,7 +36,10 @@ def on_wheel(widget, handler):
 
 
 def _route(root, event, steps):
-    w = root.winfo_containing(event.x_root, event.y_root)
+    try:
+        w = root.winfo_containing(event.x_root, event.y_root)
+    except (KeyError, tk.TclError):
+        return None                  # over a drop-down's own list (Tk's popdown, unknown to tkinter): it scrolls itself
     while w is not None:
         if w.winfo_class() in NATIVE:
             return None

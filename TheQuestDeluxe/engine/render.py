@@ -139,6 +139,24 @@ class Renderer:
         return (getattr(game, 'settings', None) or {}).get('items_on_top') == 'on'
 
     def draw_hero(self, scr, game, hx, hy):
+        """The hero at pixel position (hx, hy); half size, standing on the square's floor, while he is shrunk."""
+        if not game.shrunk():
+            self._hero_pixels(scr, game, hx, hy)
+            return
+        area = (hx, hy, TILE, TILE)
+        before = scr.subsurface(area).copy()
+        self._hero_pixels(scr, game, hx, hy)
+        after = scr.subsurface(area).copy()
+        changed = pygame.mask.from_threshold(after, (0, 0, 0, 255), (1, 1, 1, 255), before)
+        changed.invert()                                         # what the hero drew
+        colours = pygame.Surface((TILE, TILE), pygame.SRCALPHA)
+        colours.blit(after, (0, 0))
+        layer = pygame.Surface((TILE, TILE), pygame.SRCALPHA)
+        changed.to_surface(layer, setsurface=colours, unsetcolor=(0, 0, 0, 0))
+        scr.blit(before, (hx, hy))
+        scr.blit(pygame.transform.scale(layer, (TILE // 2, TILE // 2)), (hx + TILE // 4, hy + TILE // 2))
+
+    def _hero_pixels(self, scr, game, hx, hy):
         """guy2(), ported call for call (engine.anim.draw_guy2), at pixel position (hx, hy)."""
         p, st = game.player, game.status
         if game.disguised():                                     # the Disguise spell: in another creature's shape

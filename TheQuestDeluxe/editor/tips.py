@@ -108,6 +108,8 @@ FIELDS = {
     'reclass': 'Whether the hero can change class at level-ups (see the Quest tab).',
     # tiles
     'solid': 'Blocks the way for the hero and every creature.',
+    'small_only': 'A solid wall that a hero under a potion of shrinking can walk through (a crack, a mouse hole). '
+                  'Give it the billboard look for FPS mode.',
     'door': 'Opens when walked into: a plain door, a secret one, or one that needs a key.',
     'map_colour': 'Its colour on the level map: EGA colour, priority.',
     'role': 'What the engine puts this decoration down for (blood, bones, an open door ...). One decoration each.',

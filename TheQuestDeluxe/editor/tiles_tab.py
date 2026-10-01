@@ -109,7 +109,9 @@ class TilesTab(TableTab):
             walls = [(0, '(clear: nothing is left)')] + [(w['id'], f'{w["id"]} {w.get("name", "")}')
                                                          for w in sorted(self.app.project.tiles.get('walls', []),
                                                                          key=lambda w: w['id'])]
-            out += [Field('needs_item', 'Moved by the item', 'choice', items,
+            out += [Field('small_only', 'Only a shrunk hero passes', 'bool', when=lambda r: r.get('solid'),
+                          hint='a crack or a mouse hole: solid for everyone except a hero under a shrinking potion'),
+                    Field('needs_item', 'Moved by the item', 'choice', items,
                           hint='walked into with this item in the bag, the wall gives way (a boulder, rubble, a hedge)'),
                     Field('becomes', 'Then it becomes', 'choice', walls, when=lambda r: r.get('needs_item'), default=0),
                     Field('consumes', 'Uses the item up', 'bool', when=lambda r: r.get('needs_item')),
