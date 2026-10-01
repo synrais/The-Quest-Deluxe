@@ -98,6 +98,10 @@ FIELDS = {
     'makes_small': 'He is small while he wears it: through small-only walls, low eyes in FPS mode. With Makes him a '
                    'giant as well, they cancel.',
     'makes_giant': 'He is a giant while he wears it: hits half as hard again, smashes giant-only walls, high eyes.',
+    'use.life': 'Life it restores when used: Enter on it in the inventory. It is used up. (A minus hurts.)',
+    'use.mana': 'Mana it restores when used from the inventory.',
+    'use.cure_poison': 'Using it cures poison.',
+    'use.message': 'What the game says when it is used (empty: "You use the <name>.").',
     'pickup.grow': 'Picked up with Enter, it is eaten at once and the hero grows for this many turns '
                    '(a shrinking effect running instead cancels).',
     'pickup.shrink': 'Picked up with Enter, it is eaten at once and the hero shrinks for this many turns.',

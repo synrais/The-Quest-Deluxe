@@ -277,6 +277,20 @@ def inventory(h, mode):
             h.inv.coins += price
             show = True
             yield from tones(h, (700, 100), (600, 100))
+        elif hit == 13 and bag.get((x, y), 0) > 0 and mode == 1 and y >= 8 and \
+                h.pack.item(bag[(x, y)]).get('use'):
+            use = h.pack.item(bag[(x, y)])['use']                    # food, a bandage ...: used up, here and now
+            name = h.game.item_name(bag[(x, y)])
+            bag[(x, y)] = 0
+            said = h.game.apply_effect(use, f'You use the {name.lower() or "item"}.')
+            h.hero.life, h.hero.mana = h.game.player.hero.life, h.game.player.hero.mana     # the page's copy
+            g.setfillstyle(1, 0)
+            g.bar(0, 411, 640, 500)
+            g.settextstyle(8, 0, 1)
+            g.setcolor(10)
+            g.outtextxy(12, 440, said[:72])
+            show = True
+            yield from tones(h, (700, 80), (800, 80))
         elif hit == 13 and bag.get((x, y), 0) > 0:
             it = bag[(x, y)]
             if t(it, 1) <= h.hero.str and t(it, 2) <= h.hero.intl:

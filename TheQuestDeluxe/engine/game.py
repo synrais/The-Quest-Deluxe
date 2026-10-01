@@ -1014,23 +1014,44 @@ class Game:
     def eat(self, q, effect: dict):
         """Picking up an item with a `pickup` effect (a mushroom): it is used on the spot, and gone. The effect:
         grow / shrink (turns), life, mana (amounts), foresight (turns), poison (true), message."""
-        p, h = self.player, self.player.hero
         name = self.item_name(q.item).lower() or 'it'
         q.item = 0
-        self.report(effect.get('message') or f'You eat the {name}.', 10)
+        self.apply_effect(effect, f'You eat the {name}.')
+
+    def apply_effect(self, effect: dict, default_message: str) -> str:
+        """What an item does when it is eaten (`pickup`) or used from the bag (`use`): life and mana (an amount,
+        or "half" or "full"), cure_poison, grow / shrink / foresight (turns), berserk (turns), poison, message.
+        Returns the line that says so."""
+        p, h = self.player, self.player.hero
+
+        def gain(cur, mx, how):
+            if how == 'full':
+                return mx
+            if how == 'half':
+                return cur + mx // 2 + (mx % 2)
+            return cur + int(how or 0)
+        said = effect.get('message') or default_message
+        self.report(said, 10)
+        if effect.get('cure_poison') and h.poisoned:
+            h.poisoned = 0
+            self.report('The poison is gone.', 10)
+        if effect.get('berserk'):
+            self.status.powboost = self.status.armboost = int(effect['berserk'])
         if effect.get('grow'):
             self.change_size('grow', effect['grow'])
         if effect.get('shrink'):
             self.change_size('shrink', effect['shrink'])
         if effect.get('life'):
-            h.life = max(1, min(h.mlife, h.life + int(effect['life'])))
+            h.life = max(1, min(h.mlife, gain(h.life, h.mlife, effect['life'])))
         if effect.get('mana'):
-            h.mana = max(0, min(h.mmana, h.mana + int(effect['mana'])))
+            h.mana = max(0, min(h.mmana, gain(h.mana, h.mmana, effect['mana'])))
         if effect.get('foresight'):
             p.more['foresight'] = int(effect['foresight']) + 1
         if effect.get('poison') and not h.poisoned and not self.worn_any('poison_immune'):
             self.combat.poison_hero()
+        rules.status_update(p, self.status, self.items)
         self.tones((740, 100))
+        return said
 
     def disguised(self) -> bool:
         """Is the hero in another creature's shape (the Disguise spell)?"""

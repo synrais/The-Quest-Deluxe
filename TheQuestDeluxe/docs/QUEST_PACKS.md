@@ -82,6 +82,7 @@ with two conventions the engine and saves rely on:
 | `sight` | Worn items: squares further the eye sees in FPS mode. |
 | `poison_immune`, `see_invisible`, `water_walk` | Worn items: poison cannot touch him; invisible creatures show (like foresight); walls with `freezes_to` (water) do not stop him. |
 | `makes_small`, `makes_giant` | Worn items: while worn the hero is small, or a giant (both: his own size). |
+| `use` | Any item: `{"life": 20, "mana": 5, "cure_poison": true, "message": "..."}`. In the inventory (i), Enter on it in the backpack uses it up (food, a bandage, a mana root): `life` and `mana` are an amount, or `"half"` or `"full"`; the other effects of `pickup` work too (`grow`, `shrink`, `foresight`, `berserk`, `poison`). It cannot be worn. |
 | `pickup` | Any item: `{"grow": 40, "life": 10, "message": "..."}`. Picked up with Enter it is used at once and gone (a mushroom): `grow` or `shrink` (turns), `life`, `mana`, `foresight` (turns), `poison` (true), `message`. |
 | `element` | Weapons, launchers and ammunition: what a hit adds. `fire` and `poison` go on hurting for `element_turns` turns (3) at `element_power` (3) a turn; `ice` freezes the creature `element_turns` turns; `drain` heals the hero by half the damage. A bow's and its arrows' elements both apply. `element_chance`: percent of hits it takes hold on (100 if left out). Creatures whose `resists` lists the element shrug it off. |
 | `fires` | For launchers: the kinds of ammunition it takes. |

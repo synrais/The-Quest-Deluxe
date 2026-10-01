@@ -863,6 +863,44 @@ def behaviour():
     print('behaviour: chases within a range, runs away, rises a limited number of times, a giant fills 2 x 2: ok')
 
 
+def usable_items():
+    def food(folder, json):
+        path = os.path.join(folder, 'items.json')
+        data = json.load(open(path))
+        data['items'] += [{'id': 2101, 'name': 'Bread', 'type': 'treasure', 'use': {'life': 20, 'message': 'Tasty.'}},
+                          {'id': 2102, 'name': 'Mana Root', 'type': 'treasure', 'use': {'mana': 'half'}},
+                          {'id': 2103, 'name': 'Antidote Leaf', 'type': 'treasure', 'use': {'cure_poison': True}}]
+        json.dump(data, open(path, 'w'))
+    from engine import invshop
+    from engine.game import PageHost
+    g = with_changes(food)
+    p, h = g.player, g.player.hero
+    h.life, h.mana = h.mlife - 30, 0
+    h.poisoned = 1
+    p.bag[(12, 8)], p.bag[(13, 8)], p.bag[(14, 8)] = 2101, 2102, 2103
+    p.bag[(15, 8)] = 201                                            # an ordinary item: Enter equips as before
+    host = PageHost(g, g.page_layer(), {})
+    gen = invshop.inventory(host, 1)
+
+    def press(*keys):
+        """Run the page until it asks for a key, give it each key in turn."""
+        out = next(gen)
+        for k in keys:
+            while out is not invshop.KEY:
+                out = gen.send(None)
+            out = gen.send(k)
+        while out is not invshop.KEY:
+            out = gen.send(None)
+    life = h.life
+    press(13)                                                       # Enter on the bread at (12, 8)
+    assert h.life == life + 20 and p.bag.get((12, 8), 0) == 0
+    press(77, 13)                                                   # right, Enter: the mana root
+    assert h.mana == h.mmana // 2 + h.mmana % 2 and p.bag.get((13, 8), 0) == 0
+    press(77, 13)                                                   # the antidote leaf
+    assert not h.poisoned and p.bag.get((14, 8), 0) == 0
+    print('items: Enter on food in the inventory restores life, mana, cures poison, and is used up: ok')
+
+
 if __name__ == '__main__':
     fire()
     ice()
@@ -870,6 +908,7 @@ if __name__ == '__main__':
     blood_regen()
     foresight()
     clones()
+    usable_items()
     behaviour()
     creature_changes()
     fps_settings()
