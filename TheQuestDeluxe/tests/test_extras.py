@@ -283,6 +283,85 @@ def big_creature(shot=None):
           'square, dies on all, drawn once: ok')
 
 
+def links():
+    def stairs(folder, json):
+        path = os.path.join(folder, 'items.json')
+        data = json.load(open(path))
+        data['items'] += [{'id': 990, 'name': 'Stairs down', 'type': 'stairs'},
+                          {'id': 991, 'name': 'Stairs up', 'type': 'stairs'},
+                          {'id': 992, 'name': 'Hole', 'type': 'hole'}]
+        json.dump(data, open(path, 'w'))
+        for n, text in ((1, 'LINKS = {(6, 5): (2, 20, 20), (8, 5): (2, 30, 30, "Down you go.")}\n'),
+                        (2, 'LINKS = {(20, 20): (1, 6, 6)}\n')):
+            path = os.path.join(folder, 'levels', str(n), 'script.qs')
+            src = open(path).read()
+            at = src.index('START')
+            open(path, 'w').write(src[:at] + text + src[at:])
+    g = with_changes(stairs)
+    from engine.state import LINK_ITEMS
+    assert LINK_ITEMS
+    p, w = g.player, g.world
+    assert w.level == 1
+    for e in list(w.enemies):
+        w.sq(e.x, e.y).mon = 0
+    w.enemies.clear()
+    w.leave_room()
+    p.X, p.Y = 5, 5
+    w.enter_room(p, g.status)
+    for x in (6, 8):
+        w.sq(x, 5).wall = w.sq(x, 5).mon = 0
+    w.sq(6, 5).item, w.sq(8, 5).item = 990, 992
+    w.sq(7, 5).gold = 77                                       # something done on level 1 that must stay done
+    w.sq(20, 20).item = 0
+    g.try_move(1, 0)                                           # onto the stairs at (6, 5)
+    assert (w.level, g.status.level, p.X, p.Y) == (2, 2, 20, 20), (w.level, p.X, p.Y)
+    assert 1 in w.stash
+    w.sq(20, 20).item = 991
+    w.sq(21, 20).gold = 5                                      # and something on level 2
+    g.pick_up()                                                # Enter on the stairs back: level 2's LINKS
+    assert (w.level, p.X, p.Y) == (1, 6, 6) and w.sq(7, 5).gold == 77 and 2 in w.stash
+    p.X, p.Y = 7, 5
+    g.try_move(1, 0)                                           # (8, 5): the hole, with its own text
+    assert (w.level, p.X, p.Y) == (2, 30, 30) and w.sq(21, 20).gold == 5     # level 2 as it was left
+    # a save keeps the levels left behind, as what differs from the pack's maps
+    d = g.to_save()
+    assert set(d.extra['levels']) == {'1'}
+    g.slots.write(1, d)
+    d = g.slots.read(1)                                        # through the file and back
+    g2 = with_changes(stairs)
+    g2.from_save(d, 1)
+    assert g2.world.level == 2 and 1 in g2.world.stash and g2.world.stash[1][0][7][5].gold == 77
+    print('links: stairs and holes lead to another level, which keeps what was done in it, and saves: ok')
+
+
+def moved_walls():
+    def boulder(folder, json):
+        path = os.path.join(folder, 'tiles.json')
+        tiles = json.load(open(path))
+        tiles['walls'].append({'id': 41, 'name': 'Boulder', 'solid': True, 'needs_item': 995, 'becomes': 0,
+                               'becomes_deco': 5, 'consumes': True, 'message': 'The boulder rolls away.',
+                               'blocked_message': 'Too heavy.'})
+        json.dump(tiles, open(path, 'w'))
+        shutil.copy(os.path.join(folder, 'sprites', 'walls', '1.png'), os.path.join(folder, 'sprites', 'walls', '41.png'))
+        path = os.path.join(folder, 'items.json')
+        data = json.load(open(path))
+        data['items'].append({'id': 995, 'name': 'Crowbar', 'type': 'treasure'})
+        json.dump(data, open(path, 'w'))
+    g = with_changes(boulder)
+    p, w = g.player, g.world
+    for e in list(w.enemies):
+        w.sq(e.x, e.y).mon = 0
+    w.enemies.clear()
+    w.sq(p.X + 1, p.Y).wall = w.sq(p.X + 1, p.Y).mon = w.sq(p.X + 1, p.Y).item = 0
+    w.sq(p.X + 1, p.Y).wall = 41
+    assert not g.try_move(1, 0) and w.sq(p.X + 1, p.Y).wall == 41        # no crowbar: it stays
+    free = p.free_backpack_slot()
+    p.bag[free] = 995
+    assert g.try_move(1, 0) and w.sq(p.X + 1, p.Y).wall == 0 and w.sq(p.X + 1, p.Y).deco == 5
+    assert 995 not in p.bag.values()                                        # used up
+    print('an item moves a wall: the boulder gives way to the crowbar, which is used up: ok')
+
+
 if __name__ == '__main__':
     fire()
     ice()
@@ -290,5 +369,7 @@ if __name__ == '__main__':
     blood_regen()
     foresight()
     clones()
+    links()
+    moved_walls()
     big_creature(sys.argv[1] if len(sys.argv) > 1 else None)
     print('all extras checks passed')

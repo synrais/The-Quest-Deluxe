@@ -66,7 +66,7 @@ with two conventions the engine and saves rely on:
 | `id`, `name` | `name` is the item's name in the editor and in messages. |
 | `bag_name` | The name the inventory prints under the map (Quest I's own spellings). |
 | `price` | Shop price in gold. Potions cost 2 x (level - 1) times more after level 1; Bargaining takes 30% off everything else. |
-| `type` | `potion`, `key`, `chest`, `teleporter`, `exit`, `armour`, `weapon` (melee), `launcher` (sling, bow), `shield`, `helmet`, `amulet`, `ammo`, `treasure` (goes in the backpack). |
+| `type` | `ladder`, `rope`, `stairs`, `hole`, `jump_pad`: stepping on one (or Enter on it) takes the hero to the square the level script's `LINKS` names (docs/EVENTS.md): another level, which is kept as he left it (also in saves), so a cellar, a tower or a building with floors can be made. A hole or a pad with no link back is one way. `potion`, `key`, `chest`, `teleporter`, `exit`, `armour`, `weapon` (melee), `launcher` (sling, bow), `shield`, `helmet`, `amulet`, `ammo`, `treasure` (goes in the backpack). |
 | `req_str`, `req_int` | Needed to use it. |
 | `atk`, `def`, `warm`, `marm`, `str`, `int`, `dex`, `acc` | What it adds while worn (attack, defence, weapon armour, magic armour, stats). |
 | `power` | A weapon's damage; for amulets see `power_bonus`. |
@@ -169,6 +169,7 @@ Scholar; Cowardice, Rashness, Honor).
 | `solid` | Walls: blocks the way. |
 | `door` | Walls: `plain` (opens when walked into; monsters open these too), `fake` (a secret wall that opens the same way), `locked` (needs the `key` of that colour). An opened door closes again as a plain door when the hero leaves the screen. |
 | `map_colour` | `[EGA colour, priority]` on the automap; the floor's or the wall's, whichever has the higher priority (plain grass green otherwise). `map_colour_on_level` overrides it on one level. |
+| `needs_item`, `becomes`, `becomes_deco`, `consumes`, `message`, `blocked_message` | Walls: walked into with the item `needs_item` in the bag (worn or carried), the wall becomes the wall `becomes` (0 or left out: nothing, so a boulder is moved), perhaps leaving the decoration `becomes_deco`, and the item is used up if `consumes`. `message` says so in the combat log; `blocked_message` is what walking into it says without the item. Give the wall `solid` so that nothing else passes. |
 | `freezes_to` | Walls: the wall a freezing spell (`freezes_water`) turns this one into, e.g. water into a wall called Ice that isn't `solid`. The ice melts back when its turns are up (later if somebody stands on it). |
 | `role` | Decorations the engine puts down: `open_door`, `open_chest`, `remains`, `remains2`, `blood`, `bones`. |
 

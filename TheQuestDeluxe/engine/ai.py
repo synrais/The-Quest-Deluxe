@@ -11,7 +11,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from .rules import random, spread
-from .state import Enemy
+from .state import Enemy, LINK_ITEMS
 
 if TYPE_CHECKING:
     from .game import Game
@@ -61,7 +61,7 @@ def monsmove(g: 'Game') -> None:
             if not (x0 <= cx <= x1 and y0 <= cy <= y1):
                 return False
             q = w.sq(cx, cy)
-            if not (q.wall == 0 and g.pack.item_type(q.item) not in ('teleporter', 'exit')
+            if not (q.wall == 0 and g.pack.item_type(q.item) not in ('teleporter', 'exit') + LINK_ITEMS
                     and (q.mon == 0 or (cx, cy) in own) and (cx, cy) != (p.X, p.Y)):
                 return False
         return True

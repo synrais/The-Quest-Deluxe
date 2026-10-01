@@ -32,8 +32,8 @@ FACINGS = [(0, -1), (1, 0), (0, 1), (-1, 0)]          # north, east, south, west
 FACING_NAMES = 'NESW'
 FOG_STEPS = 8
 BAYER = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]]
-FLAT_ITEMS = ('exit', 'teleporter')
-FULL_ITEMS = ('chest',)
+FLAT_ITEMS = ('exit', 'teleporter', 'stairs', 'hole', 'jump_pad')
+FULL_ITEMS = ('chest', 'ladder', 'rope')
 
 
 def facing_angle(f: int) -> float:

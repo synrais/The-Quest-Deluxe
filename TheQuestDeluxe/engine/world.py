@@ -36,20 +36,66 @@ class World:
     visited: set = field(default_factory=set)            # screens seen (automap, original `carta`)
     enemies: list = field(default_factory=list)          # Enemy objects on the current screen
     origin: tuple = (1, 1)
+    stash: dict = field(default_factory=dict)            # level -> (grid, visited) of levels left by a link (Game.travel)
 
     # ── levels ────────────────────────────────────────────────────────────────
-    def load_level(self, level: int, player: Player, st: Status, start=(5, 5)) -> None:
-        self.level = level
-        st.level = level
-        self.grid = self.data.load_level(level)
+    def pristine(self, level: int) -> list:
+        """A level's map as the pack has it (with the pack's corrections to its own maps)."""
+        grid = self.data.load_level(level)
         pack = self.data.src.pack
-        if pack.fixed('map'):                              # the pack's corrections to its own maps
+        if pack.fixed('map'):
             for fix in pack.quest.get('map_fixes') or []:
                 if fix.get('level') == level and self.in_map(fix.get('x', 0), fix.get('y', 0)):
-                    q = self.grid[fix['x']][fix['y']]
+                    q = grid[fix['x']][fix['y']]
                     for f in ('floor', 'wall', 'mon', 'item', 'gold', 'deco'):
                         if f in fix:
                             setattr(q, f, fix[f])
+        return grid
+
+    def travel(self, level: int, x: int, y: int, player: Player, st: Status) -> bool:
+        """A link (ladder, stairs, hole ...) to (x, y) on another level: this level's map is kept as it is
+        (so what was done here stays done when the hero comes back), the other's is picked up as it was
+        left, or loaded. True if it was loaded fresh."""
+        self.leave_room()
+        self.stash[self.level] = (self.grid, self.visited)
+        fresh = level not in self.stash
+        if fresh:
+            self.grid, self.visited = self.pristine(level), set()
+        else:
+            self.grid, self.visited = self.stash.pop(level)
+        self.level = st.level = level
+        player.X, player.Y = x, y
+        self.enter_room(player, st)
+        return fresh
+
+    def stash_to_save(self) -> dict:
+        """The levels left by links, as what differs from the pack's maps (the DELUXE block of a save)."""
+        out = {}
+        for level, (grid, visited) in self.stash.items():
+            base, diff = self.pristine(level), []
+            for x in range(1, MAP_SIZE + 1):
+                for y in range(1, MAP_SIZE + 1):
+                    a, b = grid[x][y], base[x][y]
+                    if (a.floor, a.wall, a.item, a.mon, a.gold, a.deco) != (b.floor, b.wall, b.item, b.mon, b.gold, b.deco):
+                        diff.append([x, y, a.floor, a.wall, a.item, a.mon, a.gold, a.deco])
+            out[str(level)] = {'diff': diff, 'visited': sorted([i, j] for i, j in visited)}
+        return out
+
+    def stash_from_save(self, saved: dict) -> None:
+        self.stash = {}
+        for level, v in (saved or {}).items():
+            grid = self.pristine(int(level))
+            for x, y, fl, wa, it, mo, go, de in v.get('diff', []):
+                if self.in_map(x, y):
+                    grid[x][y] = Square(fl, wa, mo, it, go, de)
+            self.stash[int(level)] = (grid, {tuple(c) for c in v.get('visited', [])})
+
+    def load_level(self, level: int, player: Player, st: Status, start=(5, 5)) -> None:
+        if not self.level:
+            self.stash = {}                                # a new game starts with no level kept
+        self.level = level
+        st.level = level
+        self.grid = self.pristine(level)
         self.visited = set()
         player.X, player.Y = start
         st.mission1 = st.mission2 = 0

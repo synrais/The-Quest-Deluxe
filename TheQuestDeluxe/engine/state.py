@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 KNIGHT, MAGE, ROGUE, MONK = 1, 2, 3, 4           # Quest I's classes (the pack's classes.json)
 
 # Equipment slots are cells of the original 17x13 `bag` matrix.
+LINK_ITEMS = ('ladder', 'rope', 'stairs', 'hole', 'jump_pad')   # item types that lead to another level (LINKS)
 SLOT_WEAPON = (12, 4)
 SLOT_OFFHAND = (16, 4)   # shield, or second weapon with Ambidexterity
 SLOT_HELMET = (14, 2)

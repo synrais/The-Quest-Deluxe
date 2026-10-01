@@ -9,7 +9,10 @@ from .tiles_tab import key_choices
 TYPES = [('weapon', 'Weapon (melee)'), ('launcher', 'Launcher (sling, bow)'), ('ammo', 'Ammunition'),
          ('armour', 'Armour'), ('shield', 'Shield'), ('helmet', 'Helmet'), ('amulet', 'Amulet'),
          ('potion', 'Potion'), ('treasure', 'Treasure / quest item'), ('key', 'Key'), ('chest', 'Chest'),
-         ('teleporter', 'Teleporter pad'), ('exit', 'Level exit')]
+         ('teleporter', 'Teleporter pad'), ('exit', 'Level exit'),
+         ('ladder', 'Ladder (to another level)'), ('rope', 'Rope (to another level)'),
+         ('stairs', 'Stairs (to another level)'), ('hole', 'Hole (one way down)'),
+         ('jump_pad', 'Jump pad (one way)')]
 WORN = ('weapon', 'launcher', 'armour', 'shield', 'helmet', 'amulet')
 KINDS = [(0, '0 normal'), (1, '1 double strike (1 in 5)'), (2, '2 parry (1 in 5)'), (3, '3 magic (ignores armour)'),
          (4, '4 ranged (a launcher)'), (5, '5 two-handed'), (6, '6 two-handed, parry')]

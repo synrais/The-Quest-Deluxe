@@ -134,7 +134,7 @@ class CreaturesTab(TableTab):
             pick('hides_as', 'Hides again as', 'when the hero leaves the screen'),
             Field('rests_after_moving', 'Rests after moving', 'bool', hint="doesn't attack in a turn it moved"),
             Field('animal', 'Animal', 'bool', hint="doesn't fight people; killing it earns no reputation"),
-            Field('size', 'Size', 'int', default=1, width=4,
+            Field('size', 'Size', 'int', width=4,
                   hint='1: one square. 2: a giant on 2 x 2 squares (3: 3 x 3): put it on the map at its top-left '
                        'square and leave the others free; the screen has 10 x 10. A 40 x 40 picture is stretched.'),
             Field('regenerates_from_blood', 'Rises from blood', 'bool',

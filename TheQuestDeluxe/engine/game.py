@@ -17,7 +17,7 @@ from dataclasses import asdict
 import pygame
 
 from .formats import GameData, Square, MAP_SIZE
-from .state import (Status, Player, Hero, Inventory, Skills, new_player, POTION_FIELDS, KNIGHT, Enemy,
+from .state import (LINK_ITEMS, Status, Player, Hero, Inventory, Skills, new_player, POTION_FIELDS, KNIGHT, Enemy,
                     potions, add_potions, has_key, give_key)
 from .world import World, screen_of, room_origin
 from .savefile import SaveData, Slots
@@ -494,6 +494,8 @@ class Game:
             return False
         q = w.sq(nx, ny)
         wall = self.pack.wall(q.wall)
+        if wall.get('needs_item') and self.use_on_wall(q, wall):
+            return True
         if wall.get('solid'):
             return False
         e = w.enemy_at(nx, ny)
@@ -537,7 +539,9 @@ class Game:
             p.X, p.Y = nx, ny
         self.events.on_step(p.X, p.Y)
         kind = self.pack.item_type(q.item)
-        if kind == 'exit':
+        if kind in LINK_ITEMS:
+            self.take_link()
+        elif kind == 'exit':
             if self.events.meta(w.level, 'ASK_TO_LEAVE', True):
                 self.overlay = ui.YesNo('Want to travel further? (Y)es (N)o', self.next_level)
             else:
@@ -555,6 +559,57 @@ class Game:
                 self.target = None
                 self.count_hostiles()
             self.play_at('teleporter2', p.X, p.Y)
+        return True
+
+    def take_link(self) -> bool:
+        """A ladder, rope, stairs, hole or jump pad under the hero (the item types in LINK_ITEMS): the level's
+        LINKS says where it leads, {(x, y): (level, x, y)} or (level, x, y, "text to show"). The hero lands
+        on the other level (kept as he left it), and a pad or a hole at the other end only leads on if it is
+        one too: a link is only ever one way unless the other level links back. True if it led somewhere."""
+        p, w = self.player, self.world
+        link = (self.events.meta(w.level, 'LINKS', {}) or {}).get((p.X, p.Y))
+        if not link:
+            self.report('It leads nowhere.', 7)
+            return False
+        level, x, y, *rest = link
+        if not (1 <= level <= self.levels and w.in_map(x, y)):
+            self.report('It leads nowhere.', 7)
+            return False
+        text = rest[0] if rest else {'ladder': 'You climb the ladder.', 'rope': 'You climb the rope.',
+                                     'stairs': 'You take the stairs.', 'hole': 'You fall through the hole!',
+                                     'jump_pad': 'The pad throws you through the air!'}.get(
+            self.pack.item_type(w.sq(p.X, p.Y).item), '')
+        self.tones((400, 60), (500, 60), (600, 60))
+        self.target = None
+        fresh = w.travel(level, x, y, p, self.status)
+        self.count_hostiles()
+        self.events.on_level_start()
+        if fresh:
+            self.events.run('level_start')
+        if text:
+            self.report(text, 14)
+        return True
+
+    def use_on_wall(self, q, wall: dict) -> bool:
+        """A wall that an item moves (tiles.json `needs_item`: a boulder, a rubble heap, a thorn hedge): walked
+        into with the item in the bag, it becomes `becomes` (nothing if left out), perhaps leaving a
+        `becomes_deco`, and the item is used up if `consumes`. True if it gave way (a turn); without the item
+        it says `blocked_message` and stays."""
+        p, need = self.player, wall['needs_item']
+        slot = next((s for s, it in p.bag.items() if it == need), None)
+        if slot is None:
+            msg = wall.get('blocked_message')
+            if msg:
+                self.report(msg, 12)
+            return False
+        q.wall = wall.get('becomes', 0)
+        if wall.get('becomes_deco'):
+            q.deco = wall['becomes_deco']
+        if wall.get('consumes'):
+            p.bag[slot] = 0
+            rules.status_update(p, self.status, self.items)
+        self.tones((300, 80), (200, 80))
+        self.report(wall.get('message') or f'You use the {self.item_name(need).lower() or "item"}.', 14)
         return True
 
     def talk(self, npc: int, x: int, y: int):
@@ -579,6 +634,8 @@ class Game:
         was something to take; the level script hears about it at the same points as the original's
         checks (before, after a chest, after an item goes into the backpack)."""
         p, q = self.player, self.world.sq(self.player.X, self.player.Y)
+        if self.pack.item_type(q.item) in LINK_ITEMS:       # Enter on a ladder, stairs ...: use it
+            return self.take_link()
         turn = bool(q.item or q.gold)
         if turn:
             self.tones((300, 50), (400, 50))
@@ -1022,6 +1079,8 @@ class Game:
         d.spells = list(p.spells[:21])
         d.carta = {(sx + 1, sy + 1): 1 for sx, sy in w.visited}
         d.fkey = list(p.fkey)
+        if w.stash:
+            d.extra['levels'] = w.stash_to_save()
         # past the original's structures: the DELUXE block, only when there is something in it
         if any(p.spells[21:]):
             d.extra['spells'] = list(p.spells[21:])
@@ -1055,6 +1114,7 @@ class Game:
             if w.in_map(x, y):
                 w.grid[x][y] = Square(fl, wa, mo, it, go, de)
         w.visited = {(i - 1, ii - 1) for (i, ii), v in d.carta.items() if v}
+        w.stash_from_save(d.extra.get('levels'))
         w.origin = room_origin(p.X, p.Y)
         self.events.snapshot()                          # map[] holds the arrival values
         ox, oy = w.origin

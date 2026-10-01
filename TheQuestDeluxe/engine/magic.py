@@ -6,6 +6,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from .state import LINK_ITEMS
 from .rules import random, SP_INT, SP_MANA, SP_RANGE, SP_POWER, SP_DURATION
 
 if TYPE_CHECKING:
@@ -64,7 +65,8 @@ class Magic:
         q, eff = w.sq(x, y), self.effect(spell)
         water = self.g.pack.spell(spell).get('freezes_water') is not None and \
             self.g.pack.wall(q.wall).get('freezes_to') and q.mon == 0
-        if (q.wall != 0 or self.g.pack.item_type(q.item) in ('teleporter', 'exit')) and eff != 'earthquake' \
+        if (q.wall != 0 or self.g.pack.item_type(q.item) in ('teleporter', 'exit') + LINK_ITEMS) \
+                and eff != 'earthquake' \
                 and not water:
             return False
         if (x, y) == (p.X, p.Y) and eff != 'earthquake':
@@ -135,7 +137,7 @@ class Magic:
         for x, y in tiles:
             q = g.world.sq(x, y)
             if not g.world.in_room(x, y) or q.mon or q.wall \
-                    or g.pack.item_type(q.item) in ('teleporter', 'exit'):
+                    or g.pack.item_type(q.item) in ('teleporter', 'exit') + LINK_ITEMS:
                 continue
             self.anim(spell, x, y)
             e = g.spawn(sp['creature'], x, y)

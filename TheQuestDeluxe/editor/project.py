@@ -111,6 +111,9 @@ class Project:
             rows = []
         return sorted(rows, key=lambda r: r['id'])
 
+    def item_type(self, v: int) -> str:
+        return next((r.get('type', '') for r in self.tables['items'] if r['id'] == v), '') if v else ''
+
     def name_of(self, layer: str, v: int) -> str:
         if not v:
             return ''

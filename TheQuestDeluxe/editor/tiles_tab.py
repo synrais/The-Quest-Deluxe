@@ -103,6 +103,20 @@ class TilesTab(TableTab):
                                                                     key=lambda w: w['id'])]
             out.append(Field('freezes_to', 'Freezes to', 'choice', walls,
                              hint='water: the wall (ice, not solid) a freezing spell turns it into'))
+        if self.kind == 'walls':
+            items = [(None, '(nothing)')] + [(r['id'], f'{r["id"]} {r.get("name", "")}')
+                                              for r in sorted(self.app.project.tables['items'], key=lambda r: r['id'])]
+            walls = [(0, '(clear: nothing is left)')] + [(w['id'], f'{w["id"]} {w.get("name", "")}')
+                                                         for w in sorted(self.app.project.tiles.get('walls', []),
+                                                                         key=lambda w: w['id'])]
+            out += [Field('needs_item', 'Moved by the item', 'choice', items,
+                          hint='walked into with this item in the bag, the wall gives way (a boulder, rubble, a hedge)'),
+                    Field('becomes', 'Then it becomes', 'choice', walls, when=lambda r: r.get('needs_item'), default=0),
+                    Field('consumes', 'Uses the item up', 'bool', when=lambda r: r.get('needs_item')),
+                    Field('message', 'Message', 'str', when=lambda r: r.get('needs_item'),
+                          hint='in the combat log when it gives way (empty: "You use the <item>.")'),
+                    Field('blocked_message', 'Without the item', 'str', when=lambda r: r.get('needs_item'),
+                          hint='in the combat log when you walk into it without the item')]
         if self.kind in ('floors', 'walls'):
             out += [Field('map_colour', 'Automap colour', 'custom', fmt=fmt_colour('map_colour'),
                           parse=parse_colour, hint='colour, priority (e.g. 8, 2); empty: none'),

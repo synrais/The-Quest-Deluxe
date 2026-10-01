@@ -11,6 +11,8 @@ Right: the tools, the layer, and the palette of what can go in that layer.
   Start      where the hero arrives on this level (START)
   Shop       which shop a screen's shopkeeper runs (SHOPS)
   Peaceful   screens where people and allies leave monsters alone (PEACEFUL_SCREENS)
+  Link       where the ladder, rope, stairs, hole or jump pad on the clicked square leads: a square on
+             another level (LINKS). Put the item on the square first (Item layer).
   Ctrl+Z / Ctrl+Y undo and redo.
 """
 from __future__ import annotations
@@ -27,7 +29,7 @@ LAYERS = [('floor', 'Floor'), ('wall', 'Wall / door'), ('deco', 'Decoration'), (
           ('mon', 'Creature'), ('gold', 'Gold')]
 SETTINGS_3D = [('SKY_3D', '3D sky colour'), ('FOG_3D', '3D fog colour'), ('RANGE_3D', '3D range')]
 TOOLS = [('paint', 'Paint'), ('rect', 'Rectangle'), ('fill', 'Fill'), ('pick', 'Pick'),
-         ('start', 'Start'), ('shop', 'Shop'), ('peace', 'Peaceful')]
+         ('start', 'Start'), ('shop', 'Shop'), ('peace', 'Peaceful'), ('link', 'Link')]
 ZOOMS = {'Large (40)': 40, 'Medium (24)': 24, 'Small (12)': 12}
 
 
@@ -367,6 +369,11 @@ class MapTab(ttk.Frame):
                 if (sx, sy) in shops:
                     surf.blit(font.render(f'Shop {shops[(sx, sy)]}', True, (255, 255, 255), (0, 0, 160)),
                               (px + 4, py + 4))
+        for (lx, ly), link in (p.constant(self.level, 'LINKS', {}) or {}).items():
+            if self.ox <= lx < self.ox + cols and self.oy <= ly < self.oy + rows:
+                px, py = at(lx, ly)
+                pygame.draw.rect(surf, (255, 160, 0), (px + 1, py + 1, s - 2, s - 2), 2)
+                surf.blit(font.render(f'>{link[0]}', True, (255, 160, 0)), (px + 3, py + s // 2))
         start = p.constant(self.level, 'START', (5, 5))
         px, py = at(*start)
         pygame.draw.rect(surf, (255, 255, 255), (px + 1, py + 1, s - 2, s - 2), 2)
@@ -431,6 +438,8 @@ class MapTab(ttk.Frame):
             self.app.scripts_changed(self.level)
         elif tool in ('shop', 'peace'):
             self._screen_tool(tool, (x - 1) // 10 + 1, (y - 1) // 10 + 1)
+        elif tool == 'link':
+            self._link_tool(x, y)
         self.redraw()
 
     def _drag(self, e):
@@ -529,6 +538,44 @@ class MapTab(ttk.Frame):
         self.app.changed()
         self.redraw()
 
+    LINK_ITEMS = ('ladder', 'rope', 'stairs', 'hole', 'jump_pad')
+
+    def _link_tool(self, x, y):
+        """Where the stairs (ladder, rope, hole, pad) on (x, y) lead. A way back can be made at the same time:
+        the link on the other level, with the same item put there if the square has none."""
+        p, n = self.app.project, self.level
+        links = dict(p.constant(n, 'LINKS', {}) or {})
+        item = self.grid.get(x, y)[FIELD['item']]
+        if p.item_type(item) not in self.LINK_ITEMS and (x, y) not in links:
+            messagebox.showinfo('Link', 'Put a ladder, rope, stairs, hole or jump pad here first (Item layer; the '
+                                        'Items tab makes them: their Type).')
+            return
+        dlg = LinkDialog(self, f'Link at ({x}, {y}) on level {n}', links.get((x, y)), p.levels,
+                         two_way=p.item_type(item) not in ('hole', 'jump_pad'))
+        if dlg.result is None:
+            return
+        if dlg.result == 'remove':
+            links.pop((x, y), None)
+        else:
+            level, tx, ty, text, way_back = dlg.result
+            links[(x, y)] = (level, tx, ty, text) if text else (level, tx, ty)
+            if way_back:
+                other = dict(p.constant(level, 'LINKS', {}) or {})
+                other[(tx, ty)] = (n, x, y)
+                p.set_constant(level, 'LINKS', other, 'square -> (level, x, y) of the other end')
+                sq = p.grid(level).get(tx, ty)
+                if not sq[FIELD['item']]:
+                    sq[FIELD['item']] = item                   # the same stairs at the other end
+                p.touch(('map', level))
+                self.app.scripts_changed(level)
+        if links:
+            p.set_constant(n, 'LINKS', links, 'square -> (level, x, y) of the other end')
+        else:
+            p.remove_constant(n, 'LINKS')
+        self.app.changed()
+        self.app.scripts_changed(n)
+        self.redraw()
+
     def _screen_tool(self, tool, sx, sy):
         p, n = self.app.project, self.level
         if tool == 'shop':
@@ -556,3 +603,55 @@ class MapTab(ttk.Frame):
             p.set_constant(n, 'PEACEFUL_SCREENS', peaceful, "screens where people and allies don't attack monsters")
         self.app.changed()
         self.app.scripts_changed(n)
+
+
+class LinkDialog(simpledialog.Dialog):
+    """Where a link leads: the level, the square and the words shown; a way back; or remove it."""
+
+    def __init__(self, parent, title, link, levels, two_way=True):
+        self.link, self.levels, self.two_way = link, levels, two_way
+        self.result = None
+        super().__init__(parent, title)
+
+    def body(self, master):
+        link = self.link or (1, 5, 5)
+        self.vars = {}
+        for i, (key, label, value) in enumerate((('level', 'Leads to level', link[0]), ('x', 'at x (1-100)', link[1]),
+                                                 ('y', 'and y (1-100)', link[2]),
+                                                 ('text', 'Words shown (empty: the default)',
+                                                  link[3] if len(link) > 3 else ''))):
+            ttk.Label(master, text=label).grid(row=i, column=0, sticky='w', pady=2)
+            self.vars[key] = tk.StringVar(value=str(value))
+            if key == 'level':
+                w = ttk.Combobox(master, textvariable=self.vars[key], state='readonly', width=8,
+                                 values=[str(n) for n in range(1, self.levels + 1)])
+            else:
+                w = ttk.Entry(master, textvariable=self.vars[key], width=30 if key == 'text' else 8)
+            w.grid(row=i, column=1, sticky='w')
+        self.back = tk.BooleanVar(value=self.two_way and not self.link)
+        if self.two_way:
+            ttk.Checkbutton(master, text='Also make the way back (the link and the same item at the other end)',
+                            variable=self.back).grid(row=4, column=0, columnspan=2, sticky='w', pady=4)
+        self.remove = tk.BooleanVar(value=False)
+        if self.link:
+            ttk.Checkbutton(master, text='Remove this link', variable=self.remove).grid(
+                row=5, column=0, columnspan=2, sticky='w')
+        return None
+
+    def validate(self):
+        if self.remove.get():
+            return True
+        try:
+            level, x, y = (int(self.vars[k].get()) for k in ('level', 'x', 'y'))
+            assert 1 <= level <= self.levels and 1 <= x <= SIZE and 1 <= y <= SIZE
+        except (ValueError, AssertionError):
+            messagebox.showerror('Link', 'A level of this quest, and x and y from 1 to 100.', parent=self)
+            return False
+        return True
+
+    def apply(self):
+        if self.remove.get():
+            self.result = 'remove'
+            return
+        self.result = (int(self.vars['level'].get()), int(self.vars['x'].get()), int(self.vars['y'].get()),
+                       self.vars['text'].get().strip(), self.back.get())

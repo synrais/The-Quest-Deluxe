@@ -134,6 +134,21 @@ ct.new()
 assert -99 <= ct.row['id'] <= -1 and ct.row['id'] != -5 and ct.row['att'] == -2
 print('creatures: traits, loot, a new person: ok')
 
+# pickers (a creature chosen from a list), the new traits, and links between levels
+ct.select(32)
+shows = next(f for f in ct.fields() if f.key == 'reveals_as')
+assert shows.kind == 'choice' and any(v == 3 for v, _ in shows.choices)
+ct._set(shows, 3)
+assert ct.row['reveals_as'] == 3
+ct._set(shows, None)
+assert 'reveals_as' not in ct.row
+size = next(f for f in ct.fields() if f.key == 'size')
+ct._set(size, 2)
+assert ct.row['size'] == 2
+ct._set(size, None)
+assert 'size' not in ct.row
+print('creatures: pickers for what it turns into, and its size: ok')
+
 # the Classes tab: a new class with a starting kit
 cl = app.classes_tab
 app.tabs.select(cl)
@@ -324,5 +339,31 @@ assert '3 3 1 5 0 0 0 0' in lines and '2 6 1 0 0 0 25 0' in lines
 with open(os.path.join(pack, 'levels', '1', 'script.qs')) as fh:
     assert 'START = (7, 8)                      # where newmap() puts the hero' in fh.read()
 print('saved: map and script as expected')
+
+import editor.map_tab as mt
+mtab = app.map_tab
+app.tabs.select(mtab)
+pump()
+mtab.level = 1
+mtab.grid.sq[6][6][2] = 5                                 # an item that is no ladder: refused
+shown = []
+mt.messagebox.showinfo = lambda *a, **k: shown.append(a)
+mtab._link_tool(6, 6)
+assert shown, 'a square without a ladder asks for one first'
+app.project.tables['items'].append({'id': 990, 'name': 'Stairs', 'type': 'stairs'})
+mtab.grid.sq[6][6][2] = 990
+class FakeLink:
+    result = (2, 10, 12, 'Down you go.', True)
+mt.LinkDialog = lambda *a, **k: FakeLink()
+mtab._link_tool(6, 6)
+assert app.project.constant(1, 'LINKS') == {(6, 6): (2, 10, 12, 'Down you go.')}
+assert app.project.constant(2, 'LINKS') == {(10, 12): (1, 6, 6)}
+assert app.project.grid(2).get(10, 12)[2] == 990        # the same stairs at the other end
+class Gone:
+    result = 'remove'
+mt.LinkDialog = lambda *a, **k: Gone()
+mtab._link_tool(6, 6)
+assert app.project.constant(1, 'LINKS') is None
+print('links: the Link tool makes both ends and removes one: ok')
 root.destroy()
 print('all editor checks passed')
