@@ -91,6 +91,9 @@ class CreaturesTab(TableTab):
 
     def fields(self):
         opt = lambda k, label, hint='': Field(k, label, 'custom', fmt=fmt_key(k), parse=parse_int_or_none, hint=hint)
+        monsters = [(None, '(none)')] + [(c['id'], self.label(c)) for c in
+                                         sorted(self.rows, key=lambda c: c['id'])]
+        pick = lambda k, label, hint='': Field(k, label, 'choice', monsters, hint=hint)
         return [
             Field('id', 'Number', 'readonly'),
             Field('_role', 'Is a', 'readonly', default=None),
@@ -120,12 +123,12 @@ class CreaturesTab(TableTab):
             Field('cast_anim', 'Spell animation', 'custom', fmt=fmt_anim, parse=parse_anim,
                   hint='animation and its arguments, e.g. aflame 1'),
             Field('heals_allies', 'Heals its side', 'bool', hint='instead of attacking'),
-            opt('raises_dead', 'Raises bones as', 'a creature number'),
+            pick('raises_dead', 'Raises bones as', 'the creature the bones turn into'),
             opt('explodes', 'Explodes', 'blasts the hero n times, then dies'),
             Field('drains_life', 'Drains life', 'bool', hint='heals itself by the damage its spell does'),
             Field('invisible', 'Invisible', 'bool'),
-            opt('reveals_as', 'Shows itself as', 'the creature it turns into when it attacks'),
-            opt('hides_as', 'Hides again as', 'when the hero leaves the screen'),
+            pick('reveals_as', 'Shows itself as', 'the creature it turns into when it attacks'),
+            pick('hides_as', 'Hides again as', 'when the hero leaves the screen'),
             Field('rests_after_moving', 'Rests after moving', 'bool', hint="doesn't attack in a turn it moved"),
             Field('animal', 'Animal', 'bool', hint="doesn't fight people; killing it earns no reputation"),
             Field('silences_witnesses', 'Silences witnesses', 'bool', hint='nobody reports a killing near it'),
