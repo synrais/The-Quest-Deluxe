@@ -28,6 +28,7 @@ GRIP = (300, 405)         # where the grip sits: the bottom right, just below th
 SHIELD_SCALE = 8
 GRIP_LEFT = (95, 440)    # the left hand's: a shield, or a second weapon
 TILT = -22                # degrees; a melee weapon leans in toward the middle
+OFF_TILT = -34            # the off-hand weapon leans out to the left, away from the right-hand one
 ATTACK_MS = {'swing': 280, 'thrust': 240, 'shoot': 320}
 MISS_REACH, MISS_TIME = 1.6, 1.6    # a miss carries the blow this much further, and takes this much longer
 STEP_BOB = 7              # pixels up at the middle of a step
@@ -79,8 +80,8 @@ class Hands:
             self._pictures[item] = pic
         return self._pictures[item]
 
-    def pose(self, game, now: int):
-        """(dx, dy, extra tilt) of the hand: the step's bob, then the attack."""
+    def pose(self, game, now: int, swinging: bool = True):
+        """(dx, dy, extra tilt) of a hand: the step's bob, then the attack (only for the hand that attacks)."""
         dx = dy = da = 0.0
         cam = getattr(game.renderer, '_cam', None)
         if cam:
@@ -90,7 +91,7 @@ class Hands:
                 dy -= math.sin(t * math.pi) * STEP_BOB
                 dx += math.sin(t * 2 * math.pi) * 3
         swing = getattr(game, 'swing', None)
-        if swing:
+        if swing and swinging:
             kind, t0, missed = (tuple(swing) + (False,))[:3]
             u = (now - t0) / (ATTACK_MS[kind] * (MISS_TIME if missed and kind != 'shoot' else 1))
             if 0 <= u < 1:
@@ -106,36 +107,64 @@ class Hands:
                     dy += 30 * s if u < 0.7 else -20 * math.sin((u - 0.7) / 0.3 * math.pi)
         return dx, dy, da
 
-    def draw(self, game, scr, now: int):
-        """The weapon in the right hand, and in the left a shield (held up, still) or a second weapon
-        (Ambidexterity: mirrored, and it swings with the other)."""
-        left = game.player.bag.get(SLOT_OFFHAND, 0)
-        kind = self.pack.item_type(left) if left else ''
-        if kind in ('shield', 'weapon'):
-            self.hold(game, scr, now, left, off=True)
-        item = game.player.bag.get(SLOT_WEAPON, 0)
-        if item:
-            self.hold(game, scr, now, item)
+    HIT_MS, MISS_MS = 380, 460
 
-    def hold(self, game, scr, now: int, item: int, off: bool = False):
+    def reaction(self, game, now: int):
+        """(dx, dy, tilt) of the shield (or the off-hand weapon) answering a blow at the hero: a hit knocks it down
+        and away, to the left; a blow that misses him brings it up and across to block (engine.combat sets
+        game.hand_fx; the rules don't know about it)."""
+        fx = getattr(game, 'hand_fx', None)
+        if not fx:
+            return 0.0, 0.0, 0.0
+        kind, t0 = fx
+        u = (now - t0) / (self.HIT_MS if kind == 'hit' else self.MISS_MS)
+        if not 0 <= u < 1:
+            return 0.0, 0.0, 0.0
+        s = math.sin(u * math.pi)
+        if kind == 'hit':
+            return -95 * s, 75 * s, -24 * s
+        return 90 * s, -70 * s, 14 * s
+
+    def draw(self, game, scr, now: int):
+        """The weapon in the right hand; in the left a shield (held up, and it moves when a blow comes) or a second
+        weapon (Ambidexterity), which strikes on the second blow while the right hand rests."""
+        bag = game.player.bag
+        main, other = bag.get(SLOT_WEAPON, 0), bag.get(SLOT_OFFHAND, 0)
+        swing = getattr(game, 'swing', None)
+        left_strikes = bool(swing) and getattr(game, 'swing_hand', 'right') == 'left'
+        if left_strikes:                                    # the two weapons trade places in the bag for the second
+            main, other = other, main                        # blow: the one in the left hand is the one that strikes
+        if other and self.pack.item_type(other) in ('shield', 'weapon'):
+            self.hold(game, scr, now, other, off=True, swinging=left_strikes)
+        if main:
+            self.hold(game, scr, now, main, swinging=not left_strikes)
+
+    def hold(self, game, scr, now: int, item: int, off: bool = False, swinging: bool = True):
         pic = self.picture(item)
         if pic is None:
             return                                          # nothing in hand: nothing in view
-        dx, dy, da = self.pose(game, now)
+        dx, dy, da = self.pose(game, now, swinging)
         row = self.pack.item(item)
         shield = off and row.get('type') == 'shield'
         shoot = not off and attack_kind(row) == 'shoot'
-        if shield:                                          # held up at the left: it bobs, it doesn't swing
+        react = self.reaction(game, now) if off else (0.0, 0.0, 0.0)
+        if shield:                                          # held up at the left: it bobs, and answers blows
             cam = getattr(game.renderer, '_cam', None)
             dx, dy, da = (dx * 0.5 if cam else 0), (dy * 0.5 if cam else 0), 0
-            if getattr(game, 'swing', None):
+            if getattr(game, 'swing', None) and not swinging:
                 dy -= 12                                    # a little higher while the other hand strikes
+            dx, dy, da = dx + react[0], dy + react[1], da + react[2]
         angle = (-8 if shoot else TILT) + da
         scale = SHIELD_SCALE if shield else SCALE      # a shield is held close: bigger
         big = pygame.transform.scale(pic, (pic.get_width() * scale, pic.get_height() * scale))
         if off and not shield:
-            big = pygame.transform.flip(big, True, False)   # a second weapon: the other hand's, mirrored
-            angle, dx = -angle, -dx
+            # a second weapon: held at the left, leaning outward (not across, like chopsticks), swinging in
+            # across the body when it is its turn, and lifting to parry when a blow misses
+            big = pygame.transform.flip(big, True, False)
+            angle = OFF_TILT - da                           # its swing is the mirror of the right hand's
+            dx = -dx + react[0] * 0.6
+            dy = dy + react[1] * 0.6
+            angle += react[2] * 0.8
         elif shield:
             angle = 10
         turned = pygame.transform.rotate(big, angle)

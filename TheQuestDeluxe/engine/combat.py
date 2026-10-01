@@ -458,7 +458,7 @@ class Combat:
                 p.bag[SLOT_WEAPON], p.bag[SLOT_OFFHAND] = p.bag.get(SLOT_OFFHAND, 0), p.bag.get(SLOT_WEAPON, 0)
                 g.play('pause', 100)
             rules.status_update(p, self.g.status, items)
-            g.start_swing()                           # FPS mode: the weapon in view swings (Deluxe)
+            g.start_swing(second=swing == 1)          # FPS mode: the weapon in view swings (Deluxe), the off hand's on the second blow
             dmg = rules.hero_hit(p, e, items)
             if dmg > 0 and g.grown():
                 dmg = dmg * 3 // 2                                # a giant hits half as hard again
@@ -625,6 +625,7 @@ class Combat:
             g.report(f"You parry the {name}'s blow.", 11)
         elif dmg <= 0 and not shielded:
             g.report(f'The {name} misses you.', 7, (p.X, p.Y), 'miss')
+        g.hand_react('hit' if dmg > 0 else 'miss')          # FPS mode: the shield is knocked away, or comes up to block
         if dmg > 0:
             h.life -= dmg
             g.report(f'The {name} hits you for {dmg}.', 12, (p.X, p.Y), dmg)
@@ -648,6 +649,7 @@ class Combat:
             self.g.fly(hit, (e.x, e.y), (p.X, p.Y), True, towards_hero=True)
             if hit:
                 self.g.play_at(hit, p.X, p.Y, 1)
+            self.g.hand_react('hit')
             self.hurt(e.power, None, 2, e)
             self.bleed_hero()
             n = self.g.pack.trait(e.type, 'poison_ranged')
@@ -655,6 +657,7 @@ class Combat:
                 self.poison_hero()
         else:
             self.g.fly(self.g.pack.trait(e.type, 'missile_anim'), (e.x, e.y), (p.X, p.Y), False, towards_hero=True)
+            self.g.hand_react('miss')
             self.g.report(f"The {name}'s shot misses you.", 7, (p.X, p.Y), 'miss')
 
     def enemy_cast(self, e: Enemy, name: str):

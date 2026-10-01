@@ -996,6 +996,45 @@ def usable_items():
     print('items: Enter on food in the inventory restores life, mana, cures poison, and is used up: ok')
 
 
+def hands_react():
+    from engine.game import Game
+    from engine.state import SLOT_WEAPON, SLOT_OFFHAND
+    g = Game(pygame.Surface((640, 480)))
+    g.quick_start(1, 1)
+    g.view3d = True
+    g.renderer.draw(g, present=False)
+    hands = g.renderer.hands
+    now = 50000
+    g.hand_fx = ('hit', now - 190)
+    hx, hy, ha = hands.reaction(g, now)
+    assert hx < -40 and hy > 30 and ha < 0                       # knocked away (left) and down
+    g.hand_fx = ('miss', now - 230)
+    mx, my, ma = hands.reaction(g, now)
+    assert mx > 40 and my < -30 and ma > 0                       # brought up and across, to block
+    g.hand_fx = ('hit', now - 5000)
+    assert hands.reaction(g, now) == (0.0, 0.0, 0.0)             # over
+    # the left hand strikes on the second blow only: the right hand rests then
+    p = g.player
+    p.bag[SLOT_WEAPON], p.bag[SLOT_OFFHAND] = 201, 202
+    g.start_swing()
+    assert g.swing_hand == 'right'
+    g.start_swing(second=True)
+    assert g.swing_hand == 'left'
+    g.swing = ('swing', now - 140)
+    assert hands.pose(g, now, swinging=False) == (0.0, 0.0, 0.0)
+    assert hands.pose(g, now, swinging=True)[0] < -40
+    for hand, fx in (('right', None), ('left', None), ('right', ('hit', now - 100)), ('right', ('miss', now - 100))):
+        g.swing_hand, g.hand_fx = hand, fx
+        scr = pygame.Surface((400, 400))
+        hands.draw(g, scr, now)                                   # every combination draws
+    from engine.combat import Combat
+    g.hand_fx = None
+    g.fast = False
+    g.hand_react('hit')
+    assert g.hand_fx and g.hand_fx[0] == 'hit'
+    print('hands: the second blow is the left hand\'s, a shield is knocked away by a hit and comes up for a miss: ok')
+
+
 if __name__ == '__main__':
     fire()
     ice()
@@ -1003,6 +1042,7 @@ if __name__ == '__main__':
     blood_regen()
     foresight()
     clones()
+    hands_react()
     usable_items()
     behaviour()
     creature_changes()

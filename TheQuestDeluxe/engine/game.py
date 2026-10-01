@@ -198,8 +198,15 @@ class Game:
             return f'{row.get("count", 1)} {name.split("-")[0].strip()}'
         return f'{"an" if name[0] in "aeiou" else "a"} {name}'
 
-    def start_swing(self):
-        """FPS mode: the weapon in view (engine.hands) attacks from now. Only the picture moves."""
+    def hand_react(self, kind: str):
+        """FPS mode: a blow came at the hero ('hit') or missed him ('miss'): the shield in view reacts (engine.hands)."""
+        if self.view3d and not self.fast:
+            self.hand_fx = (kind, pygame.time.get_ticks())
+
+    def start_swing(self, second: bool = False):
+        """FPS mode: the weapon in view (engine.hands) attacks from now. Only the picture moves. The second blow of
+        two weapons (Ambidexterity) is the left hand's."""
+        self.swing_hand = 'left' if second else 'right'
         if self.view3d and not self.fast:
             item = self.pack.item(self.player.bag.get((12, 4), 0)) if self.player.bag.get((12, 4)) else {}
             self.swing = (attack_kind(item), pygame.time.get_ticks())
