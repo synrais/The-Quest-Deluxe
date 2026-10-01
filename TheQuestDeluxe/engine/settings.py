@@ -10,6 +10,7 @@
     fps_quality = normal ; FPS mode: low, normal, high, ultra or max (how finely the view is drawn)
     fps_view_distance = level ; FPS mode: level (as each level says) or 2-30 squares (never less than the level's)
     fps_dither = ordered ; FPS mode, the fog: ordered, fine, smooth (a blend) or off
+    fps_fog_start = 45 ; FPS mode: how far the fog fade starts, in percent of the view distance (100: only at the edge)
     fps_texture_filter = on ; FPS mode: average the far ground, walls and things (on) or skip pixels (off)
 
 Only a real game reads it (run_deluxe.py); a Game made without settings, as the tests make it, plays
@@ -30,9 +31,9 @@ CHOICES = {'fixes': ('on', 'off', 'pack'), 'sound': ('on', 'off'), 'items_on_top
 DEFAULTS = {'fixes': 'pack', 'sound': None, 'items_on_top': 'off',   # sound None: as sound.txt says
             'floating_numbers': 'off', 'fps_quality': 'normal', 'fps_dither': 'ordered',
             'fps_view_distance': 'level', 'smooth_scaling': 'off', 'render_quality': 'normal',
-            'fps_texture_filter': 'on'}
+            'fps_texture_filter': 'on', 'fps_fog_start': 45}
 QUALITY_ORDER = ('low', 'normal', 'high', 'ultra', 'max')
-RENDER_QUALITY = {'high': ('high', 'on'), 'ultra': ('max', 'on')}     # what each level of render_quality means
+RENDER_QUALITY = {'high': 'high', 'ultra': 'max'}                      # what each level of render_quality means
 
 
 def load(path: str = PATH) -> dict:
@@ -52,18 +53,18 @@ def load(path: str = PATH) -> dict:
         v = cp.get('play', 'fps_view_distance', fallback='').strip().lower()
         if v.isdigit() and 2 <= int(v) <= 30:
             out['fps_view_distance'] = int(v)
+        v = cp.get('play', 'fps_fog_start', fallback='').strip()
+        if v.isdigit() and 0 <= int(v) <= 100:
+            out['fps_fog_start'] = int(v)
     return resolve_quality(out)
 
 
 def resolve_quality(out: dict) -> dict:
-    """render_quality is the one switch for the whole game: high and ultra draw the FPS view finer (never coarser
-    than fps_quality asks) and scale everything to the window smoothly."""
+    """render_quality high and ultra draw the FPS view finer (never coarser than fps_quality asks). Smooth
+    scaling to the window is its own switch (smooth_scaling): it blurs, so quality never turns it on."""
     asked = RENDER_QUALITY.get(out.get('render_quality'))
-    if asked:
-        fps, smooth = asked
-        if QUALITY_ORDER.index(fps) > QUALITY_ORDER.index(out.get('fps_quality', 'normal')):
-            out['fps_quality'] = fps
-        out['smooth_scaling'] = smooth
+    if asked and QUALITY_ORDER.index(asked) > QUALITY_ORDER.index(out.get('fps_quality', 'normal')):
+        out['fps_quality'] = asked
     return out
 
 

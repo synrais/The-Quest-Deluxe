@@ -122,6 +122,7 @@ class View3D:
     DITHERS = ('ordered', 'fine', 'smooth', 'off')
     dither = 'ordered'                        # settings.ini fps_dither
     filter = True                             # settings.ini fps_texture_filter: average what is far away, not skip it
+    fog_start = 0.45                          # settings.ini fps_fog_start: where the fog fade begins, of the range
 
     @property
     def steps(self) -> int:
@@ -162,12 +163,12 @@ class View3D:
         return self._fog[key]
 
     def fog_level(self, scene, d: float) -> int:
-        start = scene.range * 0.45
+        start = scene.range * self.fog_start
         if d <= start:
             return 0
         if self.dither == 'off':
             return 0
-        return min(self.steps, int((d - start) / (scene.range - start) * self.steps) + 1)
+        return min(self.steps, int((d - start) / max(0.01, scene.range - start) * self.steps) + 1)
 
     def columns(self, tex):
         key = id(tex)

@@ -746,15 +746,31 @@ def fps_settings():
         frames[name] = pygame.image.tobytes(g.renderer.v3d.frame, 'RGB')
     assert frames['on'] != frames['off'], 'the filter changes the far ground'
     assert 'fps_texture_filter' in player_settings.load(path)
-    # render_quality: one switch for the whole game
+    # the fog fade: starting later leaves more of the view crisp
+    ends = {}
+    for name, st in (('early', {'fps_fog_start': 20}), ('late', {'fps_fog_start': 100})):
+        g = Game(pygame.Surface((640, 480)), settings=st)
+        g.quick_start(1, 1)
+        g.view3d = True
+        g.facing = 2
+        for x in range(1, 101):
+            for y in range(1, 101):
+                q = g.world.sq(x, y)
+                q.wall = q.mon = q.item = q.deco = 0
+                q.floor = 2 if 3 <= x <= 7 and y >= 6 else 1
+        g.world.enemies.clear()
+        g.renderer.draw(g, present=False)
+        ends[name] = pygame.image.tobytes(g.renderer.v3d.frame, 'RGB')
+    assert ends['early'] != ends['late']
+    # render_quality: one switch for how finely FPS mode is drawn
     open(path, 'w').write('[play]\nrender_quality = ultra\n')
     got = player_settings.load(path)
-    assert (got['fps_quality'], got['smooth_scaling']) == ('max', 'on')
+    assert (got['fps_quality'], got['smooth_scaling']) == ('max', 'off')       # quality does not blur the picture
     open(path, 'w').write('[play]\nrender_quality = high\nfps_quality = ultra\n')
     got = player_settings.load(path)
-    assert (got['fps_quality'], got['smooth_scaling']) == ('ultra', 'on'), 'never coarser than fps_quality'
+    assert got['fps_quality'] == 'ultra', 'never coarser than fps_quality'
     window = pygame.display.set_mode((1280, 960))
-    g = Game(window, settings={'render_quality': 'ultra'})
+    g = Game(window, settings={'render_quality': 'ultra', 'smooth_scaling': 'on'})
     g.quick_start(1, 1)
     g.view3d = True
     assert view3d.RES == view3d.QUALITY['max'] and g.renderer.smooth

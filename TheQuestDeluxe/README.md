@@ -62,8 +62,9 @@ The player's settings, in this folder:
 | `items_on_top` | `on` (shipped): gold and items are drawn over a creature or the hero standing on them. `off`: under them, as the original draws them. Blood, remains and footprints stay underneath either way. In FPS mode they are always in front. |
 | `floating_numbers` | `off` (shipped): in FPS mode the combat log's lines only. `on`: the damage, "miss" and the like also rise off whoever took them. |
 
-| `render_quality` | `normal` (shipped): the whole game in one switch. `high`: FPS mode drawn finer and everything scaled to the window smoothly. `ultra`: FPS mode drawn at three times the detail and averaged down, so distant things pixelate much less (slower). |
-| `smooth_scaling` | `off` (shipped): the picture is scaled to the window in whole pixels. `on`: smoothly, filling the window. `render_quality` high and ultra turn it on. |
+| `render_quality` | `normal` (shipped): one switch for how finely FPS mode is drawn. `high`: `fps_quality = high`. `ultra`: `fps_quality = max`, three times the detail averaged down, so distant things pixelate much less (slower). It does not blur the picture. |
+| `smooth_scaling` | `off` (shipped): the picture is scaled to the window in whole pixels, crisp. `on`: blended, filling the window: softer. |
+| `fps_fog_start` | `45` (shipped): where the fog fade begins in FPS mode, in percent of the view distance. `100`: everything stays crisp to the edge of the view. |
 | `fps_quality` | `normal` (shipped): how finely FPS mode is drawn: `low`, `normal`, `high`, `ultra` or `max`. Higher is sharper, and slower. |
 | `fps_view_distance` | `level` (shipped): FPS mode sees as far as each level says. A number, 2 to 30, makes the eye see at least that many squares. |
 | `fps_texture_filter` | `on` (shipped): in FPS mode, the ground, walls and things far away are averaged down, so a path of pebbles fades into the grass instead of breaking into staggered dashes. `off`: pixels are skipped, as a plain scaler does. |

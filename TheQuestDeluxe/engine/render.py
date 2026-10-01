@@ -474,11 +474,15 @@ class Renderer:
         scene.range = max(base, far) + game.sight_bonus()          # (a worn item that sees further adds to it)
         self.v3d.dither = (getattr(game, 'settings', None) or {}).get('fps_dither') or 'ordered'
         self.v3d.filter = (getattr(game, 'settings', None) or {}).get('fps_texture_filter') != 'off'
+        start = (getattr(game, 'settings', None) or {}).get('fps_fog_start')
+        self.v3d.fog_start = (45 if start is None else start) / 100
         self.v3d.eye = self.eye_height(game)
         frame = self.v3d.render(scene, self.camera(game, snap))
         k = MAP_PX / view3d.RES
         smooth = (getattr(game, 'settings', None) or {}).get('smooth_scaling') == 'on'
-        resize = pygame.transform.smoothscale if smooth else pygame.transform.scale     # a finer view is averaged down
+        # a view drawn finer than it is shown (ultra, max) is averaged down: that is its anti-aliasing, and keeps
+        # edges sharp; a coarser one is enlarged in whole pixels unless smooth_scaling asks for a blend
+        resize = pygame.transform.smoothscale if smooth or view3d.RES > MAP_PX else pygame.transform.scale
         scr.blit(resize(frame, (MAP_PX, MAP_PX)), (0, 0))
         t = game.target
         if t is not None and t in game.world.enemies:
