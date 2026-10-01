@@ -222,7 +222,16 @@ class Game:
             dy = 0                                       # a diagonal: by its side
         absolute = {(0, -1): 0, (1, 0): 1, (0, 1): 2, (-1, 0): 3}.get((dx, dy), 0)
         rel = (absolute - self.facing) % 4               # 0 in front, 1 right, 2 behind, 3 left
-        return (2, 3, 4, 1)[rel]
+        return (2, 1, 7, 3)[rel]                         # from behind: a stroke from both sides (7)
+
+    def fps_creature_side(self, where: int) -> int:
+        """FPS mode: the side of a blow on a creature (1 right, 2 below, 3 left, 4 above on the map), as
+        the hero sees that square: turned the way he faces, so the stroke comes from the right of the
+        screen when the attacker stands to the right of its victim."""
+        if where not in (1, 2, 3, 4):
+            return where
+        absolute = {4: 0, 1: 1, 2: 2, 3: 3}[where]       # north, east, south, west
+        return (4, 1, 2, 3)[(absolute - self.facing) % 4]
 
     def key_name(self, colour: str) -> str:
         """The key of a colour, by its item's name ('gold key' for the yellow one in Quest I)."""
@@ -1045,11 +1054,17 @@ class Game:
                     held.pop(ev.key, None)
                 elif ev.type == pygame.WINDOWFOCUSLOST:
                     held.clear()                         # its key-up would never come
+                spoken = len(self.talk_log)
                 self.handle(ev)
+                if len(self.talk_log) != spoken:
+                    held.clear()                         # a talk read the key-ups: don't walk into the NPC again
             k = self.held_key(held, now)
             if k is not None:                            # FPS mode: keep walking (or turning)
                 self._last_repeat = now
+                spoken = len(self.talk_log)
                 self.handle(pygame.event.Event(pygame.KEYDOWN, key=k, unicode='', mod=0))
+                if len(self.talk_log) != spoken or self.overlay:
+                    held.clear()                         # a held key must not start the same talk again
             self.renderer.draw(self)
             clock.tick(30)
 

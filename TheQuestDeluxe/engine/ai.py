@@ -87,13 +87,13 @@ def monsmove(g: 'Game') -> None:
                 dmg = monster_vs_monster(e, o, g.pack)
                 mw = 1 if e.x > o.x else 3 if e.x < o.x else 4 if o.y > e.y else 2
                 if dmg > 0:
-                    g.play_at('ahit', o.x, o.y, mw, 1)
+                    g.play_at('ahit', o.x, o.y, g.fps_creature_side(mw) if g.renderer.in_3d(g) else mw, 1)
                     o.life -= dmg
                     g.report(f'The {g.monster_name(e.type)} hits the {g.monster_name(o.type)} for {dmg}.', 11,
                              (o.x, o.y), dmg)
                     g.combat.check_dead(e)
                 else:
-                    g.play_at('bhit', o.x, o.y, mw)
+                    g.play_at('bhit', o.x, o.y, g.fps_creature_side(mw) if g.renderer.in_3d(g) else mw)
                     g.report(f'The {g.monster_name(e.type)} misses the {g.monster_name(o.type)}.', 7, (o.x, o.y), 'miss')
                 e.moved = True
                 fought = not ranok

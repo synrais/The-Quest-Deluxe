@@ -49,6 +49,10 @@ def _px(x, y):
 def _hit_lines(g, i, ii, where):
     """The white attack stroke of ahit()/bhit()/bhit2(): where 1-4 = from the right, below, left,
     above."""
+    if where == 7:                               # FPS mode: a blow from behind, a stroke from each side
+        _hit_lines(g, i, ii, 1)
+        _hit_lines(g, i, ii, 3)
+        return
     if where == 3:
         g.setcolor(15)
         g.line(i + 1, ii + 20, i + 22, ii + 20)
