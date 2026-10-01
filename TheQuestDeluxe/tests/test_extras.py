@@ -227,6 +227,62 @@ def clones():
     print('shadow clones: an ally on each free square around the hero, as strong as asked, fading after their turns: ok')
 
 
+def big_creature(shot=None):
+    def big(folder, json):
+        path = os.path.join(folder, 'creatures.json')
+        data = json.load(open(path))
+        for r in data['creatures']:
+            if r['id'] == 1:
+                r['size'] = 2
+        json.dump(data, open(path, 'w'))
+    from engine.ai import monsmove
+    g = with_changes(big)
+    p, w = g.player, g.world
+    for e in list(w.enemies):
+        w.sq(e.x, e.y).mon = 0
+    w.enemies.clear()
+    ox, oy = w.origin
+    for x, y in w.room_tiles():
+        q = w.sq(x, y)
+        q.wall = q.mon = q.item = q.deco = 0
+    p.X, p.Y = ox + 8, oy + 8
+    w.sq(ox + 2, oy + 2).mon = 1                                   # only the top-left square on the map
+    w.rescan(p, g.status)
+    assert len(w.enemies) == 1
+    e = w.enemies[0]
+    cells = {(ox + 2, oy + 2), (ox + 3, oy + 2), (ox + 2, oy + 3), (ox + 3, oy + 3)}
+    assert set(w.cells(e)) == cells and all(w.sq(x, y).mon == 1 for x, y in cells)
+    assert all(w.enemy_at(x, y) is e for x, y in cells) and w.enemy_at(ox + 4, oy + 2) is None
+    w.rescan(p, g.status)                                          # the marked squares make no more creatures
+    assert len(w.enemies) == 1
+    e = w.enemies[0]
+    e.att = 9
+    for _ in range(5):
+        monsmove(g)
+        e.moved = False
+        now = set(w.cells(e))
+        assert len(now) == 4 and sum(1 for x, y in w.room_tiles() if w.sq(x, y).mon == 1) == 4
+        assert all(w.sq(x, y).mon == 1 for x, y in now)
+    assert (e.x, e.y) != (ox + 2, oy + 2)                          # it came after the hero
+    p.X, p.Y = e.x + 2, e.y                                        # next to its right side
+    assert w.gap(e, p.X, p.Y) == (1, 0)
+    mon = e
+    mon.life = 1
+    g.combat.hurt(1000, w.enemy_at(e.x + 1, e.y + 1), 3, by_hero=True)     # struck on its far square
+    assert not w.enemies and not any(w.sq(x, y).mon for x, y in w.room_tiles())
+    # it is drawn once, over all its squares, from above and in FPS mode
+    e = g.spawn(1, ox + 2, oy + 2)
+    g.renderer.draw(g, present=False)
+    g.view3d = True
+    g.facing = 3
+    p.X, p.Y = ox + 6, oy + 3
+    g.renderer.draw(g, present=False)
+    if shot:
+        pygame.image.save(g.renderer.screen, shot)
+    print('big creatures: one creature on 2 x 2 squares: found from any, moves whole, fights from its nearest '
+          'square, dies on all, drawn once: ok')
+
+
 if __name__ == '__main__':
     fire()
     ice()
@@ -234,4 +290,5 @@ if __name__ == '__main__':
     blood_regen()
     foresight()
     clones()
+    big_creature(sys.argv[1] if len(sys.argv) > 1 else None)
     print('all extras checks passed')

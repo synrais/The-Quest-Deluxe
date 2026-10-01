@@ -4,7 +4,8 @@ The weapon he holds (the bag's weapon cell) stands at the bottom right of the vi
 off the edge: its bag picture with the cell's frame and grey cut away, tilted, and
 scaled up in whole EGA pixels. An item's "fps_turn" turns its picture that many degrees (anticlockwise)
 to stand it up; a pack can also draw its own: sprites/hands/<item>.png (upright, the grip at the
-bottom). With nothing in hand, nothing shows.
+bottom). With nothing in hand, nothing shows. The left hand shows a shield, or a second weapon
+(Ambidexterity), the same way.
 
 It moves with the hero: a bob as he steps, and when he attacks a swing (swords, axes, clubs...), a
 thrust (spears, pikes, lances: kind 3) or a draw and release (bows and slings). A miss swings or
@@ -19,9 +20,13 @@ import os
 
 import pygame
 
+from .state import SLOT_OFFHAND, SLOT_WEAPON
+
 
 SCALE = 5                 # whole pixels: the view is 400 x 400, a 40-pixel picture stands 200 high
 GRIP = (300, 405)         # where the grip sits: the bottom right, just below the view's edge
+SHIELD_SCALE = 8
+GRIP_LEFT = (95, 440)    # the left hand's: a shield, or a second weapon
 TILT = -22                # degrees; a melee weapon leans in toward the middle
 ATTACK_MS = {'swing': 280, 'thrust': 240, 'shoot': 320}
 MISS_REACH, MISS_TIME = 1.6, 1.6    # a miss carries the blow this much further, and takes this much longer
@@ -102,18 +107,42 @@ class Hands:
         return dx, dy, da
 
     def draw(self, game, scr, now: int):
-        item = game.player.bag.get((12, 4), 0)
-        pic = self.picture(item) if item else None
+        """The weapon in the right hand, and in the left a shield (held up, still) or a second weapon
+        (Ambidexterity: mirrored, and it swings with the other)."""
+        left = game.player.bag.get(SLOT_OFFHAND, 0)
+        kind = self.pack.item_type(left) if left else ''
+        if kind in ('shield', 'weapon'):
+            self.hold(game, scr, now, left, off=True)
+        item = game.player.bag.get(SLOT_WEAPON, 0)
+        if item:
+            self.hold(game, scr, now, item)
+
+    def hold(self, game, scr, now: int, item: int, off: bool = False):
+        pic = self.picture(item)
         if pic is None:
             return                                          # nothing in hand: nothing in view
         dx, dy, da = self.pose(game, now)
-        shoot = attack_kind(self.pack.item(item)) == 'shoot'
+        row = self.pack.item(item)
+        shield = off and row.get('type') == 'shield'
+        shoot = not off and attack_kind(row) == 'shoot'
+        if shield:                                          # held up at the left: it bobs, it doesn't swing
+            cam = getattr(game.renderer, '_cam', None)
+            dx, dy, da = (dx * 0.5 if cam else 0), (dy * 0.5 if cam else 0), 0
+            if getattr(game, 'swing', None):
+                dy -= 12                                    # a little higher while the other hand strikes
         angle = (-8 if shoot else TILT) + da
-        big = pygame.transform.scale(pic, (pic.get_width() * SCALE, pic.get_height() * SCALE))
+        scale = SHIELD_SCALE if shield else SCALE      # a shield is held close: bigger
+        big = pygame.transform.scale(pic, (pic.get_width() * scale, pic.get_height() * scale))
+        if off and not shield:
+            big = pygame.transform.flip(big, True, False)   # a second weapon: the other hand's, mirrored
+            angle, dx = -angle, -dx
+        elif shield:
+            angle = 10
         turned = pygame.transform.rotate(big, angle)
         # the grip (the bottom middle of the upright picture) lands on GRIP, moved by the pose
         a = math.radians(angle)
         vx, vy = 0, big.get_height() / 2                    # centre -> grip, before turning
         rx, ry = vx * math.cos(a) + vy * math.sin(a), -vx * math.sin(a) + vy * math.cos(a)
-        gx, gy = GRIP[0] + dx - (40 if shoot else 0), GRIP[1] + dy
+        grip = (GRIP_LEFT if off else (GRIP[0] - (40 if shoot else 0), GRIP[1]))
+        gx, gy = grip[0] + dx, grip[1] + dy
         scr.blit(turned, (gx - rx - turned.get_width() / 2, gy - ry - turned.get_height() / 2))

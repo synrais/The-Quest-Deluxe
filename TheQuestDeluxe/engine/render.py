@@ -104,8 +104,27 @@ class Renderer:
             else:
                 pygame.draw.circle(surf, EGA[14], (px + 20, py + 20), 6)
 
+    def draw_big(self, surf, game, ox, oy):
+        """Creatures of `size` 2 and more (creatures.json): one picture over all the squares they stand on
+        (a 40 x 40 picture is stretched; one the size of the squares is used as it is)."""
+        w = game.world
+        for e in w.enemies:
+            n = w.size_of(e.type)
+            if n < 2 or (self.pack.trait(e.type, 'invisible') and not game.foresight()):
+                continue
+            px, py, side = (e.x - ox) * TILE, (e.y - oy) * TILE, n * TILE
+            img = self.sprites.get('enemy', game.true_form(e.type))
+            if img:
+                surf.blit(img if img.get_size() == (side, side) else pygame.transform.scale(img, (side, side)),
+                          (px, py))
+            else:
+                pygame.draw.circle(surf, EGA[12] if e.type > 0 else EGA[11], (px + side // 2, py + side // 2),
+                                   side // 2 - 8)
+
     def draw_creature(self, surf, px, py, q):
         s = self.sprites
+        if q.mon and (self.pack.trait(q.mon, 'size', 1) or 1) > 1:
+            return                                  # a big creature is drawn whole, over the squares (draw_big)
         if q.mon and (not self.pack.trait(q.mon, 'invisible') or self.game.foresight()):
             img = s.get('enemy', self.game.true_form(q.mon))
             if img:
@@ -310,6 +329,7 @@ class Renderer:
         ox, oy = w.origin
         for x, y in w.room_tiles():
             self.draw_tile(scr, (x - ox) * TILE, (y - oy) * TILE, w.grid[x][y], on_top=self.on_top(game))
+        self.draw_big(scr, game, ox, oy)
         hx, hy = (p.X - ox) * TILE, (p.Y - oy) * TILE
         self.draw_hero(scr, game, hx, hy)
         if self.on_top(game):
@@ -346,8 +366,15 @@ class Renderer:
                     return None
                 q = w.grid[x][y]
                 return q.floor, q.wall, q.item, q.mon, q.gold, q.deco
+            def big_size(x, y, m):
+                """1 for a creature on one square; for a big one its size on its top-left square, 0 on the rest."""
+                e = w.enemy_at(x, y)
+                if e is None or w.size_of(e.type) < 2:
+                    return 1
+                return w.size_of(e.type) if (e.x, e.y) == (x, y) else 0
             items = {v: (r.get('type', ''), r.get('view3d')) for v, r in pack.items.items()}
-            scene = view3d.Scene(pack.tiles, items, picture, square, hidden=lambda m: pack.trait(m, 'invisible') and not game.foresight())
+            scene = view3d.Scene(pack.tiles, items, picture, square, hidden=lambda m: pack.trait(m, 'invisible') and not game.foresight(),
+                                mon_size=big_size)
             meta, dflt = game.events.meta, pack.quest.get('view3d', {})
             scene.sky = meta(w.level, 'SKY_3D', dflt.get('sky', view3d.Scene.sky))
             scene.fog = meta(w.level, 'FOG_3D', dflt.get('fog', scene.sky))

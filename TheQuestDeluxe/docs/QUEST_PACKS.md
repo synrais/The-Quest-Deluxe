@@ -111,6 +111,7 @@ Traits (all optional):
 | `missile_anim` | Its missile's animation. |
 | `cast_anim` | Its spell's animation: `[name, arguments...]`. |
 | `resists` | A list of elements (`fire`, `ice`, `poison`, `drain`) that weapons, arrows and spells with that element don't affect. |
+| `size` | How many squares across (and down) the creature stands on: 2 is a giant on 2 x 2 squares. Place it on the map at its top-left square, with the others free and on the same screen; it moves, fights (from its nearest square), dies and is drawn as one creature, from any of its squares. Its picture is stretched to fit, or used as it is if it is `size` x 40 pixels square. |
 | `regenerates_from_blood` | After it dies, the nearest pile of blood on the screen (blood, footprints, remains; not its own body) slides a square a turn towards the body, and when it lands the creature rises again at full life, if nobody stands there. Fire spells with `burns` clear the blood and so starve it; with none left it stays dead. |
 | `heals_allies` | Heals a wounded creature on its side instead of attacking. |
 | `raises_dead` | Turns bones on the screen into this creature. |

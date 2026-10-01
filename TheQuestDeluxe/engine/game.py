@@ -298,7 +298,9 @@ class Game:
             e.life = e.mlife = ms.life
             e.power, e.atk, e.defense = ms.power, ms.atk, ms.defense
             e.warm, e.marm, e.range, e.att = ms.warm, ms.marm, ms.range, ms.att
-        self.world.sq(x, y).mon = t
+        for cx, cy in self.world.footprint(x, y, self.world.size_of(t)):
+            if self.world.in_map(cx, cy):
+                self.world.sq(cx, cy).mon = t
         self.world.enemies.append(e)
         self.status.mons = len(self.world.enemies)
         return e

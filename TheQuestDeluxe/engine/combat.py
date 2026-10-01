@@ -141,7 +141,9 @@ class Combat:
         if self.g.target is e:
             self.g.target = None
         q = w.sq(e.x, e.y)
-        q.mon = 0
+        for cx, cy in w.cells(e):
+            if w.in_map(cx, cy):
+                w.sq(cx, cy).mon = 0
         r, pk = random(2), self.g.pack
         if q.deco in (0, pk.deco('blood')):
             q.deco = pk.deco('remains') if r == 0 else pk.deco('remains2')
@@ -454,7 +456,7 @@ class Combat:
                 continue
             if not (e.att >= 0 or e.att <= -10 or e.att == -4):
                 continue
-            dx, dy = abs(p.X - e.x), abs(p.Y - e.y)
+            dx, dy = self.w.gap(e, p.X, p.Y)               # a big creature: from its nearest square
             adjacent = (dx == 1 and dy == 0) or (dy == 1 and dx == 0)
             if not adjacent and not (dx <= e.range and dy <= e.range and e.range > 1):
                 continue

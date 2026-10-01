@@ -85,11 +85,17 @@ class World:
     def rescan(self, player: Player, st: Status) -> None:
         """enemycheck(): rebuild the creature list from the current screen, column by column."""
         self.enemies = []
+        covered = set()                                    # squares of a big creature past its top-left one
         for x, y in self.room_tiles():
             t = self.grid[x][y].mon
-            if t == 0:
+            if t == 0 or (x, y) in covered:
                 continue
             e = Enemy(type=t, x=x, y=y)
+            n = self.size_of(t)
+            for cx, cy in self.footprint(x, y, n)[1:]:      # a big creature stands on n x n squares
+                if self.in_room(cx, cy):
+                    self.grid[cx][cy].mon = t
+                    covered.add((cx, cy))
             ms = self.data.monsters.get(t)
             if ms:
                 e.life = e.mlife = ms.life
@@ -129,6 +135,24 @@ class World:
 
     def enemy_at(self, x: int, y: int) -> Enemy | None:
         for e in self.enemies:
-            if e.x == x and e.y == y and e.life > 0:
+            n = self.size_of(e.type)
+            if e.x <= x < e.x + n and e.y <= y < e.y + n and e.life > 0:
                 return e
         return None
+
+    # ── big creatures (creatures.json `size`: n x n squares, the creature's own square its top left) ──
+    def size_of(self, t: int) -> int:
+        return max(1, int(self.data.src.pack.trait(t, 'size', 1) or 1)) if t else 1
+
+    @staticmethod
+    def footprint(x: int, y: int, n: int) -> list:
+        """The squares an n x n creature with its top left at (x, y) stands on, that one first."""
+        return [(x + i, y + j) for i in range(n) for j in range(n)]
+
+    def cells(self, e: Enemy) -> list:
+        return self.footprint(e.x, e.y, self.size_of(e.type))
+
+    def gap(self, e: Enemy, x: int, y: int) -> tuple:
+        """How far (x, y) is from the creature's nearest square, across and down."""
+        n = self.size_of(e.type)
+        return max(e.x - x, 0, x - (e.x + n - 1)), max(e.y - y, 0, y - (e.y + n - 1))

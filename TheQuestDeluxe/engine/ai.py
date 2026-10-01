@@ -51,19 +51,33 @@ def monsmove(g: 'Game') -> None:
     ox, oy = w.origin
     x0, x1, y0, y1 = ox, ox + 9, oy, oy + 9
 
+    mover = [None]                                  # the creature being moved (a big one needs room for all of it)
+
     def free(x, y):
-        q = w.sq(x, y)
-        return q.wall == 0 and g.pack.item_type(q.item) not in ('teleporter', 'exit') and q.mon == 0 \
-            and (x, y) != (p.X, p.Y)
+        e = mover[0]
+        n = w.size_of(e.type) if e else 1
+        own = set(w.cells(e)) if n > 1 else ()
+        for cx, cy in w.footprint(x, y, n):
+            if not (x0 <= cx <= x1 and y0 <= cy <= y1):
+                return False
+            q = w.sq(cx, cy)
+            if not (q.wall == 0 and g.pack.item_type(q.item) not in ('teleporter', 'exit')
+                    and (q.mon == 0 or (cx, cy) in own) and (cx, cy) != (p.X, p.Y)):
+                return False
+        return True
 
     def step(e, nx, ny):
-        w.sq(e.x, e.y).mon = 0
-        w.sq(nx, ny).mon = e.type
+        cells = w.cells(e)
+        for cx, cy in cells:
+            w.sq(cx, cy).mon = 0
         e.x, e.y = nx, ny
+        for cx, cy in w.cells(e):
+            w.sq(cx, cy).mon = e.type
 
     for e in list(w.enemies):
         if e not in w.enemies or e.life <= 0:
             continue
+        mover[0] = e
         if e.att < -10:
             e.att += 1
         if e.att == -10:
@@ -80,7 +94,8 @@ def monsmove(g: 'Game') -> None:
             for o in list(w.enemies):
                 if o is e or o.life <= 0 or not wants_to_fight(e, o, g):
                     continue
-                ddx, ddy = abs(e.x - o.x), abs(e.y - o.y)
+                ddx, ddy = (w.gap(e, o.x, o.y) if w.size_of(e.type) > 1 else
+                            w.gap(o, e.x, e.y) if w.size_of(o.type) > 1 else (abs(e.x - o.x), abs(e.y - o.y)))
                 if not ((ddx == 1 and ddy == 0) or (ddy == 1 and ddx == 0)) or g.pack.trait(o.type, 'invisible'):
                     continue
                 g.combat.reveal(e)
@@ -147,6 +162,9 @@ def monsmove(g: 'Game') -> None:
 def chase(g, e, tx, ty, x0, x1, y0, y1, free, step):
     h = g.player.hero
     x, y = e.x, e.y
+    n = g.world.size_of(e.type)
+    if n > 1:                                         # a big creature's top left aims short, so it all arrives
+        tx, ty = tx - (n - 1) if tx > x else tx, ty - (n - 1) if ty > y else ty
     dx, dy = abs(x - tx), abs(y - ty)
     wflag = random(2) + 1 if dx == dy else 0
     saved = e.att

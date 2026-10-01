@@ -58,8 +58,10 @@ class Scene:
     """
     sky, fog, range = 9, 9, 10
 
-    def __init__(self, tiles: dict, item_types: dict, picture, square, hidden=lambda mon: False):
+    def __init__(self, tiles: dict, item_types: dict, picture, square, hidden=lambda mon: False,
+                 mon_size=lambda x, y, mon: 1):
         self.picture, self.square, self.hidden = picture, square, hidden
+        self.mon_size = mon_size                  # (x, y, creature) -> its size on its top-left square, 0 on its others
         self.walls = {r['id']: r for r in tiles.get('walls', [])}
         self.decos = {r['id']: r for r in tiles.get('decos', [])}
         self.floors = {r['id']: r for r in tiles.get('floors', [])}
@@ -361,17 +363,23 @@ class View3D:
                     continue
                 side = inv * (dy * sx - dx * sy)
                 n = 0
+                msz = scene.mon_size(x0 + i, y0 + j, mo) if mo else 1
                 # on one square, back to front: what stands there, the creature, then gold and items
                 # in front of it
                 for kind, v, size, cond in (('deco', de, 1.0, de and scene.look('deco', de) == 'billboard'),
                                             ('wall', wa, 1.0, wa and scene.look('wall', wa) == 'billboard'),
-                                            ('mon', mo, 1.0, mo and not scene.hidden(mo)),
+                                            ('mon', mo, 1.0, mo and msz == 1 and not scene.hidden(mo)),
                                             ('gold', 0, 0.45, go > 0),
                                             ('item', it, 0.5, it and scene.look('item', it) == 'small'),
                                             ('item', it, 0.9, it and scene.look('item', it) == 'billboard')):
                     if cond:
                         things.append((depth, -n, side, kind, v, size, (x0 + i, y0 + j)))
                         n += 1
+                if msz > 1 and not scene.hidden(mo):          # a big creature: one picture, over all its squares
+                    mx, my = x0 + i + msz / 2 - cx, y0 + j + msz / 2 - cy
+                    d2 = inv * (-py * mx + px * my)
+                    if 0.3 <= d2 <= rng:
+                        things.append((d2, -n, inv * (dy * mx - dx * my), 'mon', mo, float(msz), (x0 + i, y0 + j)))
         things.sort(reverse=True)
         horizon = RES / 2
         for depth, _, side, kind, v, size, at in things:
