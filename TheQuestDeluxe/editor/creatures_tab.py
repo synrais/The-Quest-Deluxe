@@ -139,6 +139,9 @@ class CreaturesTab(TableTab):
                        'square and leave the others free; the screen has 10 x 10. A 40 x 40 picture is stretched.'),
             Field('regenerates_from_blood', 'Rises from blood', 'bool',
                   hint='after it dies the nearest pile of blood on the screen slides to its body, and it rises again at full life'),
+            Field('blood_range', 'Blood reaches', 'int', when=lambda r: r.get('regenerates_from_blood'),
+                  hint='squares from its body that blood still feeds it (empty: the whole screen). It can rise '
+                       'again and again while there is blood in reach, its own spilled blood included'),
             Field('resists', 'Resists', 'multi', [(k, v) for k, v in ELEMENT_NAMES], hint='elements and spells it shrugs off'),
             Field('silences_witnesses', 'Silences witnesses', 'bool', hint='nobody reports a killing near it'),
         ]

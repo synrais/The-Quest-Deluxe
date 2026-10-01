@@ -112,7 +112,7 @@ Traits (all optional):
 | `cast_anim` | Its spell's animation: `[name, arguments...]`. |
 | `resists` | A list of elements (`fire`, `ice`, `poison`, `drain`) that weapons, arrows and spells with that element don't affect. |
 | `size` | How many squares across (and down) the creature stands on: 2 is a giant on 2 x 2 squares. Place it on the map at its top-left square, with the others free and on the same screen; it moves, fights (from its nearest square), dies and is drawn as one creature, from any of its squares. Its picture is stretched to fit, or used as it is if it is `size` x 40 pixels square. |
-| `regenerates_from_blood` | After it dies, the nearest pile of blood on the screen (blood, footprints, remains; not its own body) slides a square a turn towards the body, and when it lands the creature rises again at full life, if nobody stands there. Fire spells with `burns` clear the blood and so starve it; with none left it stays dead. |
+| `regenerates_from_blood` | After it dies, the nearest pile of blood on the screen (blood, footprints, remains; not its own body) slides a square a turn towards the body, and when it lands the creature rises again at full life, if nobody stands there. `blood_range` limits how far from its body the blood counts (the whole screen if left out). It rises again every time it dies while there is blood in reach, the blood it spills when hit included. Fire spells with `burns` clear the blood and so starve it; with none in reach it stays dead. |
 | `heals_allies` | Heals a wounded creature on its side instead of attacking. |
 | `raises_dead` | Turns bones on the screen into this creature. |
 | `explodes` | Blasts the hero this many times, then dies. |

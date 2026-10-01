@@ -166,6 +166,22 @@ def blood_regen():
     for _ in range(3):
         g.combat.revive_step()
     assert w.enemy_at(cx, cy) is None and 'reviving' not in p.more
+    # it rises again and again while blood is in reach, and not from blood past its blood_range
+    pk.creatures[1]['blood_range'] = 3
+    w.sq(cx + 6, cy).deco = blood                                               # too far
+    again = g.spawn(1, cx, cy)
+    g.combat.hurt(1000, again, 3, by_hero=True)
+    for _ in range(8):
+        g.combat.revive_step()
+    assert w.enemy_at(cx, cy) is None and w.sq(cx + 6, cy).deco == blood
+    w.sq(cx - 3, cy + 1).deco = blood                                           # in reach
+    w.sq(cx + 6, cy).deco = 0
+    again = g.spawn(1, cx, cy)
+    g.combat.hurt(1000, again, 3, by_hero=True)
+    for _ in range(8):
+        g.combat.revive_step()
+    third = w.enemy_at(cx, cy)
+    assert third is not None and third.life == third.mlife
     print('a creature that feeds on blood: the nearest pile slides to its body, it rises at full life, '
           'burnt blood starves it: ok')
 

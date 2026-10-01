@@ -228,10 +228,12 @@ class Combat:
             if not w.in_room(x, y):
                 keep.append(entry)                        # waits for the hero to come back to this screen
                 continue
+            reach = g.pack.trait(kind, 'blood_range') or 99          # how far from the body blood still feeds it
             if (px, py) != (x, y):
                 if not (px >= 0 and w.in_room(px, py) and w.sq(px, py).deco in blood):
                     near = [(max(abs(sx - x), abs(sy - y)), abs(sx - x) + abs(sy - y), sx, sy)
-                            for sx, sy in w.room_tiles() if w.sq(sx, sy).deco in blood and (sx, sy) != (x, y)]
+                            for sx, sy in w.room_tiles() if w.sq(sx, sy).deco in blood and (sx, sy) != (x, y)
+                            and max(abs(sx - x), abs(sy - y)) <= reach]
                     if not near:
                         continue                          # no blood left: the creature stays dead
                     px, py = min(near)[2:]
