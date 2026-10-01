@@ -729,6 +729,23 @@ def fps_settings():
     assert len(set(shots.values())) == len(shots), 'every setting changes the picture'
     Game(pygame.Surface((640, 480))).renderer                       # a game without settings is back to normal
     assert view3d.RES == 200
+    # the texture filter: a far path of pebbles is averaged, not skipped
+    frames = {}
+    for name, st in (('on', {}), ('off', {'fps_texture_filter': 'off'})):
+        g = Game(pygame.Surface((640, 480)), settings=st)
+        g.quick_start(1, 1)
+        g.view3d = True
+        g.facing = 2
+        for x in range(1, 101):
+            for y in range(1, 101):
+                q = g.world.sq(x, y)
+                q.wall = q.mon = q.item = q.deco = 0
+                q.floor = 2 if 3 <= x <= 7 and y >= 6 else 1
+        g.world.enemies.clear()
+        g.renderer.draw(g, present=False)
+        frames[name] = pygame.image.tobytes(g.renderer.v3d.frame, 'RGB')
+    assert frames['on'] != frames['off'], 'the filter changes the far ground'
+    assert 'fps_texture_filter' in player_settings.load(path)
     # render_quality: one switch for the whole game
     open(path, 'w').write('[play]\nrender_quality = ultra\n')
     got = player_settings.load(path)

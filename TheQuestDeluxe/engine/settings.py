@@ -10,6 +10,7 @@
     fps_quality = normal ; FPS mode: low, normal, high, ultra or max (how finely the view is drawn)
     fps_view_distance = level ; FPS mode: level (as each level says) or 2-30 squares (never less than the level's)
     fps_dither = ordered ; FPS mode, the fog: ordered, fine, smooth (a blend) or off
+    fps_texture_filter = on ; FPS mode: average the far ground, walls and things (on) or skip pixels (off)
 
 Only a real game reads it (run_deluxe.py); a Game made without settings, as the tests make it, plays
 the pack as it is, so a player's settings can't change what the tests check.
@@ -24,10 +25,12 @@ PATH = os.path.join(ROOT, 'settings.ini')
 CHOICES = {'fixes': ('on', 'off', 'pack'), 'sound': ('on', 'off'), 'items_on_top': ('on', 'off'),
            'floating_numbers': ('on', 'off'), 'fps_quality': ('low', 'normal', 'high', 'ultra', 'max'),
            'fps_dither': ('ordered', 'fine', 'smooth', 'off'), 'smooth_scaling': ('on', 'off'),
+           'fps_texture_filter': ('on', 'off'),
            'render_quality': ('normal', 'high', 'ultra')}
 DEFAULTS = {'fixes': 'pack', 'sound': None, 'items_on_top': 'off',   # sound None: as sound.txt says
             'floating_numbers': 'off', 'fps_quality': 'normal', 'fps_dither': 'ordered',
-            'fps_view_distance': 'level', 'smooth_scaling': 'off', 'render_quality': 'normal'}
+            'fps_view_distance': 'level', 'smooth_scaling': 'off', 'render_quality': 'normal',
+            'fps_texture_filter': 'on'}
 QUALITY_ORDER = ('low', 'normal', 'high', 'ultra', 'max')
 RENDER_QUALITY = {'high': ('high', 'on'), 'ultra': ('max', 'on')}     # what each level of render_quality means
 

@@ -121,6 +121,7 @@ class View3D:
     # ── helpers ─────────────────────────────────────────────────────────────
     DITHERS = ('ordered', 'fine', 'smooth', 'off')
     dither = 'ordered'                        # settings.ini fps_dither
+    filter = True                             # settings.ini fps_texture_filter: average what is far away, not skip it
 
     @property
     def steps(self) -> int:
@@ -297,9 +298,12 @@ class View3D:
         horizon = RES // 2
         rows = range(horizon, RES) if below else range(0, horizon)
         fog_c = scene.fog
+        height = self.eye if below else 1 - self.eye
+        if self.filter and turned.get_bitsize() not in (24, 32):
+            turned = turned.convert(32)
         for y in rows:
             p = (y - horizon + 0.5) if below else (horizon - y - 0.5)
-            d = (self.eye if below else 1 - self.eye) * SCALE / p       # how far the ground (or the roof) is there
+            d = height * SCALE / p                                    # how far the ground (or the roof) is there
             if d > scene.range:
                 if not below:
                     continue
@@ -310,7 +314,20 @@ class View3D:
             w = max(1, int(2 * half))
             if sy < 0 or sy >= th or sx < 0 or sx + w > tw:
                 continue
-            line = pygame.transform.scale(turned.subsurface((sx, sy, w, 1)), (RES, 1))
+            if self.filter:
+                # one screen row covers a band of the picture: all of it counts, so that a far path of pebbles
+                # fades into the grass instead of showing a dash here and nothing on the next row
+                far, near = height * SCALE / (p - 0.5) if p > 0.5 else d, height * SCALE / (p + 0.5)
+                top = max(0, int(ey - max(far, d) * T))
+                bottom = min(th, int(math.ceil(ey - min(near, d) * T)) + 1)
+                band = max(1, bottom - top)
+                strip = turned.subsurface((sx, top, w, band))
+                if band > 1:
+                    strip = pygame.transform.smoothscale(strip, (w, 1))
+                line = pygame.transform.smoothscale(strip, (RES, 1)) if w > RES else \
+                    pygame.transform.scale(strip, (RES, 1))
+            else:
+                line = pygame.transform.scale(turned.subsurface((sx, sy, w, 1)), (RES, 1))
             f.blit(line, (0, y))
             lv = self.fog_level(scene, d)
             if lv:
@@ -380,7 +397,9 @@ class View3D:
                     continue
                 piece = col.subsurface((0, r0, 1, r1 - r0))
                 ph = max(1, int(round((r1 - r0) * h / tht)))
-                f.blit(pygame.transform.scale(piece, (1, ph)), (x, int(round(top + r0 * h / tht))))
+                shrink = pygame.transform.smoothscale if self.filter and ph < r1 - r0 and piece.get_bitsize() in (24, 32) \
+                    else pygame.transform.scale                       # a far wall averages its texture
+                f.blit(shrink(piece, (1, ph)), (x, int(round(top + r0 * h / tht))))
             y0, y1 = max(0, int(top)), min(RES, int(top + h) + 1)
             if side == 1:
                 shade = 'smooth' if self.dither == 'off' else None
@@ -445,6 +464,8 @@ class View3D:
                 img = pygame.Surface((w, w), pygame.SRCALPHA)
                 img.fill((0, 0, 0, 0))
                 pygame.draw.circle(img, (*EGA[12 if kind == 'mon' else 14], 255), (w // 2, w // 2), max(1, w // 4))
+            elif self.filter and w < pic.get_width() and pic.get_bitsize() == 32:
+                img = pygame.transform.smoothscale(pic, (w, w))        # far things are averaged down
             else:
                 img = pygame.transform.scale(pic, (w, w))
             lv = self.fog_level(scene, depth)

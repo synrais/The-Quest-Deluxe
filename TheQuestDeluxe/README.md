@@ -66,6 +66,7 @@ The player's settings, in this folder:
 | `smooth_scaling` | `off` (shipped): the picture is scaled to the window in whole pixels. `on`: smoothly, filling the window. `render_quality` high and ultra turn it on. |
 | `fps_quality` | `normal` (shipped): how finely FPS mode is drawn: `low`, `normal`, `high`, `ultra` or `max`. Higher is sharper, and slower. |
 | `fps_view_distance` | `level` (shipped): FPS mode sees as far as each level says. A number, 2 to 30, makes the eye see at least that many squares. |
+| `fps_texture_filter` | `on` (shipped): in FPS mode, the ground, walls and things far away are averaged down, so a path of pebbles fades into the grass instead of breaking into staggered dashes. `off`: pixels are skipped, as a plain scaler does. |
 | `fps_dither` | `ordered` (shipped): the fog in FPS mode is a 4 x 4 dither. `fine`: an 8 x 8 one. `smooth`: a plain blend. `off`: no fading with distance. |
 
 `run_deluxe.py --fixes on|off|pack` and `--sound on|off` override them for one game. The tests never
