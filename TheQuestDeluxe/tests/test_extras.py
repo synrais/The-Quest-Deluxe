@@ -688,6 +688,78 @@ def fps_settings():
     print('settings.ini: FPS quality, view distance and dithering, and bad values fall back: ok')
 
 
+def creature_changes():
+    def traits(folder, json):
+        path = os.path.join(folder, 'creatures.json')
+        data = json.load(open(path))
+        for r in data['creatures']:
+            if r['id'] == 1:
+                r['becomes_on_death'] = 2                      # an imp turns into an orc
+            if r['id'] == 3:
+                r['bursts_into'] = {'1': 3}                     # breaks into three imps
+            if r['id'] == 4:
+                r.update({'transforms_into': 5, 'transforms_below': 50})
+            if r['id'] == 6:
+                r.update({'transforms_into': 5, 'transforms_damage': 7})
+            if r['id'] == 7:
+                r['hit_drops'] = [[0, 50, 'gold', 5, 10], [50, 100, 'item', 620]]
+        json.dump(data, open(path, 'w'))
+    g = with_changes(traits)
+    p, w, pk = g.player, g.world, g.pack
+    ox, oy = w.origin
+    for e in list(w.enemies):
+        w.sq(e.x, e.y).mon = 0
+    w.enemies.clear()
+    for x, y in w.room_tiles():
+        q = w.sq(x, y)
+        q.wall = q.mon = q.item = q.deco = q.gold = 0
+    p.X, p.Y = ox, oy
+    # turns into another creature on death
+    a = g.spawn(1, ox + 5, oy + 5)
+    g.combat.hurt(1000, a, 3, by_hero=True)
+    now = w.enemy_at(ox + 5, oy + 5)
+    assert now is not None and now.type == 2 and now.life == now.mlife and w.sq(ox + 5, oy + 5).mon == 2
+    assert w.sq(ox + 5, oy + 5).deco == 0                       # no body: it did not die
+    w.enemies.clear()
+    w.sq(ox + 5, oy + 5).mon = 0
+    # bursts into several
+    b = g.spawn(3, ox + 5, oy + 5)
+    g.combat.hurt(1000, b, 3, by_hero=True)
+    kids = [e for e in w.enemies if e.type == 1]
+    assert len(kids) == 3 and all(max(abs(e.x - (ox + 5)), abs(e.y - (oy + 5))) <= 2 for e in kids)
+    assert w.sq(ox + 5, oy + 5).deco != 0                       # and it leaves its body
+    for e in list(w.enemies):
+        w.sq(e.x, e.y).mon = 0
+    w.enemies.clear()
+    # transforms when its life is low (percent), or after damage taken
+    c = g.spawn(4, ox + 3, oy + 3)
+    c.life = c.mlife * 6 // 10 or 1
+    g.combat.check_dead()
+    assert c.type == 4
+    g.combat.hurt(max(1, c.life - c.mlife // 2 + 1), c, 3, by_hero=True)
+    g.combat.check_dead()
+    assert c.type == 5 and c.life == c.mlife and w.sq(ox + 3, oy + 3).mon == 5
+    d = g.spawn(6, ox + 7, oy + 7)
+    d.life = d.mlife = max(d.mlife, 30)
+    d.life -= 5
+    g.combat.check_dead()
+    assert d.type == 6
+    d.life -= 3
+    g.combat.check_dead()
+    assert d.type == 5
+    # drops something each time it is hit
+    e = g.spawn(7, ox + 8, oy + 3)
+    e.life = e.mlife = 500
+    drops = 0
+    for _ in range(12):
+        gold, items = w.sq(e.x, e.y).gold, sum(1 for x, y in w.room_tiles() if w.sq(x, y).item)
+        g.combat.hurt(1, e, 3, by_hero=True)
+        drops += (w.sq(e.x, e.y).gold > gold) + (sum(1 for x, y in w.room_tiles() if w.sq(x, y).item) > items)
+    assert drops >= 8, drops                                    # every hit let something fall (rolls 1-100, all covered)
+    g.combat.hurt(3, e, 3, by_hero=True, how='burning')         # burning is not a hit
+    print('creatures: turn into another on death, burst into several, transform when hurt, drop things when hit: ok')
+
+
 if __name__ == '__main__':
     fire()
     ice()
@@ -695,6 +767,7 @@ if __name__ == '__main__':
     blood_regen()
     foresight()
     clones()
+    creature_changes()
     fps_settings()
     resurrection()
     shrinking()

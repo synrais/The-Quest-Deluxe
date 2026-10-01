@@ -31,6 +31,11 @@ def fmt_loot(row) -> str:
     return '; '.join(parts)
 
 
+def fmt_rules(key):
+    """A list of loot-style rules (lo-hi: gold n+base / item number) kept under `key`."""
+    return lambda row: fmt_loot({'loot': row.get(key) or []})
+
+
 def parse_loot(text: str) -> list:
     out = []
     for part in text.split(';'):
@@ -114,6 +119,8 @@ class CreaturesTab(TableTab):
             Field('exp', 'Experience', 'int', hint='for killing it'),
             Field('loot', 'Loot', 'custom', fmt=fmt_loot, parse=parse_loot,
                   hint='e.g. 20-100: gold 3+1; 10-20: item 620 (random(3)+1 gold, or item 620)'),
+            Field('hit_drops', 'Drops when hit', 'custom', fmt=fmt_rules('hit_drops'), parse=parse_loot,
+                  hint='something falls each time it is hurt: rules like Loot, e.g. 1-30: gold 3+1; 30-40: item 620'),
             Field('drop_on_level', 'Always drops', 'custom', fmt=fmt_pairs('drop_on_level'), parse=parse_pairs,
                   hint='level: item, e.g. 3: 12'),
             Field('corpse', 'Leaves', 'choice', CORPSES),
@@ -137,6 +144,15 @@ class CreaturesTab(TableTab):
             Field('size', 'Size', 'int', width=4,
                   hint='1: one square. 2: a giant on 2 x 2 squares (3: 3 x 3): put it on the map at its top-left '
                        'square and leave the others free; the screen has 10 x 10. A 40 x 40 picture is stretched.'),
+            pick('becomes_on_death', 'Turns into (on death)', 'instead of dying it becomes this creature, '
+                 'at full life, where it stood'),
+            Field('bursts_into', 'Bursts into', 'custom', fmt=fmt_pairs('bursts_into'), parse=parse_pairs,
+                  hint='creatures that spring from its body when it dies: "creature: how many", e.g. 12: 3, 13: 1'),
+            pick('transforms_into', 'Transforms into', 'the creature it becomes when hurt enough (see below)'),
+            Field('transforms_below', 'Transforms at life %', 'int', when=lambda r: r.get('transforms_into'),
+                  hint='when its life falls to this percent of its full life or less (empty: not by this)'),
+            Field('transforms_damage', 'Transforms after damage', 'int', when=lambda r: r.get('transforms_into'),
+                  hint='when it has taken this much damage in all (empty: not by this)'),
             Field('regenerates_from_blood', 'Rises from blood', 'bool',
                   hint='after it dies the nearest pile of blood on the screen slides to its body, and it rises again at full life'),
             Field('blood_range', 'Blood reaches', 'int', when=lambda r: r.get('regenerates_from_blood'),

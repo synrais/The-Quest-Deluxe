@@ -43,7 +43,10 @@ class Combat:
         2/3 ignore armour. Returns damage done. how: what dealt it, for the combat log (a spell's name)."""
         self.absorbed = False
         self._log = None if quiet else (kind, attacker, by_hero, how)
-        return self._hurt(dmg, target, kind, attacker, by_hero)
+        done = self._hurt(dmg, target, kind, attacker, by_hero)
+        if target is not None and done > 0 and how not in ('burning', 'poison'):
+            self.hit_drops(target)                         # a creature that drops something each time it is hit
+        return done
 
     def _logged(self, dam, target):
         if self._log is not None:
@@ -114,6 +117,7 @@ class Combat:
         judgement, and removal. Like the original, the creature that slides into a removed one's place
         is not looked at until the next check."""
         w, ev = self.w, self.g.events
+        self.transform_check()
         ev.attacker = -1 if attacker is None or attacker not in w.enemies else w.enemies.index(attacker)
         fixed = self.g.pack.fixed('dead_scan')
         i = 0
@@ -145,6 +149,7 @@ class Combat:
             if w.in_map(cx, cy):
                 w.sq(cx, cy).mon = 0
         r, pk = random(2), self.g.pack
+        before_deco = q.deco
         if q.deco in (0, pk.deco('blood')):
             q.deco = pk.deco('remains') if r == 0 else pk.deco('remains2')
             corpse = pk.trait(e.type, 'corpse', 'body')
@@ -174,14 +179,17 @@ class Combat:
             self.g.change_rep(-3)
         if e.type > 0 and not self.g.pack.trait(e.type, 'animal') and witness > 0 and h.rep <= -4 and a == -1:
             self.g.change_rep(1)
-        if (e.type > 0 or -100 < e.type < 0 and e.type != -5) and q.deco in (
+        becomes = pk.trait(e.type, 'becomes_on_death')
+        if becomes:
+            q.deco = before_deco                              # it does not die: it turns into something else
+        if (e.type > 0 or -100 < e.type < 0 and e.type != -5) and not becomes and q.deco in (
                 pk.deco('remains'), pk.deco('remains2'), pk.deco('bones')) and q.deco:
             corpses = self.p.more.setdefault('corpses', {})   # who lies where, for the Resurrect spell
             corpses.pop(f'{w.level},{e.x},{e.y}', None)
             corpses[f'{w.level},{e.x},{e.y}'] = e.type
             while len(corpses) > 60:
                 corpses.pop(next(iter(corpses)))
-        if pk.trait(e.type, 'regenerates_from_blood'):
+        if pk.trait(e.type, 'regenerates_from_blood') and not becomes:
             self.p.more.setdefault('reviving', []).append([w.level, e.x, e.y, e.type, -1, -1, 0])
         del w.enemies[i]
         if -100 < e.type < 0 and a == -1:
@@ -189,6 +197,92 @@ class Combat:
                 if -100 < o.type < 0 and o.att > -10:
                     o.att = 9
         self.g.status.mons = len(w.enemies)
+        self.after_death(e, becomes)
+
+    def free_spot(self, x: int, y: int, reach: int = 4):
+        """The nearest free square of this screen around (x, y), within reach, or None."""
+        from .state import LINK_ITEMS
+        w, p, pk = self.w, self.p, self.g.pack
+        best = None
+        for sx, sy in w.room_tiles():
+            d = max(abs(sx - x), abs(sy - y))
+            q = w.sq(sx, sy)
+            if 0 < d <= reach and q.wall == 0 and q.mon == 0 and (sx, sy) != (p.X, p.Y) \
+                    and pk.item_type(q.item) not in ('teleporter', 'exit') + LINK_ITEMS:
+                if best is None or (d, sx, sy) < best[:3]:
+                    best = (d, sx, sy)
+        return best[1:] if best else None
+
+    def after_death(self, e: Enemy, becomes):
+        """What a creature leaves behind besides its body: `becomes_on_death` (it turns into another creature
+        where it stood) and `bursts_into` (creatures that spring from it: {"creature": how many})."""
+        g, pk = self.g, self.g.pack
+        name = g.monster_name(e.type)
+        if becomes:
+            new = g.spawn(int(becomes), e.x, e.y)
+            new.moved = True
+            g.report(f'The {name} turns into {g.a_name_of_creature(new.type)}!', 13, (e.x, e.y), 'changes')
+        burst = pk.trait(e.type, 'bursts_into') or {}
+        made = 0
+        for cid, count in burst.items():
+            for _ in range(int(count)):
+                spot = self.free_spot(e.x, e.y)
+                if spot is None:
+                    break
+                spawned = g.spawn(int(cid), *spot)
+                spawned.moved = True
+                made += 1
+        if made:
+            g.report(f'The {name} bursts into {made} creature{"s" if made > 1 else ""}!', 13, (e.x, e.y), 'bursts')
+            g.count_hostiles()
+
+    def transform(self, e: Enemy, new_type: int):
+        """The creature becomes another, with that one's strength, where it stands."""
+        g, w = self.g, self.w
+        old = g.monster_name(e.type)
+        for cx, cy in w.cells(e):
+            w.sq(cx, cy).mon = 0
+        e.type = new_type
+        ms = g.data.monsters.get(new_type)
+        if ms:
+            e.life = e.mlife = ms.life
+            e.power, e.atk, e.defense = ms.power, ms.atk, ms.defense
+            e.warm, e.marm, e.range = ms.warm, ms.marm, ms.range
+        e.effects.clear()
+        for cx, cy in w.cells(e):
+            w.sq(cx, cy).mon = new_type
+        g.tones((300, 60), (600, 60), (900, 60))
+        g.report(f'The {old} turns into {g.a_name_of_creature(new_type)}!', 13, (e.x, e.y), 'changes')
+
+    def transform_check(self):
+        """Creatures with `transforms_into` change when they are hurt enough: `transforms_below` (the percent of
+        life left at or under which) or `transforms_damage` (the damage taken in all)."""
+        pk = self.g.pack
+        for e in list(self.w.enemies):
+            into = pk.trait(e.type, 'transforms_into')
+            if not into or e.life <= 0 or int(into) == e.type:
+                continue
+            below, taken = pk.trait(e.type, 'transforms_below'), pk.trait(e.type, 'transforms_damage')
+            if (below is not None and e.life * 100 <= e.mlife * below) or (taken and e.mlife - e.life >= taken):
+                self.transform(e, int(into))
+
+    def hit_drops(self, e: Enemy):
+        """A creature with `hit_drops` lets something fall each time it is hurt: the same rules as `loot` (a roll
+        of 1-100, the first rule whose range holds it applies)."""
+        rules_ = self.g.pack.trait(e.type, 'hit_drops')
+        if not rules_:
+            return
+        roll = random(100) + 1
+        for lo, hi, kind, *args in rules_:
+            if lo < roll <= hi:
+                if kind == 'gold':
+                    got = random(args[0]) + args[1]
+                    self.w.sq(e.x, e.y).gold += got
+                    self.g.report(f'The {self.g.monster_name(e.type)} drops {got} gold.', 14, (e.x, e.y), f'+{got}')
+                elif kind == 'item':
+                    self.g.put_item(e.x, e.y, args[0])
+                    self.g.report(f'The {self.g.monster_name(e.type)} drops {self.g.a_name(args[0])}.', 14)
+                break
 
     def grant_rewards(self, e: Enemy) -> int:
         """monsdeath2(): Honor calms down, experience, then loot from the pack's creatures.json. The roll
@@ -374,6 +468,7 @@ class Combat:
                 g.play_at('ahit', e.x, e.y, where, 1, in_view=False)     # FPS mode: the weapon shows it
                 e.life -= dmg
                 g.report(f'You hit the {name} for {dmg}.', 14, (e.x, e.y), dmg)
+                self.hit_drops(e)
                 steal = g.worn_sum('lifesteal')
                 if steal:
                     p.hero.life = min(p.hero.mlife, p.hero.life + max(1, dmg * steal // 100))

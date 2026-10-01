@@ -47,6 +47,16 @@ FIELDS = {
     'rests_after_moving': "It does not attack in a turn in which it moved.",
     'animal': "Doesn't fight people, and killing it earns no reputation penalty or reward.",
     'silences_witnesses': 'Nobody reports a killing that happens near it.',
+    'hit_drops': 'Something falls each time it is hurt (not by burning or poison). Rules like Loot: a roll of 1-100, '
+                 'the first rule whose range holds it applies: "1-30: gold 3+1; 30-40: item 620".',
+    'becomes_on_death': 'It does not die: it turns into this creature, at full life, where it stood. You still get '
+                        'the experience and loot of the first form.',
+    'bursts_into': 'When it dies, these creatures spring from the spot (on free squares near it): '
+                   '"creature: how many". They can be combined with a body.',
+    'transforms_into': 'The creature it becomes when it has been hurt enough, at that creature\'s full life (a '
+                       'boss with a second form). It can transform again if that one can.',
+    'transforms_below': 'It transforms when its life falls to this percent of its full life or less.',
+    'transforms_damage': 'It transforms when it has taken this much damage in all.',
     'size': 'Squares across: 2 is a giant on 2 x 2 squares. Put it on the map at its top-left square and keep the '
             'others free. Its picture is stretched to fit.',
     'regenerates_from_blood': 'After it dies the nearest pile of blood on the screen slides to its body and it rises '

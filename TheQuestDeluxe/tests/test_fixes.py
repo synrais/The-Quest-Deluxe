@@ -218,7 +218,8 @@ def player_settings():
     path = os.path.join(tempfile.mkdtemp(), 'settings.ini')
     assert settings.load(path) == settings.DEFAULTS                  # no file
     open(path, 'w').write('[play]\nfixes = ON ; a comment\nsound = maybe\n')
-    assert settings.load(path) == {'fixes': 'on', 'sound': None, 'items_on_top': 'off', 'floating_numbers': 'off'}   # not a choice: default
+    assert settings.load(path) == {'fixes': 'on', 'sound': None, 'items_on_top': 'off', 'floating_numbers': 'off',
+                                   'fps_quality': 'normal', 'fps_dither': 'ordered', 'fps_view_distance': 'level'}   # not a choice: default
     shipped = settings.load()
     assert shipped['fixes'] == 'on' and shipped['items_on_top'] == 'on', shipped   # the folder's settings.ini
     # the player's choice beats the pack's, both ways; without settings the pack's own stands
