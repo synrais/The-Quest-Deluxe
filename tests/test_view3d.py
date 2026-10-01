@@ -239,12 +239,12 @@ def weapon_in_view():
     assert missed < hit[0] - 40, (missed, hit)
     g.swing = ('thrust', now - 5000)
     # a creature's blow on the hero, as he sees it: from in front it rises from the bottom (2), from his
-    # right it comes from the right (1), from behind from both sides (7), from his left from the left (3)
+    # right it comes from the right (1), from behind a slash across the view (7), from his left from the left (3)
     from deluxe.state import Enemy
     p = g.player
     g.facing = 1                                                 # east
     sides = [g.fps_side(Enemy(type=1, x=p.X + dx, y=p.Y + dy)) for dx, dy in ((1, 0), (0, 1), (-1, 0), (0, -1))]
-    assert sides == [2, 1, 7, 3], sides
+    assert sides == [8, 1, 7, 3], sides
     g.swing = ('swing', now - 5000)
     assert hands.pose(g, now)[:2] == (0, 0) or r._cam            # long over: back at rest
     g.swing = None

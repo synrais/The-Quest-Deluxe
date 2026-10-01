@@ -49,9 +49,17 @@ def _px(x, y):
 def _hit_lines(g, i, ii, where):
     """The white attack stroke of ahit()/bhit()/bhit2(): where 1-4 = from the right, below, left,
     above."""
-    if where == 7:                               # FPS mode: a blow from behind, a stroke from each side
-        _hit_lines(g, i, ii, 1)
-        _hit_lines(g, i, ii, 3)
+    if where == 7:                               # FPS mode: a blow from behind: a slash across the view, no sword
+        g.setcolor(15)
+        for a, b in ((0, 0), (1, 0), (0, 1), (-5, 5), (5, -5)):
+            g.line(i + 35 + a, ii + 5 + b, i + 5 + a, ii + 35 + b)
+        return
+    if where == 8:                               # FPS mode: a creature ahead strikes at us: its hilt at the middle
+        g.setcolor(15)                           # of the view, the blade coming down towards the bottom
+        g.line(i + 20, ii + 23, i + 20, ii + 38)
+        g.line(i + 19, ii + 23, i + 19, ii + 38)
+        g.line(i + 15, ii + 24, i + 24, ii + 24)
+        g.line(i + 15, ii + 25, i + 24, ii + 25)
         return
     if where == 3:
         g.setcolor(15)

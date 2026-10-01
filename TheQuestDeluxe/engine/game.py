@@ -226,7 +226,7 @@ class Game:
             dy = 0                                       # a diagonal: by its side
         absolute = {(0, -1): 0, (1, 0): 1, (0, 1): 2, (-1, 0): 3}.get((dx, dy), 0)
         rel = (absolute - self.facing) % 4               # 0 in front, 1 right, 2 behind, 3 left
-        return (2, 1, 7, 3)[rel]                         # from behind: a stroke from both sides (7)
+        return (8, 1, 7, 3)[rel]                         # ahead: a sword coming down (8); behind: a slash (7)
 
     def fps_creature_side(self, where: int) -> int:
         """FPS mode: the side of a blow on a creature (1 right, 2 below, 3 left, 4 above on the map), as
