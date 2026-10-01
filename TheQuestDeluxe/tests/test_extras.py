@@ -731,7 +731,7 @@ def fps_settings():
     assert view3d.RES == 200
     # the texture filter: a far path of pebbles is averaged, not skipped
     frames = {}
-    for name, st in (('on', {}), ('off', {'fps_texture_filter': 'off'})):
+    for name, st in (('on', {'fps_texture_filter': 'on'}), ('off', {})):          # off is the default
         g = Game(pygame.Surface((640, 480)), settings=st)
         g.quick_start(1, 1)
         g.view3d = True

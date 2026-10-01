@@ -11,7 +11,7 @@
     fps_view_distance = level ; FPS mode: level (as each level says) or 2-30 squares (never less than the level's)
     fps_dither = ordered ; FPS mode, the fog: ordered, fine, smooth (a blend) or off
     fps_fog_start = 45 ; FPS mode: how far the fog fade starts, in percent of the view distance (100: only at the edge)
-    fps_texture_filter = on ; FPS mode: average the far ground, walls and things (on) or skip pixels (off)
+    fps_texture_filter = off ; FPS mode: average the far ground, walls and things (on) or skip pixels (off)
 
 Only a real game reads it (run_deluxe.py); a Game made without settings, as the tests make it, plays
 the pack as it is, so a player's settings can't change what the tests check.
@@ -31,7 +31,7 @@ CHOICES = {'fixes': ('on', 'off', 'pack'), 'sound': ('on', 'off'), 'items_on_top
 DEFAULTS = {'fixes': 'pack', 'sound': None, 'items_on_top': 'off',   # sound None: as sound.txt says
             'floating_numbers': 'off', 'fps_quality': 'normal', 'fps_dither': 'ordered',
             'fps_view_distance': 'level', 'smooth_scaling': 'off', 'render_quality': 'normal',
-            'fps_texture_filter': 'on', 'fps_fog_start': 45}
+            'fps_texture_filter': 'off', 'fps_fog_start': 45}
 QUALITY_ORDER = ('low', 'normal', 'high', 'ultra', 'max')
 RENDER_QUALITY = {'high': 'high', 'ultra': 'max'}                      # what each level of render_quality means
 

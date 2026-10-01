@@ -473,7 +473,7 @@ class Renderer:
         far = want if isinstance(want, int) else 0
         scene.range = max(base, far) + game.sight_bonus()          # (a worn item that sees further adds to it)
         self.v3d.dither = (getattr(game, 'settings', None) or {}).get('fps_dither') or 'ordered'
-        self.v3d.filter = (getattr(game, 'settings', None) or {}).get('fps_texture_filter') != 'off'
+        self.v3d.filter = (getattr(game, 'settings', None) or {}).get('fps_texture_filter') == 'on'
         start = (getattr(game, 'settings', None) or {}).get('fps_fog_start')
         self.v3d.fog_start = (45 if start is None else start) / 100
         self.v3d.eye = self.eye_height(game)

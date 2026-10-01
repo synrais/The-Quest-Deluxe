@@ -121,7 +121,7 @@ class View3D:
     # ── helpers ─────────────────────────────────────────────────────────────
     DITHERS = ('ordered', 'fine', 'smooth', 'off')
     dither = 'ordered'                        # settings.ini fps_dither
-    filter = True                             # settings.ini fps_texture_filter: average what is far away, not skip it
+    filter = False                            # settings.ini fps_texture_filter: average what is far away, not skip it
     fog_start = 0.45                          # settings.ini fps_fog_start: where the fog fade begins, of the range
 
     @property
