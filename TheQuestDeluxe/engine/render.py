@@ -465,10 +465,13 @@ class Renderer:
         base = getattr(scene, 'base_range', None)
         if base is None:
             base = scene.base_range = scene.range
-        scene.range = base + game.sight_bonus()                    # a worn item that sees further
+        want = (getattr(game, 'settings', None) or {}).get('fps_view_distance')     # settings.ini: see further
+        far = want if isinstance(want, int) else 0
+        scene.range = max(base, far) + game.sight_bonus()          # (a worn item that sees further adds to it)
+        self.v3d.dither = (getattr(game, 'settings', None) or {}).get('fps_dither') or 'ordered'
         self.v3d.eye = self.eye_height(game)
         frame = self.v3d.render(scene, self.camera(game, snap))
-        k = MAP_PX // view3d.RES
+        k = MAP_PX / view3d.RES
         scr.blit(pygame.transform.scale(frame, (MAP_PX, MAP_PX)), (0, 0))
         t = game.target
         if t is not None and t in game.world.enemies:

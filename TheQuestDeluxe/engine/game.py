@@ -142,6 +142,7 @@ class Game:
         self.pack = self.data.src.pack
         # the player's settings.ini (run_deluxe.py); without them, the pack plays as it is
         self.settings = settings or {}
+        view3d.configure(self.settings.get('fps_quality'))        # how finely FPS mode draws (settings.ini)
         self.pack.fix_override = fix_override(settings)
         self.items = rules.ItemTable(self.data.items, self.pack)
         self.spells = rules.SpellTable(self.data.spells)

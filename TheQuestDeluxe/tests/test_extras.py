@@ -653,6 +653,41 @@ def sizes_and_worn():
     print('sizes and worn items: eye height, gigantism, mushrooms, regen, thorns, sight, immunities: ok')
 
 
+def fps_settings():
+    import tempfile
+    from engine import settings as player_settings, view3d
+    from engine.game import Game
+    path = os.path.join(tempfile.mkdtemp(), 'settings.ini')
+    open(path, 'w').write('[play]\nfps_quality = high\nfps_dither = fine\nfps_view_distance = 20\n')
+    got = player_settings.load(path)
+    assert (got['fps_quality'], got['fps_dither'], got['fps_view_distance']) == ('high', 'fine', 20)
+    open(path, 'w').write('[play]\nfps_quality = huge\nfps_dither = ?\nfps_view_distance = 99\n')
+    got = player_settings.load(path)
+    assert (got['fps_quality'], got['fps_dither'], got['fps_view_distance']) == ('normal', 'ordered', 'level')
+    shots = {}
+    for name, settings in (('normal', {}), ('high', {'fps_quality': 'high'}), ('low', {'fps_quality': 'low'}),
+                           ('far', {'fps_view_distance': 25}), ('fine', {'fps_dither': 'fine'}),
+                           ('smooth', {'fps_dither': 'smooth'}), ('off', {'fps_dither': 'off'})):
+        g = Game(pygame.Surface((640, 480)), settings=settings)
+        g.quick_start(1, 1)
+        g.view3d = True
+        g.facing = 2                                             # looking south: the start is at the map's north edge
+        for x in range(1, 101):                                  # open ground, so that the fog shows
+            for y in range(1, 101):
+                q = g.world.sq(x, y)
+                q.wall = q.mon = q.item = q.deco = 0
+        g.world.enemies.clear()
+        g.renderer.draw(g, present=False)
+        shots[name] = pygame.image.tostring(g.renderer.screen.subsurface((0, 0, 400, 400)), 'RGB')
+        assert view3d.RES == view3d.QUALITY[settings.get('fps_quality', 'normal')]
+        if name == 'far':
+            assert g.renderer.scene3d(g).range == 25 and g.renderer.v3d.frame.get_width() == view3d.RES
+    assert len(set(shots.values())) == len(shots), 'every setting changes the picture'
+    Game(pygame.Surface((640, 480))).renderer                       # a game without settings is back to normal
+    assert view3d.RES == 200
+    print('settings.ini: FPS quality, view distance and dithering, and bad values fall back: ok')
+
+
 if __name__ == '__main__':
     fire()
     ice()
@@ -660,6 +695,7 @@ if __name__ == '__main__':
     blood_regen()
     foresight()
     clones()
+    fps_settings()
     resurrection()
     shrinking()
     sizes_and_worn()

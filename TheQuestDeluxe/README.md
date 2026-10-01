@@ -62,6 +62,10 @@ The player's settings, in this folder:
 | `items_on_top` | `on` (shipped): gold and items are drawn over a creature or the hero standing on them. `off`: under them, as the original draws them. Blood, remains and footprints stay underneath either way. In FPS mode they are always in front. |
 | `floating_numbers` | `off` (shipped): in FPS mode the combat log's lines only. `on`: the damage, "miss" and the like also rise off whoever took them. |
 
+| `fps_quality` | `normal` (shipped): how finely FPS mode is drawn: `low`, `normal`, `high` or `ultra`. Higher is sharper, and slower. |
+| `fps_view_distance` | `level` (shipped): FPS mode sees as far as each level says. A number, 2 to 30, makes the eye see at least that many squares. |
+| `fps_dither` | `ordered` (shipped): the fog in FPS mode is a 4 x 4 dither. `fine`: an 8 x 8 one. `smooth`: a plain blend. `off`: no fading with distance. |
+
 `run_deluxe.py --fixes on|off|pack` and `--sound on|off` override them for one game. The tests never
 read this file: they play each pack as it is.
 

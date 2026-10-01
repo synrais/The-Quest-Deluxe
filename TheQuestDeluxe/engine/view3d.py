@@ -24,14 +24,34 @@ import pygame
 
 from .bgi import EGA
 
-RES = 200                                  # the view is drawn at RES x RES, then scaled up
+RES = 200                                  # the view is drawn at RES x RES, then scaled up (settings.ini fps_quality)
+QUALITY = {'low': 140, 'normal': 200, 'high': 300, 'ultra': 400}
 PLANE = 0.66                               # half the width of the view plane: a 66 degree view
 SCALE = RES / (2 * PLANE)                  # pixels per square at a distance of one square
+
+
+def configure(quality: str | None = None):
+    """Draw the view at the resolution of a quality (low, normal, high, ultra; normal if left out)."""
+    global RES, SCALE
+    RES = QUALITY.get(quality or 'normal', QUALITY['normal'])
+    SCALE = RES / (2 * PLANE)
 T = 40                                     # picture size (a square's side in the ground image)
 FACINGS = [(0, -1), (1, 0), (0, 1), (-1, 0)]          # north, east, south, west
 FACING_NAMES = 'NESW'
 FOG_STEPS = 8
 BAYER = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]]
+
+
+def _bayer(n: int) -> list:
+    """The ordered-dither matrix of side n (a power of two)."""
+    if n == 1:
+        return [[0]]
+    m = _bayer(n // 2)
+    return [[4 * m[y % (n // 2)][x % (n // 2)] + ((0, 2), (3, 1))[y // (n // 2)][x // (n // 2)] for x in range(n)]
+            for y in range(n)]
+
+
+BAYER8 = _bayer(8)
 FLAT_ITEMS = ('exit', 'teleporter', 'stairs', 'hole', 'jump_pad')
 FULL_ITEMS = ('chest', 'ladder', 'rope')
 
@@ -99,22 +119,44 @@ class View3D:
                                                   # lower (a shrunk hero) makes everything tower, higher shrinks it
 
     # ── helpers ─────────────────────────────────────────────────────────────
-    def fog_pattern(self, colour: int, level: int) -> pygame.Surface:
-        """level/FOG_STEPS of the pixels in the fog colour, in a 4x4 ordered dither; the rest clear."""
-        key = (colour, level)
+    DITHERS = ('ordered', 'fine', 'smooth', 'off')
+    dither = 'ordered'                        # settings.ini fps_dither
+
+    @property
+    def steps(self) -> int:
+        """How many degrees of fog the distance is cut into: the fine dither and the blend have more."""
+        return {'ordered': FOG_STEPS, 'fine': 4 * FOG_STEPS, 'smooth': 4 * FOG_STEPS}.get(self.dither, FOG_STEPS)
+
+    @property
+    def cell(self) -> int:
+        """The side of the dither's repeating tile in pixels (so that it lines up with the screen)."""
+        return {'ordered': 4, 'fine': 8}.get(self.dither, 1)
+
+    def fog_pattern(self, colour: int, level: int, mode: str | None = None) -> pygame.Surface:
+        """level/FOG_STEPS of the pixels in the fog colour: spread in a 4 x 4 ordered dither (the default), an 8 x 8
+        one (fine), or as a smooth blend (smooth); the rest clear. Off: nothing is drawn."""
+        mode = mode or self.dither
+        key = (colour, level, mode)
         if key not in self._fog:
-            n = level * 16 // FOG_STEPS
             c = (*EGA[colour], 255) if colour >= 0 else (0, 0, 0, 255)
-            tile = pygame.Surface((4, 4), pygame.SRCALPHA)
-            tile.fill((0, 0, 0, 0))
-            for y in range(4):
-                for x in range(4):
-                    if BAYER[y][x] < n:
-                        tile.set_at((x, y), c)
             s = pygame.Surface((RES, RES), pygame.SRCALPHA)
-            for y in range(0, RES, 4):
-                for x in range(0, RES, 4):
-                    s.blit(tile, (x, y))
+            if mode == 'smooth':
+                s.fill((*c[:3], min(255, level * 255 // self.steps)))
+            elif mode == 'off':
+                s.fill((0, 0, 0, 0))
+            else:
+                n_side = {'ordered': 4, 'fine': 8}[mode]
+                matrix = BAYER if n_side == 4 else BAYER8
+                n = level * n_side * n_side // self.steps
+                tile = pygame.Surface((n_side, n_side), pygame.SRCALPHA)
+                tile.fill((0, 0, 0, 0))
+                for y in range(n_side):
+                    for x in range(n_side):
+                        if matrix[y][x] < n:
+                            tile.set_at((x, y), c)
+                for y in range(0, RES, n_side):
+                    for x in range(0, RES, n_side):
+                        s.blit(tile, (x, y))
             self._fog[key] = s
         return self._fog[key]
 
@@ -122,7 +164,9 @@ class View3D:
         start = scene.range * 0.45
         if d <= start:
             return 0
-        return min(FOG_STEPS, int((d - start) / (scene.range - start) * FOG_STEPS) + 1)
+        if self.dither == 'off':
+            return 0
+        return min(self.steps, int((d - start) / (scene.range - start) * self.steps) + 1)
 
     def columns(self, tex):
         key = id(tex)
@@ -339,7 +383,9 @@ class View3D:
                 f.blit(pygame.transform.scale(piece, (1, ph)), (x, int(round(top + r0 * h / tht))))
             y0, y1 = max(0, int(top)), min(RES, int(top + h) + 1)
             if side == 1:
-                f.blit(self.fog_pattern(-1, 2), (x, y0), (x, y0, 1, y1 - y0))      # the shaded sides
+                shade = 'smooth' if self.dither == 'off' else None
+                f.blit(self.fog_pattern(-1, 2 * self.steps // FOG_STEPS if shade is None else 8, shade),
+                       (x, y0), (x, y0, 1, y1 - y0))                                      # the shaded sides
             lv = self.fog_level(scene, d)
             if lv:
                 f.blit(self.fog_pattern(scene.fog, lv), (x, y0), (x, y0, 1, y1 - y0))
@@ -407,7 +453,7 @@ class View3D:
                 mask = pygame.mask.from_surface(img)
                 pat = self.fog_pattern(scene.fog, lv)
                 layer = pygame.Surface((w, w), pygame.SRCALPHA)
-                layer.blit(pat, (0, 0), (left % 4, top % 4, w, w))     # the dither lines up with the screen
+                layer.blit(pat, (0, 0), (left % self.cell, top % self.cell, w, w))     # the dither lines up with the screen
                 img.blit(mask.to_surface(setsurface=layer, unsetcolor=(0, 0, 0, 0)), (0, 0))
             # only the columns in front of the walls
             run = None

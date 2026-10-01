@@ -5,6 +5,9 @@
     sound = on        ; the PC-speaker tones
     items_on_top = on ; gold and items drawn over the creatures and the hero (the original: under)
     floating_numbers = off ; FPS mode: damage, "miss" and the like rising off whoever took them
+    fps_quality = normal ; FPS mode: low, normal, high or ultra (how finely the view is drawn)
+    fps_view_distance = level ; FPS mode: level (as each level says) or 2-30 squares (never less than the level's)
+    fps_dither = ordered ; FPS mode, the fog: ordered, fine, smooth (a blend) or off
 
 Only a real game reads it (run_deluxe.py); a Game made without settings, as the tests make it, plays
 the pack as it is, so a player's settings can't change what the tests check.
@@ -17,9 +20,11 @@ import os
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))      # the TheQuestDeluxe folder
 PATH = os.path.join(ROOT, 'settings.ini')
 CHOICES = {'fixes': ('on', 'off', 'pack'), 'sound': ('on', 'off'), 'items_on_top': ('on', 'off'),
-           'floating_numbers': ('on', 'off')}
+           'floating_numbers': ('on', 'off'), 'fps_quality': ('low', 'normal', 'high', 'ultra'),
+           'fps_dither': ('ordered', 'fine', 'smooth', 'off')}
 DEFAULTS = {'fixes': 'pack', 'sound': None, 'items_on_top': 'off',   # sound None: as sound.txt says
-            'floating_numbers': 'off'}
+            'floating_numbers': 'off', 'fps_quality': 'normal', 'fps_dither': 'ordered',
+            'fps_view_distance': 'level'}
 
 
 def load(path: str = PATH) -> dict:
@@ -36,6 +41,9 @@ def load(path: str = PATH) -> dict:
             v = cp.get('play', key, fallback='').strip().lower()
             if v in choices:
                 out[key] = v
+        v = cp.get('play', 'fps_view_distance', fallback='').strip().lower()
+        if v.isdigit() and 2 <= int(v) <= 30:
+            out['fps_view_distance'] = int(v)
     return out
 
 
