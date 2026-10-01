@@ -148,6 +148,7 @@ class Enemy:
     marm: int = 0
     att: int = 0        # attitude / AI state, see ATT_* below
     moved: bool = False  # original `move[i]`: already acted this turn
+    effects: dict = field(default_factory=dict)   # Deluxe: 'fire' / 'poison' -> [turns left, damage a turn]
 
     @property
     def is_npc(self) -> bool:

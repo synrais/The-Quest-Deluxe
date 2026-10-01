@@ -14,6 +14,9 @@ CAST_ANIMS = ['afireball', 'aflame', 'agflame', 'alightning', 'athunder', 'ainfe
               'aearthq', 'adeaths', 'aicering', 'ablackward', 'adeteriorate']
 
 
+ELEMENT_NAMES = [('fire', 'fire'), ('ice', 'ice'), ('poison', 'poison'), ('drain', 'drain')]
+
+
 def role(v: int) -> str:
     return 'monster' if v > 0 else 'shopkeeper' if v == -5 else 'person' if v > -100 else 'summoned ally'
 
@@ -131,6 +134,7 @@ class CreaturesTab(TableTab):
             pick('hides_as', 'Hides again as', 'when the hero leaves the screen'),
             Field('rests_after_moving', 'Rests after moving', 'bool', hint="doesn't attack in a turn it moved"),
             Field('animal', 'Animal', 'bool', hint="doesn't fight people; killing it earns no reputation"),
+            Field('resists', 'Resists', 'multi', [(k, v) for k, v in ELEMENT_NAMES], hint='elements and spells it shrugs off'),
             Field('silences_witnesses', 'Silences witnesses', 'bool', hint='nobody reports a killing near it'),
         ]
 

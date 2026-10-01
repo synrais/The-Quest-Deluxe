@@ -97,6 +97,12 @@ class TilesTab(TableTab):
                     Field('door', 'Door', 'choice', DOORS),
                     Field('key', 'Key', 'choice', key_choices(self.app.project.quest), when=lambda r: r.get('door') == 'locked',
                           hint='the key colour that opens it')]
+        if self.kind == 'walls':
+            walls = [(None, '(does not freeze)')] + [(w['id'], f'{w["id"]} {w.get("name", "")}')
+                                                    for w in sorted(self.app.project.tiles.get('walls', []),
+                                                                    key=lambda w: w['id'])]
+            out.append(Field('freezes_to', 'Freezes to', 'choice', walls,
+                             hint='water: the wall (ice, not solid) a freezing spell turns it into'))
         if self.kind in ('floors', 'walls'):
             out += [Field('map_colour', 'Automap colour', 'custom', fmt=fmt_colour('map_colour'),
                           parse=parse_colour, hint='colour, priority (e.g. 8, 2); empty: none'),

@@ -62,7 +62,10 @@ class Magic:
     def valid_target(self, spell: int, x: int, y: int) -> bool:
         w, p, st = self.g.world, self.g.player, self.g.status
         q, eff = w.sq(x, y), self.effect(spell)
-        if (q.wall != 0 or self.g.pack.item_type(q.item) in ('teleporter', 'exit')) and eff != 'earthquake':
+        water = self.g.pack.spell(spell).get('freezes_water') is not None and \
+            self.g.pack.wall(q.wall).get('freezes_to') and q.mon == 0
+        if (q.wall != 0 or self.g.pack.item_type(q.item) in ('teleporter', 'exit')) and eff != 'earthquake' \
+                and not water:
             return False
         if (x, y) == (p.X, p.Y) and eff != 'earthquake':
             return False
@@ -127,9 +130,54 @@ class Magic:
             if not g.world.in_room(x, y):
                 continue
             self.anim(spell, x, y)
+            self.scorch(spell, x, y)
             e = g.world.enemy_at(x, y)
             if e:
                 self.strike(spell, e, x, y)
+
+    def squares_around(self, x: int, y: int, r: int):
+        """The squares of this screen within r (a square's distance) of (x, y)."""
+        w = self.g.world
+        return [(tx, ty) for tx in range(x - r, x + r + 1) for ty in range(y - r, y + r + 1) if w.in_room(tx, ty)]
+
+    def scorch(self, spell: int, x: int, y: int):
+        """A fire spell with `burns` (a radius, 0 = the one square) burns the blood off the ground there:
+        puddles, footprints and remains, not bones."""
+        r = self.g.pack.spell(spell).get('burns')
+        if r is None:
+            return
+        pk, w = self.g.pack, self.g.world
+        blood = {pk.deco(role) for role in ('blood', 'remains', 'remains2')} - {0}
+        burnt = False
+        for tx, ty in self.squares_around(x, y, r):
+            q = w.sq(tx, ty)
+            if q.deco in blood:
+                q.deco, burnt = 0, True
+        if burnt:
+            self.g.report('The flames burn the blood away.', 12)
+
+    def freeze_water(self, spell: int, x: int, y: int):
+        """A spell with `freezes_water` (a radius) turns the water (a wall with `freezes_to`, the ice that
+        can be walked on) to ice for the spell's duration (10 turns if it has none). The squares are kept in
+        the hero's more['frozen'] as [level, x, y, turns, the water]; Game.upkeep melts them."""
+        sp = self.g.pack.spell(spell)
+        r = sp.get('freezes_water')
+        if r is None:
+            return
+        g, w, p = self.g, self.g.world, self.g.player
+        turns = self.tell(spell, SP_DURATION) or 10
+        frozen = p.more.setdefault('frozen', [])
+        done = False
+        for tx, ty in self.squares_around(x, y, r):
+            q = w.sq(tx, ty)
+            ice = g.pack.wall(q.wall).get('freezes_to')
+            if ice and q.mon == 0 and (tx, ty) != (p.X, p.Y):
+                frozen.append([w.level, tx, ty, turns + 1, q.wall])
+                q.wall, done = ice, True
+        if done:
+            g.report('The water freezes over.', 11)
+        if not frozen:
+            p.more.pop('frozen', None)
 
     def cast_at(self, spell: int, x: int, y: int) -> None:
         """The targeted half of cast(), in the original order."""
@@ -143,6 +191,8 @@ class Magic:
                 self.anim(spell, x, y)
             if sp.get('empties_mana'):
                 h.mana = 0
+            self.scorch(spell, x, y)
+            self.freeze_water(spell, x, y)
         if eff == 'drain':                                  # life drain
             if p.skill.hon == 1:
                 p.skill.hon = 2
@@ -166,10 +216,14 @@ class Magic:
             return
         if eff == 'freeze':                                 # ring of ice: freeze if it beats magic armour
             self.anim(spell, x, y)
+            self.freeze_water(spell, x, y)
             g.combat.hurt(0, target, 1, by_hero=True, quiet=True)   # even with nobody there: hurt(0, -1, ...)
             if target:
                 power_of = spell if g.pack.fixed('shield_ice') else sp.get('freeze_power_of', spell)
-                if self.tell(power_of, SP_POWER) > target.marm:    # Quest I: spell 4's
+                if 'ice' in (g.pack.trait(target.type, 'resists') or []):
+                    g.play_at('bhit', x, y, 5)
+                    g.report(f'The {g.monster_name(target.type)} resists the ice.', 7, (x, y), 'resists')
+                elif self.tell(power_of, SP_POWER) > target.marm:    # Quest I: spell 4's
                     target.att = -11 - self.tell(spell, SP_DURATION)
                     g.report(f'The {g.monster_name(target.type)} is frozen.', 11, (x, y), 'frozen')
                 else:

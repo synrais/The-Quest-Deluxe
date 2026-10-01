@@ -76,6 +76,7 @@ with two conventions the engine and saves rely on:
 | `fps_turn` | Weapons and launchers: degrees anticlockwise to stand the bag picture up in the hand (the crossbow: 90). A pack can instead draw the weapon as held: `sprites/hands/<id>.png`, upright, the grip at the bottom. |
 | `key` | For keys: `yellow`, `red` or `blue`, or a colour of quest.json's `keys`. |
 | `ammo`, `count` | For ammunition: its kind (`arrows`, ...) and how many the stack holds (up to 20). A stack of each size is its own item. |
+| `element` | Weapons, launchers and ammunition: what a hit adds. `fire` and `poison` go on hurting for `element_turns` turns (3) at `element_power` (3) a turn; `ice` freezes the creature `element_turns` turns; `drain` heals the hero by half the damage. A bow's and its arrows' elements both apply. `element_chance`: percent of hits it takes hold on (100 if left out). Creatures whose `resists` lists the element shrug it off. |
 | `fires` | For launchers: the kinds of ammunition it takes. |
 | `missile_anim` | For launchers: the animation of a hit (`sthit`, `arhit`, `bolthit`). |
 | `power_x2` | Ammunition that doubles a launcher's power ... |
@@ -109,6 +110,7 @@ Traits (all optional):
 | `poison_melee`, `poison_ranged`, `poison_cast` | Poisons the hero 1 time in n when that attack hits. |
 | `missile_anim` | Its missile's animation. |
 | `cast_anim` | Its spell's animation: `[name, arguments...]`. |
+| `resists` | A list of elements (`fire`, `ice`, `poison`, `drain`) that weapons, arrows and spells with that element don't affect. |
 | `heals_allies` | Heals a wounded creature on its side instead of attacking. |
 | `raises_dead` | Turns bones on the screen into this creature. |
 | `explodes` | Blasts the hero this many times, then dies. |
@@ -134,6 +136,8 @@ Pictures: `sprites/creatures/<id>.png`.
 | `fizzle` | % chance the spell fails (Invisibility also fails under a shield). |
 | `empties_mana` | Casting it leaves no mana. |
 | `needs_target` | Only castable at a creature. |
+| `burns` | A radius in squares (0 = the square hit): the spell burns the blood off the ground there (blood, footprints and remains; bones stay). Bolts, `ward` and `dark_hour` use it; a bigger spell gets a bigger radius. |
+| `freezes_water` | A radius (0 = the square hit): water within it (a wall with `freezes_to`) turns to ice for the spell's `duration` turns (10 if it has none), then melts. Bolts and `freeze` use it; the water itself is a valid target. |
 | `absorb_power_of`, `freeze_power_of` | Quest I's Shield and Ring of Ice read each other's power (a bug in the original; both are 10). |
 
 Icons: `sprites/spells/<id>.png`.
@@ -163,6 +167,7 @@ Scholar; Cowardice, Rashness, Honor).
 | `solid` | Walls: blocks the way. |
 | `door` | Walls: `plain` (opens when walked into; monsters open these too), `fake` (a secret wall that opens the same way), `locked` (needs the `key` of that colour). An opened door closes again as a plain door when the hero leaves the screen. |
 | `map_colour` | `[EGA colour, priority]` on the automap; the floor's or the wall's, whichever has the higher priority (plain grass green otherwise). `map_colour_on_level` overrides it on one level. |
+| `freezes_to` | Walls: the wall a freezing spell (`freezes_water`) turns this one into, e.g. water into a wall called Ice that isn't `solid`. The ice melts back when its turns are up (later if somebody stands on it). |
 | `role` | Decorations the engine puts down: `open_door`, `open_chest`, `remains`, `remains2`, `blood`, `bones`. |
 
 Pictures: `sprites/floors/<id>.png`, `sprites/walls/<id>.png`, `sprites/decos/<id>.png`.

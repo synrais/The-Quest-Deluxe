@@ -19,6 +19,14 @@ MISSILES = [(None, '(none)'), ('sthit', 'a stone (sthit)'), ('arhit', 'an arrow 
 STATS = ['req_str', 'req_int', 'atk', 'def', 'warm', 'marm', 'str', 'int', 'dex', 'acc', 'power', 'kind']
 
 
+ELEMENTS = [(None, '(none)'), ('fire', 'Fire (burns it)'), ('ice', 'Ice (freezes it)'),
+            ('poison', 'Poison'), ('drain', 'Drain (heals the hero)')]
+
+
+def has(key):
+    return lambda r: bool(r.get(key))
+
+
 def is_(*types):
     return lambda r: r.get('type') in types
 
@@ -98,9 +106,25 @@ class ItemsTab(TableTab):
                   hint='yellow, red and blue are the original\'s; more colours are defined on the Quest tab'),
             Field('quest', 'Quest item', 'bool', hint="can't be sold or dropped", when=is_('treasure', 'weapon', 'launcher', 'armour',
                                                                         'shield', 'helmet', 'amulet')),
+            Field('element', 'Element', 'choice', ELEMENTS, when=is_('weapon', 'launcher', 'ammo'),
+                  hint='what a hit adds: burns, poisons or freezes the creature, or heals the hero. '
+                       'A bow and its arrows both count.'),
+            Field('element_chance', 'Element chance %', 'int', when=has('element'), hint='of every hit (empty: always)'),
+            Field('element_power', 'Element damage', 'int', when=lambda r: r.get('element') in ('fire', 'poison'),
+                  hint='a turn, while it burns or is poisoned (empty: 3)'),
+            Field('element_turns', 'Element turns', 'int', when=lambda r: r.get('element') in ('fire', 'poison', 'ice'),
+                  hint='how long it burns, is poisoned or stays frozen (empty: 3)'),
         ]
 
     def after_change(self, row, key, old):
+        if key.startswith('element') and row.get('type') == 'ammo':      # every stack of the kind shoots alike
+            for r in self.rows:
+                if r is not row and r.get('type') == 'ammo' and r.get('ammo') == row.get('ammo'):
+                    for k in ('element', 'element_chance', 'element_power', 'element_turns'):
+                        if k in row:
+                            r[k] = row[k]
+                        else:
+                            r.pop(k, None)
         if key == 'type':
             if row['type'] in WORN:
                 for k in STATS:                        # worn things need every stat (the engine's table)

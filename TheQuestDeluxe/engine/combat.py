@@ -201,6 +201,51 @@ class Combat:
             self.g.put_item(e.x, e.y, drop)
         return gold
 
+    # ── elements: a weapon or ammunition that burns, freezes, poisons or drains (Deluxe) ──
+    def apply_element(self, source: dict, e: Enemy, dealt: int):
+        """A blow that hit e, struck with `source` (an item's row): its `element` (fire, ice, poison, drain)
+        takes hold with a chance of `element_chance` percent (100 if left out). Fire and poison go on
+        hurting for `element_turns` turns (3), `element_power` (3) a turn; ice freezes it that many turns;
+        drain heals the hero by half the damage. A creature whose `resists` holds the element shrugs it off.
+        Items without an element draw no random numbers, so the original's games are untouched."""
+        kind = source.get('element')
+        if not kind or e.life <= 0:
+            return
+        g = self.g
+        chance = source.get('element_chance', 100)
+        if chance < 100 and random(100) >= chance:
+            return
+        name = g.monster_name(e.type)
+        if kind in (g.pack.trait(e.type, 'resists') or []):
+            g.report(f'The {name} resists the {kind}.', 7, (e.x, e.y), 'resists')
+            return
+        power, turns = source.get('element_power', 3), source.get('element_turns', 3)
+        if kind in ('fire', 'poison'):
+            e.effects[kind] = [turns, power]
+            g.report(f'The {name} {"catches fire" if kind == "fire" else "is poisoned"}!', 12 if kind == 'fire' else 10,
+                     (e.x, e.y), 'burning' if kind == 'fire' else 'poisoned')
+        elif kind == 'ice':
+            e.att = -11 - turns
+            g.report(f'The {name} is frozen.', 11, (e.x, e.y), 'frozen')
+        elif kind == 'drain' and dealt > 0:
+            h = self.p.hero
+            h.life = min(h.mlife, h.life + max(1, dealt // 2))
+
+    def tick_effects(self):
+        """The end of a turn: what burns or is poisoned takes its damage and the turns run down."""
+        for e in list(self.w.enemies):
+            for kind in list(e.effects):
+                if e not in self.w.enemies or e.life <= 0:
+                    break
+                turns, power = e.effects[kind]
+                if kind == 'fire':
+                    self.g.play_at('afireball', e.x, e.y, 1)
+                self.hurt(power, e, 3, by_hero=True, how='burning' if kind == 'fire' else 'poison')
+                if turns <= 1:
+                    e.effects.pop(kind, None)
+                else:
+                    e.effects[kind] = [turns - 1, power]
+
     # ── the hero attacks ──────────────────────────────────────────────────────
     def wake_on_attack(self, e: Enemy):
         h, sk = self.p.hero, self.p.skill
@@ -241,6 +286,7 @@ class Combat:
                 g.play_at('ahit', e.x, e.y, where, 1, in_view=False)     # FPS mode: the weapon shows it
                 e.life -= dmg
                 g.report(f'You hit the {name} for {dmg}.', 14, (e.x, e.y), dmg)
+                self.apply_element(g.pack.item(p.item(SLOT_WEAPON)), e, dmg)
                 q = self.w.sq(e.x, e.y)
                 if q.deco == 0 and e.life > 0 and bleeds(self.g.pack, e):
                     q.deco = self.g.pack.deco('blood')
@@ -312,7 +358,9 @@ class Combat:
             q = self.w.sq(e.x, e.y)
             if q.deco == 0 and e.life > 0 and bleeds(self.g.pack, e):
                 q.deco = self.g.pack.deco('blood')
-            self.hurt(h.power, e, 2, by_hero=True, how='shot')
+            dealt = self.hurt(h.power, e, 2, by_hero=True, how='shot')
+            for src in (self.g.pack.item(wep), self.g.pack.item(p.item(SLOT_OFFHAND))):
+                self.apply_element(src, e, dealt)          # a fire bow, fire arrows
         else:
             self.g.fly(self.g.pack.item(p.item(SLOT_WEAPON)).get('missile_anim'), (p.X, p.Y), (e.x, e.y), False)
             self.g.play_at('bhit', e.x, e.y, 6)

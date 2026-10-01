@@ -804,6 +804,7 @@ class Game:
                     e.att = 9
         self.combat.enemy_attacks()
         monsmove(self)
+        self.combat.tick_effects()
         self.combat.check_dead()
         # dying and death
         if h.life < 1:
@@ -832,9 +833,32 @@ class Game:
             self.overlay = ui.TitleScreen()
         self.load_game(on_no=no)
 
+    def thaw(self):
+        """Ice made by a spell melts back to water when its turns are up (not under a creature or the hero:
+        it waits until the square is free)."""
+        p, w = self.player, self.world
+        keep = []
+        for entry in p.more.get('frozen', []):
+            level, x, y, turns, water = entry
+            if level != w.level:
+                continue                              # another level was reloaded: its water is back
+            if level == w.level:
+                entry[3] = turns = turns - 1
+                if turns <= 0 and w.sq(x, y).mon == 0 and (x, y) != (p.X, p.Y):
+                    w.sq(x, y).wall = water
+                    if w.in_room(x, y):
+                        self.report('The ice melts.', 11)
+                    continue
+            keep.append(entry)
+        if keep:
+            p.more['frozen'] = keep
+        else:
+            p.more.pop('frozen', None)
+
     def upkeep(self):
         """Top of the main2() loop after a turn: faults, poison, spell timers, boosts."""
         p, h, st, sk = self.player, self.player.hero, self.status, self.player.skill
+        self.thaw()
         if sk.ras > 1:
             sk.ras -= 1
         if h.poisoned == 1 and h.life > 0:

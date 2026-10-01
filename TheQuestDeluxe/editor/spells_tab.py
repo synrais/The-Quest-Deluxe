@@ -70,6 +70,10 @@ class SpellsTab(TableTab):
                 when=eff('bolt', 'dark_hour', 'ward')),
             Field('creature', 'Summons', 'choice', creatures, when=eff('summon'), hint='an ally (-100 and below)'),
             opt('fizzle', 'Fails', '% chance the spell fails'),
+            opt('burns', 'Burns blood away', 'a fire spell clears the blood on the ground within this many '
+                'squares of where it lands (0: that square only; bones stay)'),
+            opt('freezes_water', 'Freezes water', 'turns water (a wall with "Freezes to") within this many '
+                'squares to ice for the Duration, 10 turns if none'),
             Field('empties_mana', 'Empties the mana', 'bool'),
             Field('needs_target', 'Needs a creature', 'bool', hint='only castable at a creature'),
             opt('absorb_power_of', 'Uses the power of spell', "Quest I's Shield reads spell 5's power",
