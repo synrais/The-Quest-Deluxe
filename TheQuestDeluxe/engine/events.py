@@ -290,7 +290,7 @@ class Events:
             'ay', 'attacker'}
     FUNCS = {'say', 'talk', 'random', 'has', 'has_any', 'take', 'take_any', 'give', 'put', 'remove', 'room',
              'map', 'count', 'visited', 'enemies', 'refresh', 'change_rep', 'hero_step', 'poison', 'autosave',
-             'effect', 'min', 'max', 'abs', 'range', 'slot', 'said', 'len', 'restart', 'hurt_hero', 'next_level'}
+             'effect', 'min', 'max', 'abs', 'range', 'slot', 'said', 'len', 'restart', 'hurt_hero', 'next_level', 'message'}
 
     def has_var(self, name):
         return name in self.VARS
@@ -380,6 +380,13 @@ class Events:
 
     def f_talk(self, npc):
         return self.talk(npc)
+
+    def f_message(self, person, n):
+        """Show Talk.dat's message n of this level for that person (a creature number) at once, from any
+        handler: the talk handler is not run, so say() is not needed."""
+        text = (talk_text_fixed if self.g.pack.fixed('talk') else talk_text)(self.talk_raw, self.g.world.level,
+                                                                              person, n)
+        self.g.show_talk(text)
 
     def f_random(self, n):
         return rules.random(n)

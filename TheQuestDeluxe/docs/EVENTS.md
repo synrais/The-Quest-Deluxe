@@ -72,6 +72,7 @@ LINKS = {(24, 55): (2, 10, 12)}  # Deluxe: where a ladder, rope, stairs, hole or
 |---|---|
 | `say(n)`, `said()` | Choose, or read, the message. |
 | `talk(npc)` | Run the talk handler for `npc` and show its message. |
+| `message(person, n)` | Show message `n` of this level for that person (a creature number) at once, from any handler. |
 | `random(n)` | 0..n-1, using Borland's `rand()` (the same sequence as the original). |
 | `has(item)`, `has_any(item)` | Is the item in the backpack / anywhere in the bag (worn items too; the off-hand is not checked, like the original)? |
 | `take(item)`, `take_any(item)` | The same, but also removes the item. |

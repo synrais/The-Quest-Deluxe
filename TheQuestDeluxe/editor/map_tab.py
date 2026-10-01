@@ -13,6 +13,8 @@ Right: the tools, the layer, and the palette of what can go in that layer.
   Peaceful   screens where people and allies leave monsters alone (PEACEFUL_SCREENS)
   Link       where the ladder, rope, stairs, hole or jump pad on the clicked square leads: a square on
              another level (LINKS). Put the item on the square first (Item layer).
+  Mouse wheel scrolls the map up and down, Shift+wheel sideways, Ctrl+wheel zooms in and out round the pointer.
+  The Screens and Squares boxes show the lines between screens and round every square.
   Ctrl+Z / Ctrl+Y undo and redo.
 """
 from __future__ import annotations
@@ -24,6 +26,7 @@ import pygame
 
 from .art import Art, photo, FIELD
 from .project import SIZE
+from .uikit import on_wheel
 
 LAYERS = [('floor', 'Floor'), ('wall', 'Wall / door'), ('deco', 'Decoration'), ('item', 'Item'),
           ('mon', 'Creature'), ('gold', 'Gold')]
@@ -45,7 +48,8 @@ class MapTab(ttk.Frame):
         self.value = {k: 0 for k, _ in LAYERS}     # what each layer paints
         self.value['floor'] = 1
         self.gold = tk.IntVar(value=10)
-        self.grid_lines = tk.BooleanVar(value=True)
+        self.grid_lines = tk.BooleanVar(value=True)        # the yellow lines between 10 x 10 screens
+        self.square_lines = tk.BooleanVar(value=True)      # a thin line round every square, inside each screen
         self.drag_from = None
         self.stroke: dict = {}
         self.undo_stack, self.redo_stack = [], []
@@ -73,6 +77,7 @@ class MapTab(ttk.Frame):
         ttk.Label(box, text='Stories before it').grid(row=1, column=0, sticky='w')
         self.stories = ttk.Entry(box, width=10)
         self.stories.grid(row=1, column=1, sticky='w')
+        ttk.Button(box, text='Pick...', width=6, command=self._pick_story).grid(row=1, column=2, padx=2)
         ttk.Label(box, text='Teleporter jump').grid(row=2, column=0, sticky='w')
         self.teleport = ttk.Entry(box, width=10)
         self.teleport.grid(row=2, column=1, sticky='w')
@@ -133,6 +138,7 @@ class MapTab(ttk.Frame):
         self.zoom.bind('<<ComboboxSelected>>', lambda e: self._set_zoom())
         self.zoom.pack(side='left')
         ttk.Checkbutton(v, text='Screens', variable=self.grid_lines, command=self.redraw).pack(side='left', padx=4)
+        ttk.Checkbutton(v, text='Squares', variable=self.square_lines, command=self.redraw).pack(side='left')
 
         mid = ttk.Frame(self)
         mid.pack(side='left', fill='both', expand=True)
@@ -153,10 +159,7 @@ class MapTab(ttk.Frame):
         c.bind('<ButtonRelease-1>', self._release)
         c.bind('<ButtonPress-3>', lambda e: self._pick_at(*self._square(e)))
         c.bind('<Motion>', self._motion)
-        c.bind('<MouseWheel>', self._wheel)
-        c.bind('<Shift-MouseWheel>', lambda e: self._wheel(e, sideways=True))
-        c.bind('<Button-4>', lambda e: self._scroll(0, -2))
-        c.bind('<Button-5>', lambda e: self._scroll(0, 2))
+        on_wheel(mid, self._wheel)                 # the wheel scrolls, Shift sideways, Ctrl zooms (uikit)
         c.bind('<Enter>', lambda e: c.focus_set())
         for key, d in (('<Left>', (-1, 0)), ('<Right>', (1, 0)), ('<Up>', (0, -1)), ('<Down>', (0, 1))):
             c.bind(key, lambda e, d=d: self._scroll(d[0] * 5, d[1] * 5))
@@ -222,6 +225,19 @@ class MapTab(ttk.Frame):
             v = p.constant(self.level, name)
             e.delete(0, 'end')
             e.insert(0, '' if v is None else str(v))
+
+    def _pick_story(self):
+        """Add a story from the Stories tab's list to the stories shown before this level."""
+        from engine.formats import parse_story
+        from .event_wizard import Picker
+        stories = parse_story(self.app.project.texts['stories'])
+        rows = [(n, s.split('\n')[0][:80]) for n, s in sorted(stories.items())]
+        got = Picker(self, 'A story shown before this level', rows, ('Number', 'Begins')).result
+        if got is not None:
+            now = [v for v in self.stories.get().replace(',', ' ').split() if v]
+            if str(got) not in now:
+                self.stories.delete(0, 'end')
+                self.stories.insert(0, ', '.join(now + [str(got)]))
 
     def _apply_settings(self):
         p, n = self.app.project, self.level
@@ -322,9 +338,29 @@ class MapTab(ttk.Frame):
             new = cur + step
         self._scroll(new - cur if axis == 0 else 0, new - cur if axis == 1 else 0)
 
-    def _wheel(self, e, sideways=False):
-        d = -2 if e.delta > 0 else 2
-        self._scroll(d, 0) if sideways else self._scroll(0, d)
+    ZOOM_STEPS = (8, 12, 16, 20, 24, 32, 40, 48, 64)
+
+    def _wheel(self, steps, ctrl, shift):
+        if ctrl:
+            self._zoom_by(-steps)
+        else:
+            self._scroll(steps * 2, 0) if shift else self._scroll(0, steps * 2)
+
+    def _zoom_by(self, direction):
+        """Ctrl + wheel: one step bigger (up) or smaller, keeping the square under the pointer where it is."""
+        c = self.canvas
+        px, py = c.winfo_pointerx() - c.winfo_rootx(), c.winfo_pointery() - c.winfo_rooty()
+        px, py = max(0, min(c.winfo_width(), px)), max(0, min(c.winfo_height(), py))
+        fx, fy = self.ox + px / self.size, self.oy + py / self.size          # the map point under the pointer
+        steps = self.ZOOM_STEPS
+        at = min(range(len(steps)), key=lambda i: abs(steps[i] - self.size))
+        new = steps[max(0, min(len(steps) - 1, at + direction))]
+        if new == self.size:
+            return
+        self.size = new
+        self.zoom.set(f'{new} pixels')
+        self.ox, self.oy = round(fx - px / new), round(fy - py / new)
+        self._scroll(0, 0)
 
     def redraw(self):
         if not hasattr(self, 'art'):
@@ -352,6 +388,13 @@ class MapTab(ttk.Frame):
 
         def at(x, y):
             return (x - self.ox) * s, (y - self.oy) * s
+        if self.square_lines.get() and s >= 12:
+            for x in range(self.ox, self.ox + cols + 1):
+                if (x - 1) % 10:
+                    pygame.draw.line(surf, (70, 70, 70), (at(x, 0)[0], 0), (at(x, 0)[0], rows * s))
+            for y in range(self.oy, self.oy + rows + 1):
+                if (y - 1) % 10:
+                    pygame.draw.line(surf, (70, 70, 70), (0, at(0, y)[1]), (cols * s, at(0, y)[1]))
         if self.grid_lines.get():
             for x in range(self.ox, self.ox + cols + 1):
                 if (x - 1) % 10 == 0:

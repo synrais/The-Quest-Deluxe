@@ -118,6 +118,13 @@ class EventsTab(Editor):
     def __init__(self, master, app):
         super().__init__(master, app, 'Each level has a script with its settings (the map tab sets most of them) '
                                       'and handlers the game calls. docs/EVENTS.md lists everything a script can use.')
+        ttk.Separator(self.buttons).pack(fill='x', pady=6)
+        ttk.Button(self.buttons, text='Add an event...', command=self.add_event).pack(fill='x')
+        ttk.Label(self.buttons, text='Put into the script at the cursor:', foreground='#555').pack(
+            anchor='w', pady=(6, 0))
+        for label, kind in (('A message...', 'message'), ('An item...', 'item'), ('A creature...', 'creature'),
+                            ('A story...', 'story')):
+            ttk.Button(self.buttons, text=label, command=lambda k=kind: self.insert_number(k)).pack(fill='x', pady=1)
         ttk.Label(self.buttons, text='Add a handler:').pack(anchor='w', pady=(8, 0))
         self.handler = ttk.Combobox(self.buttons, values=list(HANDLERS), state='readonly', width=18)
         self.handler.pack(fill='x')
@@ -139,6 +146,54 @@ class EventsTab(Editor):
     def reload(self, k):
         if k == self.current:
             self.show(k)
+
+    def add_event(self):
+        """The wizard: a rule from drop-down menus, written into the script (and the Dialogue)."""
+        from .event_wizard import EventWizard
+        level = self.current if self.current is not None else 1
+        wiz = EventWizard(self, level)
+        self.wait_window(wiz)
+        if wiz.done:
+            self.show(level)
+            self.text.see('end')
+            self.result.config(text='The event is at the end of the handler. Check reads it the way the game will.',
+                               foreground='#555')
+
+    def insert_number(self, kind):
+        """Choose an item, creature, story or message from a list, and put it into the script at the cursor."""
+        from .event_wizard import Picker
+        p, level = self.app.project, self.current if self.current is not None else 1
+        if kind == 'item':
+            rows = [(r['id'], r.get('name', '')) for r in sorted(p.tables['items'], key=lambda r: r['id'])]
+            got = Picker(self, 'An item', rows, ('Number', 'Name')).result
+            text = None if got is None else str(got)
+        elif kind == 'creature':
+            rows = [(r['id'], r.get('name', '')) for r in sorted(p.tables['creatures'], key=lambda r: r['id'])]
+            got = Picker(self, 'A creature', rows, ('Number', 'Name')).result
+            text = None if got is None else str(got)
+        elif kind == 'story':
+            stories = parse_story(p.texts['stories'])
+            rows = [(n, s.split('\n')[0][:80]) for n, s in sorted(stories.items())]
+            got = Picker(self, 'A story', rows, ('Number', 'Begins')).result
+            text = None if got is None else str(got)
+        else:
+            from . import dialogue
+            names = {r['id']: r.get('name', '') for r in p.tables['creatures']}
+            rows = [((e.person, e.number), f'{e.person} {names.get(e.person, "")}'.strip(),
+                     e.line1 + (' / ' + e.line2 if e.line2 else ''))
+                    for e in dialogue.entries(dialogue.parse(p.texts['talk'])) if e.level in (level, 0) and e.number >= 10]
+            got = Picker(self, 'A message (level %d)' % level, rows, ('Message', 'Person', 'Says'),
+                         note='Numbers from 10 up are said by scripts. Inside talk() it inserts say(n), '
+                              'anywhere else message(person, n).').result
+            if got is None:
+                return
+            before = self.text.get('1.0', 'insert')
+            last_def = before.rfind('\ndef ')
+            inside_talk = before[last_def + 1:].startswith('def talk(') if last_def >= 0 else before.startswith('def talk(')
+            text = f'say({got[1]})' if inside_talk else f'message({got[0]}, {got[1]})'
+        if text:
+            self.text.insert('insert', text)
+            self.text.focus_set()
 
     def _add_handler(self):
         name = self.handler.get()

@@ -72,6 +72,8 @@ class Painter(tk.Toplevel):
         self.bind('<Control-z>', lambda e: self.undo())
         self.bind('<Control-y>', lambda e: self.redo())
         self.protocol('WM_DELETE_WINDOW', self.close)
+        from .uikit import center
+        center(self, parent=master.winfo_toplevel())
 
     # ── layout ──────────────────────────────────────────────────────────────
     def _build(self):

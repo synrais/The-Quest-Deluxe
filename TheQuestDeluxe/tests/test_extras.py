@@ -395,6 +395,22 @@ def painted_hero():
     print('a painted hero (sprites/heroes/<class>.png) takes the place of the drawn one: ok')
 
 
+def event_code_text():
+    from editor.event_code import rule_lines, add_to_handler
+    from engine.script import Script
+    rule = rule_lines('talk', -6, [('m1', 0), ('has', 208)], [('say', 12), ('give', 208), ('m1', 1)])
+    assert rule[0] == 'if npc == -6 and m1 == 0 and has_any(208):' and rule[-1] == '    m1 = 1'
+    script = 'START = (5, 5)\n\n\ndef talk(npc):\n    # hi\n    pass\n\n\ndef dies(w):\n    pass\n'
+    out = add_to_handler(script, 'talk', rule)
+    assert 'pass' not in out.split('def dies')[0] and out.count('def talk') == 1
+    out = add_to_handler(out, 'talk', rule_lines('talk', -7, [], [('message', (-7, 11))]))
+    out = add_to_handler(out, 'level_start', rule_lines('arrive', None, [('rep', 3)], [('coins', 50)]))
+    out = add_to_handler(out, 'dies', rule_lines('dies', 3, [], [('next', None)]))
+    Script(out, 'test')                                         # every handler it wrote is one the game reads
+    assert 'def level_start():' in out and 'message(-7, 11)' in out
+    print('events: rules are written into the right handler, made when missing, and read by the game: ok')
+
+
 if __name__ == '__main__':
     fire()
     ice()
@@ -402,6 +418,7 @@ if __name__ == '__main__':
     blood_regen()
     foresight()
     clones()
+    event_code_text()
     links()
     moved_walls()
     painted_hero()

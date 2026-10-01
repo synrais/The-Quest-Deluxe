@@ -14,6 +14,7 @@ from tkinter import ttk, filedialog, messagebox, simpledialog
 
 from engine.pack import PACKS_DIR, DEFAULT_PACK, ROOT
 from .project import Project
+from .uikit import center, install as install_wheel, on_wheel, scroll_canvas
 from .map_tab import MapTab
 from .text_tabs import EventsTab, TextTab
 from .items_tab import ItemsTab
@@ -34,26 +35,35 @@ class QuestTab(ttk.Frame):
               ('first_level', 'First level', int)]
 
     def __init__(self, master, app):
-        super().__init__(master, padding=12)
+        super().__init__(master)
+        canvas = tk.Canvas(self, highlightthickness=0)
+        bar = ttk.Scrollbar(self, orient='vertical', command=canvas.yview)
+        canvas.configure(yscrollcommand=bar.set)
+        bar.pack(side='right', fill='y')
+        canvas.pack(side='left', fill='both', expand=True)
+        body = ttk.Frame(canvas, padding=12)
+        canvas.create_window((0, 0), window=body, anchor='nw')
+        body.bind('<Configure>', lambda e: canvas.configure(scrollregion=canvas.bbox('all')))
+        on_wheel(self, scroll_canvas(canvas))
         self.app = app
         self.vars = {}
         for i, (key, label, _) in enumerate(self.FIELDS):
-            ttk.Label(self, text=label).grid(row=i, column=0, sticky='w', pady=2)
+            ttk.Label(body, text=label).grid(row=i, column=0, sticky='w', pady=2)
             v = tk.StringVar()
-            ttk.Entry(self, textvariable=v, width=40).grid(row=i, column=1, sticky='w')
+            ttk.Entry(body, textvariable=v, width=40).grid(row=i, column=1, sticky='w')
             self.vars[key] = v
         n = len(self.FIELDS)
-        ttk.Label(self, text='Class changes').grid(row=n, column=0, sticky='w', pady=2)
+        ttk.Label(body, text='Class changes').grid(row=n, column=0, sticky='w', pady=2)
         self.reclass = tk.StringVar()
-        ttk.Combobox(self, textvariable=self.reclass, values=list(self.RECLASS.values()), state='readonly',
+        ttk.Combobox(body, textvariable=self.reclass, values=list(self.RECLASS.values()), state='readonly',
                      width=58).grid(row=n, column=1, sticky='w')
-        ttk.Label(self, text='Starting potions').grid(row=n + 1, column=0, sticky='w')
+        ttk.Label(body, text='Starting potions').grid(row=n + 1, column=0, sticky='w')
         self.potions = tk.StringVar()
-        ttk.Entry(self, textvariable=self.potions, width=40).grid(row=n + 1, column=1, sticky='w')
-        ttk.Label(self, text='potion number: count, ... (6: 1 is one Full Restoration Potion)',
+        ttk.Entry(body, textvariable=self.potions, width=40).grid(row=n + 1, column=1, sticky='w')
+        ttk.Label(body, text='potion number: count, ... (6: 1 is one Full Restoration Potion)',
                   foreground='#555').grid(row=n + 2, column=1, sticky='w')
         # potions 9 and 10: The Quest Deluxe's own (keys 9 and 0)
-        box = ttk.LabelFrame(self, text='Potions 9 and 10 (keys 9 and 0; 1-8 are the original\'s)', padding=6)
+        box = ttk.LabelFrame(body, text='Potions 9 and 10 (keys 9 and 0; 1-8 are the original\'s)', padding=6)
         box.grid(row=n + 3, column=0, columnspan=2, sticky='w', pady=8)
         self.pots = {}
         for c, label in enumerate(('', 'Name', 'Colour (0-15)', 'Life', 'Mana', 'Cures poison', 'Berserk turns', 'Foresight turns')):
@@ -71,21 +81,21 @@ class QuestTab(ttk.Frame):
         ttk.Label(box, text='Life and mana: half, full or a number. An empty name: no such potion.',
                   foreground='#555').grid(row=3, column=0, columnspan=8, sticky='w', pady=(4, 0))
         # key colours past the original's yellow, red and blue
-        ttk.Label(self, text='More key colours').grid(row=n + 4, column=0, sticky='w')
+        ttk.Label(body, text='More key colours').grid(row=n + 4, column=0, sticky='w')
         self.keys = tk.StringVar()
-        ttk.Entry(self, textvariable=self.keys, width=40).grid(row=n + 4, column=1, sticky='w')
-        ttk.Label(self, text='name: EGA colour, ... (green: 10, purple: 5); yellow, red and blue are the original\'s',
+        ttk.Entry(body, textvariable=self.keys, width=40).grid(row=n + 4, column=1, sticky='w')
+        ttk.Label(body, text='name: EGA colour, ... (green: 10, purple: 5); yellow, red and blue are the original\'s',
                   foreground='#555').grid(row=n + 5, column=1, sticky='w')
         # the original's bugs, fixed (packs/TheQuest keeps them all, to play exactly as the original)
         from engine.pack import Pack
-        box = ttk.LabelFrame(self, text="Fix the original's bugs", padding=6)
+        box = ttk.LabelFrame(body, text="Fix the original's bugs", padding=6)
         box.grid(row=n + 6, column=0, columnspan=2, sticky='w', pady=8)
         self.fixes = {}
         for r, (name, text) in enumerate(Pack.FIXES.items()):
             self.fixes[name] = tk.BooleanVar()
             ttk.Checkbutton(box, text=text, variable=self.fixes[name]).grid(row=r, column=0, sticky='w')
-        ttk.Button(self, text='Apply', command=self.apply).grid(row=n + 7, column=1, sticky='w', pady=8)
-        self.info = ttk.Label(self, text='', foreground='#555', justify='left')
+        ttk.Button(body, text='Apply', command=self.apply).grid(row=n + 7, column=1, sticky='w', pady=8)
+        self.info = ttk.Label(body, text='', foreground='#555', justify='left')
         self.info.grid(row=n + 8, column=0, columnspan=2, sticky='w', pady=12)
 
     RECLASS = {False: 'none: the hero keeps the class chosen',
@@ -180,8 +190,9 @@ class App:
         self.root = root
         self.project = None
         self.dirty = False
-        root.geometry('1280x780')
-        root.minsize(1000, 600)
+        center(root, 1280, 780)                     # always opens in the middle of the screen
+        root.minsize(min(1000, root.winfo_screenwidth() - 40), min(600, root.winfo_screenheight() - 100))
+        install_wheel(root)
         self._menus()
         bar = ttk.Frame(root, padding=(6, 4))
         bar.pack(fill='x')

@@ -13,6 +13,7 @@ from tkinter import ttk, messagebox, filedialog
 import pygame
 
 from .art import photo, to_ega, bag_cell
+from .uikit import on_wheel, scroll_canvas
 
 OPAQUE = {'bag', 'spells', 'floors'}           # pictures with no transparent pixels
 
@@ -94,6 +95,7 @@ class TableTab(ttk.Frame):
         self.pics = ttk.Frame(right, padding=(8, 4))
         self.pics.pack(anchor='w')
         canvas = tk.Canvas(right, highlightthickness=0)
+        on_wheel(right, scroll_canvas(canvas, 2))
         sb = ttk.Scrollbar(right, orient='vertical', command=canvas.yview)
         self.form = ttk.Frame(canvas, padding=8)
         self.form.bind('<Configure>', lambda e: canvas.configure(scrollregion=canvas.bbox('all')))

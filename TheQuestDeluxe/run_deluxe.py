@@ -29,12 +29,19 @@ def main():
     if args.pack:
         os.environ['QUEST_PACK'] = args.pack          # before the engine loads the pack
 
+    os.environ.setdefault('SDL_VIDEO_CENTERED', '1')     # the window opens in the middle of the screen
     import pygame
     from engine.game import Game
     from engine import settings as player_settings
 
     pygame.init()
-    window = pygame.display.set_mode((640 * args.scale, 480 * args.scale), pygame.RESIZABLE)
+    scale = args.scale
+    try:                                                 # no bigger than the screen holds (title bar and taskbar too)
+        dw, dh = pygame.display.get_desktop_sizes()[0]
+        scale = max(1, min(scale, dw // 640, (dh - 120) // 480))
+    except (pygame.error, IndexError):
+        pass
+    window = pygame.display.set_mode((640 * scale, 480 * scale), pygame.RESIZABLE)
     settings = player_settings.load()
     for key in ('fixes', 'sound'):
         if getattr(args, key):

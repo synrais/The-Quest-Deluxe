@@ -392,5 +392,66 @@ mt.LinkDialog = lambda *a, **k: Gone()
 mtab._link_tool(6, 6)
 assert app.project.constant(1, 'LINKS') is None
 print('links: the Link tool makes both ends and removes one: ok')
+
+# the wheel, zoom and grid on the map
+from editor.uikit import _route
+class Wheel:
+    x_root = y_root = 0
+    state = 0
+before = (mtab.ox, mtab.oy)
+mtab._wheel(3, False, False)
+assert mtab.oy == before[1] + 6 and mtab.ox == before[0]
+mtab._wheel(1, False, True)
+assert mtab.ox == before[0] + 2
+size = mtab.size
+mtab._wheel(-1, True, False)                                  # Ctrl + wheel up: zoom in
+assert mtab.size > size
+mtab._wheel(1, True, False)
+assert mtab.size == size
+mtab.square_lines.set(False)
+mtab.redraw()
+mtab.square_lines.set(True)
+mtab.redraw()
+app.tabs.select(app.items_tab)
+pump()
+form = app.items_tab.pics.master                                # the form's side of the tab scrolls with the wheel
+assert getattr(form, '_wheel_handler', None) is not None
+form._wheel_handler(2, False, False)                            # (the handler runs without error)
+assert getattr(app.quest_tab, '_wheel_handler', None) is not None
+print('the wheel: the map scrolls, zooms and has a square grid; the forms scroll: ok')
+
+# the event wizard writes a rule into the script and the words into the Dialogue
+from editor.event_wizard import EventWizard
+app.tabs.select(app.events_tab)
+pump()
+et = app.events_tab
+et.docs.selection_clear(0, 'end')
+et.show(8) if 8 in et._keys else None
+level = 1
+wiz = EventWizard(et, level)
+wiz.when.current(0)
+wiz._when_changed()
+wiz.subject.current([v for v, _ in wiz.people].index(-6)) if -6 in [v for v, _ in wiz.people] else None
+wiz._add_condition()
+wiz.conds[0]['kind'].current(0)
+wiz.conds[0]['var'].set('0')
+wiz.action.set_pairs(__import__('editor.event_wizard', fromlist=['ACTIONS']).ACTIONS)
+wiz.action.current(0)
+wiz._action_changed()
+wiz.param['text'].insert(0, 'Wolves took my sheep.')
+wiz._add_action()
+wiz.action.current(2)
+wiz._action_changed()
+wiz.param['item'].current(0)
+wiz._add_action()
+code = wiz.preview.get('1.0', 'end')
+assert 'def talk(npc):' in code and 'say(' in code and 'give(' in code and 'm1 == 0' in code, code
+wiz._finish()
+script = app.project.scripts[1]
+assert 'npc == -6 and m1 == 0' in script and 'give(' in script
+assert 'Wolves took my sheep.' in app.project.texts['talk']
+from engine.script import Script
+Script(script, 'level 1')                                     # the game reads what the wizard wrote
+print('events: the wizard makes a rule, its words and the script, and the game reads it: ok')
 root.destroy()
 print('all editor checks passed')
