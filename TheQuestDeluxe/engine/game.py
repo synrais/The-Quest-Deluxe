@@ -31,6 +31,7 @@ from .events import Events
 from .render import Renderer, TILE
 from .speaker import Speaker, sound_setting
 from .settings import fix_override
+from . import settings as settings_mod
 from .hands import attack_kind
 from . import anim
 from . import invshop
@@ -142,12 +143,14 @@ class Game:
         self.pack = self.data.src.pack
         # the player's settings.ini (run_deluxe.py); without them, the pack plays as it is
         self.settings = settings or {}
+        self.settings = settings_mod.resolve_quality(dict(self.settings)) if self.settings else self.settings
         view3d.configure(self.settings.get('fps_quality'))        # how finely FPS mode draws (settings.ini)
         self.pack.fix_override = fix_override(settings)
         self.items = rules.ItemTable(self.data.items, self.pack)
         self.spells = rules.SpellTable(self.data.spells)
         self.rewards = self.pack.rewards()
         self.renderer = Renderer(window, self.data.src, self.pack)
+        self.renderer.smooth = self.settings.get('smooth_scaling') == 'on'
         # saves/<pack>/save01.dat .. save20.dat: the original's format, kept apart from the classic port's
         self.slots = Slots(os.path.join(ROOT, 'saves', os.path.basename(self.pack.root)))
         # scripted runs (tests, the dummy video driver) play animations instantly and silently

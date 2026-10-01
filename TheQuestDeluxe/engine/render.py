@@ -70,6 +70,7 @@ class Renderer:
         self.pack = pack
         self.sprites = Sprites(pack)
         self.anchor = None             # the map square the running animation plays at (FPS mode)
+        self.smooth = False            # scale to the window smoothly (settings.ini smooth_scaling)
 
     # ── tiles ─────────────────────────────────────────────────────────────────
     def draw_tile(self, surf, px, py, q, enemy=None, on_top=False):
@@ -475,7 +476,9 @@ class Renderer:
         self.v3d.eye = self.eye_height(game)
         frame = self.v3d.render(scene, self.camera(game, snap))
         k = MAP_PX / view3d.RES
-        scr.blit(pygame.transform.scale(frame, (MAP_PX, MAP_PX)), (0, 0))
+        smooth = (getattr(game, 'settings', None) or {}).get('smooth_scaling') == 'on'
+        resize = pygame.transform.smoothscale if smooth else pygame.transform.scale     # a finer view is averaged down
+        scr.blit(resize(frame, (MAP_PX, MAP_PX)), (0, 0))
         t = game.target
         if t is not None and t in game.world.enemies:
             r = self.v3d.sprite_rects.get((t.x, t.y))
@@ -598,7 +601,10 @@ class Renderer:
         surface = self.screen if surface is None else surface
         ww, wh = self.window.get_size()
         scale = max(1, min(ww // W, wh // H))
-        if ww / W >= 1 and wh / H >= 1 and scale * W <= ww:
+        if self.smooth:                                    # settings.ini smooth_scaling: fill the window, blended
+            f = min(ww / W, wh / H)
+            scaled = pygame.transform.smoothscale(surface, (max(1, int(W * f)), max(1, int(H * f))))
+        elif ww / W >= 1 and wh / H >= 1 and scale * W <= ww:
             scaled = pygame.transform.scale(surface, (W * scale, H * scale))
         else:
             f = min(ww / W, wh / H)

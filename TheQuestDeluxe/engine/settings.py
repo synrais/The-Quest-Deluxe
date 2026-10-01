@@ -5,7 +5,9 @@
     sound = on        ; the PC-speaker tones
     items_on_top = on ; gold and items drawn over the creatures and the hero (the original: under)
     floating_numbers = off ; FPS mode: damage, "miss" and the like rising off whoever took them
-    fps_quality = normal ; FPS mode: low, normal, high or ultra (how finely the view is drawn)
+    render_quality = normal ; the whole game: normal, high or ultra (finer FPS view and smooth scaling)
+    smooth_scaling = off ; scale the picture to the window smoothly (on) or in whole pixels (off)
+    fps_quality = normal ; FPS mode: low, normal, high, ultra or max (how finely the view is drawn)
     fps_view_distance = level ; FPS mode: level (as each level says) or 2-30 squares (never less than the level's)
     fps_dither = ordered ; FPS mode, the fog: ordered, fine, smooth (a blend) or off
 
@@ -20,11 +22,14 @@ import os
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))      # the TheQuestDeluxe folder
 PATH = os.path.join(ROOT, 'settings.ini')
 CHOICES = {'fixes': ('on', 'off', 'pack'), 'sound': ('on', 'off'), 'items_on_top': ('on', 'off'),
-           'floating_numbers': ('on', 'off'), 'fps_quality': ('low', 'normal', 'high', 'ultra'),
-           'fps_dither': ('ordered', 'fine', 'smooth', 'off')}
+           'floating_numbers': ('on', 'off'), 'fps_quality': ('low', 'normal', 'high', 'ultra', 'max'),
+           'fps_dither': ('ordered', 'fine', 'smooth', 'off'), 'smooth_scaling': ('on', 'off'),
+           'render_quality': ('normal', 'high', 'ultra')}
 DEFAULTS = {'fixes': 'pack', 'sound': None, 'items_on_top': 'off',   # sound None: as sound.txt says
             'floating_numbers': 'off', 'fps_quality': 'normal', 'fps_dither': 'ordered',
-            'fps_view_distance': 'level'}
+            'fps_view_distance': 'level', 'smooth_scaling': 'off', 'render_quality': 'normal'}
+QUALITY_ORDER = ('low', 'normal', 'high', 'ultra', 'max')
+RENDER_QUALITY = {'high': ('high', 'on'), 'ultra': ('max', 'on')}     # what each level of render_quality means
 
 
 def load(path: str = PATH) -> dict:
@@ -44,6 +49,18 @@ def load(path: str = PATH) -> dict:
         v = cp.get('play', 'fps_view_distance', fallback='').strip().lower()
         if v.isdigit() and 2 <= int(v) <= 30:
             out['fps_view_distance'] = int(v)
+    return resolve_quality(out)
+
+
+def resolve_quality(out: dict) -> dict:
+    """render_quality is the one switch for the whole game: high and ultra draw the FPS view finer (never coarser
+    than fps_quality asks) and scale everything to the window smoothly."""
+    asked = RENDER_QUALITY.get(out.get('render_quality'))
+    if asked:
+        fps, smooth = asked
+        if QUALITY_ORDER.index(fps) > QUALITY_ORDER.index(out.get('fps_quality', 'normal')):
+            out['fps_quality'] = fps
+        out['smooth_scaling'] = smooth
     return out
 
 

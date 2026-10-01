@@ -729,6 +729,24 @@ def fps_settings():
     assert len(set(shots.values())) == len(shots), 'every setting changes the picture'
     Game(pygame.Surface((640, 480))).renderer                       # a game without settings is back to normal
     assert view3d.RES == 200
+    # render_quality: one switch for the whole game
+    open(path, 'w').write('[play]\nrender_quality = ultra\n')
+    got = player_settings.load(path)
+    assert (got['fps_quality'], got['smooth_scaling']) == ('max', 'on')
+    open(path, 'w').write('[play]\nrender_quality = high\nfps_quality = ultra\n')
+    got = player_settings.load(path)
+    assert (got['fps_quality'], got['smooth_scaling']) == ('ultra', 'on'), 'never coarser than fps_quality'
+    window = pygame.display.set_mode((1280, 960))
+    g = Game(window, settings={'render_quality': 'ultra'})
+    g.quick_start(1, 1)
+    g.view3d = True
+    assert view3d.RES == view3d.QUALITY['max'] and g.renderer.smooth
+    g.renderer.draw(g, present=False)
+    g.renderer.present()                                            # scaled smoothly to the window
+    assert g.renderer.v3d.frame.get_width() == 600
+    pygame.display.set_mode((640, 480))
+    Game(pygame.Surface((640, 480)))                                # back to normal for what follows
+    assert view3d.RES == 200
     print('settings.ini: FPS quality, view distance and dithering, and bad values fall back: ok')
 
 

@@ -25,7 +25,7 @@ import pygame
 from .bgi import EGA
 
 RES = 200                                  # the view is drawn at RES x RES, then scaled up (settings.ini fps_quality)
-QUALITY = {'low': 140, 'normal': 200, 'high': 300, 'ultra': 400}
+QUALITY = {'low': 140, 'normal': 200, 'high': 300, 'ultra': 400, 'max': 600}
 PLANE = 0.66                               # half the width of the view plane: a 66 degree view
 SCALE = RES / (2 * PLANE)                  # pixels per square at a distance of one square
 

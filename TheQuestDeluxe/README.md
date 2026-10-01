@@ -62,7 +62,9 @@ The player's settings, in this folder:
 | `items_on_top` | `on` (shipped): gold and items are drawn over a creature or the hero standing on them. `off`: under them, as the original draws them. Blood, remains and footprints stay underneath either way. In FPS mode they are always in front. |
 | `floating_numbers` | `off` (shipped): in FPS mode the combat log's lines only. `on`: the damage, "miss" and the like also rise off whoever took them. |
 
-| `fps_quality` | `normal` (shipped): how finely FPS mode is drawn: `low`, `normal`, `high` or `ultra`. Higher is sharper, and slower. |
+| `render_quality` | `normal` (shipped): the whole game in one switch. `high`: FPS mode drawn finer and everything scaled to the window smoothly. `ultra`: FPS mode drawn at three times the detail and averaged down, so distant things pixelate much less (slower). |
+| `smooth_scaling` | `off` (shipped): the picture is scaled to the window in whole pixels. `on`: smoothly, filling the window. `render_quality` high and ultra turn it on. |
+| `fps_quality` | `normal` (shipped): how finely FPS mode is drawn: `low`, `normal`, `high`, `ultra` or `max`. Higher is sharper, and slower. |
 | `fps_view_distance` | `level` (shipped): FPS mode sees as far as each level says. A number, 2 to 30, makes the eye see at least that many squares. |
 | `fps_dither` | `ordered` (shipped): the fog in FPS mode is a 4 x 4 dither. `fine`: an 8 x 8 one. `smooth`: a plain blend. `off`: no fading with distance. |
 
