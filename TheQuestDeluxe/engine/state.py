@@ -148,7 +148,12 @@ class Enemy:
     marm: int = 0
     att: int = 0        # attitude / AI state, see ATT_* below
     moved: bool = False  # original `move[i]`: already acted this turn
-    effects: dict = field(default_factory=dict)   # Deluxe: 'fire' / 'poison' -> [turns left, damage a turn]
+
+    @property
+    def effects(self) -> dict:
+        """Deluxe: 'fire' / 'poison' -> [turns left, damage a turn]. Not a dataclass field, so the
+        original's creature record (what the lockstep test compares) stays as it was."""
+        return self.__dict__.setdefault('_effects', {})
 
     @property
     def is_npc(self) -> bool:
