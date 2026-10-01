@@ -1027,6 +1027,19 @@ def hands_react():
         g.swing_hand, g.hand_fx = hand, fx
         scr = pygame.Surface((400, 400))
         hands.draw(g, scr, now)                                   # every combination draws
+    # the weapons trade places in the bag while the second blow is worked out: in view each stays in its own hand
+    g.swing, g.swing_hand, g.hand_fx = None, 'right', None
+    scr = pygame.Surface((400, 400))
+    scr.fill((0, 0, 0))
+    hands.draw(g, scr, now)
+    rest = pygame.image.tobytes(scr, 'RGB')
+    p.bag[SLOT_WEAPON], p.bag[SLOT_OFFHAND] = p.bag[SLOT_OFFHAND], p.bag[SLOT_WEAPON]
+    g.slots_swapped = True
+    scr.fill((0, 0, 0))
+    hands.draw(g, scr, now)
+    assert pygame.image.tobytes(scr, 'RGB') == rest, 'a swapped bag does not swap the hands in view'
+    g.slots_swapped = False
+    p.bag[SLOT_WEAPON], p.bag[SLOT_OFFHAND] = p.bag[SLOT_OFFHAND], p.bag[SLOT_WEAPON]
     from engine.combat import Combat
     g.hand_fx = None
     g.fast = False

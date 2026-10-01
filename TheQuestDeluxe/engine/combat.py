@@ -456,6 +456,7 @@ class Combat:
         for swing in (0, 1):
             if swing == 1:
                 p.bag[SLOT_WEAPON], p.bag[SLOT_OFFHAND] = p.bag.get(SLOT_OFFHAND, 0), p.bag.get(SLOT_WEAPON, 0)
+                g.slots_swapped = True                    # (the picture in view keeps each weapon in its own hand)
                 g.play('pause', 100)
             rules.status_update(p, self.g.status, items)
             g.start_swing(second=swing == 1)          # FPS mode: the weapon in view swings (Deluxe), the off hand's on the second blow
@@ -492,6 +493,7 @@ class Combat:
                 g.report(f'You miss the {name}.', 7, (e.x, e.y), 'miss')
             if swing == 1:
                 p.bag[SLOT_WEAPON], p.bag[SLOT_OFFHAND] = p.bag.get(SLOT_OFFHAND, 0), p.bag.get(SLOT_WEAPON, 0)
+                g.slots_swapped = False
                 g.play('pause', 100)
                 rules.status_update(p, self.g.status, items)
             off = p.item(SLOT_OFFHAND)

@@ -132,8 +132,8 @@ class Hands:
         main, other = bag.get(SLOT_WEAPON, 0), bag.get(SLOT_OFFHAND, 0)
         swing = getattr(game, 'swing', None)
         left_strikes = bool(swing) and getattr(game, 'swing_hand', 'right') == 'left'
-        if left_strikes:                                    # the two weapons trade places in the bag for the second
-            main, other = other, main                        # blow: the one in the left hand is the one that strikes
+        if getattr(game, 'slots_swapped', False):           # the two weapons trade places in the bag while the second
+            main, other = other, main                        # blow is worked out: each stays in its own hand in view
         if other and self.pack.item_type(other) in ('shield', 'weapon'):
             self.hold(game, scr, now, other, off=True, swinging=left_strikes)
         if main:
