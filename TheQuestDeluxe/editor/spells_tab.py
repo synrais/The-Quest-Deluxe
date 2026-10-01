@@ -56,6 +56,8 @@ class SpellsTab(TableTab):
                                                          hint=hint, when=when)
         creatures = sorted((c['id'], f'{c["id"]} {c.get("name", "")}') for c in self.app.project.tables['creatures']
                            if c['id'] <= -100)
+        spells = [(None, '(its own)')] + [(r['id'], f'{r["id"]} {r.get("name", "")}')
+                                          for r in sorted(self.rows, key=lambda r: r['id'])]
         return [
             Field('id', 'Number', 'readonly'),
             Field('name', 'Name', 'str'),
@@ -65,7 +67,7 @@ class SpellsTab(TableTab):
             Field('power', 'Power', 'int', default=0),
             Field('duration', 'Duration', 'int', default=0, hint='turns (shields, invisibility, freeze)'),
             Field('effect', 'Effect', 'choice', EFFECTS),
-            Field('anim', 'Animation', 'custom', fmt=fmt_anim, parse=parse_anim,
+            Field('anim', 'Animation', 'custom', fmt=fmt_anim, parse=parse_anim, suggest=ANIMS,
                   hint='e.g. aflame 0, athunder, asskeleton 1'),
             opt('repeat', 'Repeats', 'how many times the animation (or the ward) repeats',
                 when=eff('bolt', 'dark_hour', 'ward')),
@@ -80,10 +82,10 @@ class SpellsTab(TableTab):
                 'squares to ice for the Duration, 10 turns if none'),
             Field('empties_mana', 'Empties the mana', 'bool'),
             Field('needs_target', 'Needs a creature', 'bool', hint='only castable at a creature'),
-            opt('absorb_power_of', 'Uses the power of spell', "Quest I's Shield reads spell 5's power",
-                when=eff('shield')),
-            opt('freeze_power_of', 'Uses the power of spell', "Quest I's Ring of Ice reads spell 4's power",
-                when=eff('freeze')),
+            Field('absorb_power_of', 'Uses the power of spell', 'choice', spells,
+                  hint="Quest I's Shield reads spell 5's power", when=eff('shield')),
+            Field('freeze_power_of', 'Uses the power of spell', 'choice', spells,
+                  hint="Quest I's Ring of Ice reads spell 4's power", when=eff('freeze')),
         ]
 
     def new_row(self):

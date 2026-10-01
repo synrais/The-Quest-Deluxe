@@ -123,7 +123,7 @@ class CreaturesTab(TableTab):
             opt('poison_ranged', 'Poisons (missile)', '1 time in n'),
             opt('poison_cast', 'Poisons (spell)', '1 time in n'),
             Field('missile_anim', 'Missile', 'choice', MISSILES),
-            Field('cast_anim', 'Spell animation', 'custom', fmt=fmt_anim, parse=parse_anim,
+            Field('cast_anim', 'Spell animation', 'custom', fmt=fmt_anim, parse=parse_anim, suggest=CAST_ANIMS,
                   hint='animation and its arguments, e.g. aflame 1'),
             Field('heals_allies', 'Heals its side', 'bool', hint='instead of attacking'),
             pick('raises_dead', 'Raises bones as', 'the creature the bones turn into'),

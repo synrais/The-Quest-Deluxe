@@ -19,7 +19,8 @@ OPAQUE = {'bag', 'spells', 'floors'}           # pictures with no transparent pi
 
 class Field:
     def __init__(self, key, label, kind='int', choices=None, when=None, hint='', default=None, width=8,
-                 fmt=None, parse=None):
+                 fmt=None, parse=None, suggest=None):
+        self.suggest = suggest            # 'custom' text with a drop-down of values to start it from
         self.key, self.label, self.kind = key, label, kind
         self.fmt, self.parse = fmt, parse        # 'custom': row -> text, text -> value (ValueError if wrong)
         self.choices = choices            # [(value, label)] for 'choice' and 'multi'
@@ -211,7 +212,12 @@ class TableTab(ttk.Frame):
         else:
             text = f.fmt(row) if f.kind == 'custom' else ('' if value is None else str(value))
             var = tk.StringVar(value=text)
-            w = ttk.Entry(self.form, textvariable=var, width=f.width if f.kind == 'int' else 30 if f.kind == 'str' else 38)
+            if f.suggest:
+                w = ttk.Combobox(self.form, textvariable=var, values=list(f.suggest), width=38)
+                w.bind('<<ComboboxSelected>>', lambda e: self._typed(f, var, w))
+            else:
+                w = ttk.Entry(self.form, textvariable=var,
+                              width=f.width if f.kind == 'int' else 30 if f.kind == 'str' else 38)
             w.bind('<FocusOut>', lambda e: self._typed(f, var, w))
             w.bind('<Return>', lambda e: self._typed(f, var, w))
         self.widgets[f.key] = (w, var)
