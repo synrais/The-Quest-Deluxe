@@ -190,7 +190,7 @@ class App:
         self.root = root
         self.project = None
         self.dirty = False
-        center(root, 1280, 780)                     # always opens in the middle of the screen
+        center(root, 1280, 780)                     # (until the window knows what it holds: fit_window)
         root.minsize(min(1000, root.winfo_screenwidth() - 40), min(600, root.winfo_screenheight() - 100))
         install_wheel(root)
         self._menus()
@@ -235,6 +235,19 @@ class App:
         if last and not os.path.exists(os.path.join(last, 'quest.json')):
             last = None                              # a pack that has moved or gone: start from the default
         self.open(pack or last or DEFAULT_PACK)
+        self.fit_window()
+
+    def fit_window(self):
+        """Size the window to what it holds, as far as the screen allows, and put it in the middle: wide enough for
+        every tab's panels side by side and tall enough for the map and the longest forms."""
+        root = self.root
+        root.update_idletasks()
+        sw, sh = root.winfo_screenwidth(), root.winfo_screenheight()
+        need_w = root.winfo_reqwidth() + 20
+        need_h = root.winfo_reqheight() + 20
+        width = min(sw - 40, max(need_w, 1280))
+        height = min(sh - 100, max(need_h, 860))
+        center(root, width, height)
 
     # ── menus ───────────────────────────────────────────────────────────────
     def _menus(self):
