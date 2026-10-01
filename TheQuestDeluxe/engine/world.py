@@ -36,6 +36,7 @@ class World:
     visited: set = field(default_factory=set)            # screens seen (automap, original `carta`)
     enemies: list = field(default_factory=list)          # Enemy objects on the current screen
     origin: tuple = (1, 1)
+    carry: list = field(default_factory=list)            # raised allies that follow the hero to the next screen
     stash: dict = field(default_factory=dict)            # level -> (grid, visited) of levels left by a link (Game.travel)
 
     # ── levels ────────────────────────────────────────────────────────────────
@@ -127,6 +128,32 @@ class World:
         self.origin = room_origin(player.X, player.Y)
         self.visited.add(((self.origin[0] - 1) // ROOM, (self.origin[1] - 1) // ROOM))
         self.rescan(player, st)
+        self.place_carried(player, st)
+
+    def place_carried(self, player: Player, st: Status) -> None:
+        """Allies raised with a following spell arrive with the hero: each on the nearest free square to him."""
+        carried, self.carry = self.carry, []
+        pack = self.data.src.pack
+        for e in carried:
+            n = self.size_of(e.type)
+            taken = {(player.X, player.Y)}
+            best = None
+            for sx, sy in self.room_tiles():
+                cells = self.footprint(sx, sy, n)
+                if all(self.in_room(cx, cy) and self.grid[cx][cy].wall == 0 and self.grid[cx][cy].mon == 0
+                       and (cx, cy) not in taken and pack.item_type(self.grid[cx][cy].item) not in
+                       ('teleporter', 'exit', 'ladder', 'rope', 'stairs', 'hole', 'jump_pad') for cx, cy in cells):
+                    d = max(abs(sx - player.X), abs(sy - player.Y))
+                    if best is None or (d, sx, sy) < best[:3]:
+                        best = (d, sx, sy)
+            if best is None:
+                continue                                    # no room on this screen: it stays behind
+            e.x, e.y = best[1], best[2]
+            for cx, cy in self.cells(e):
+                self.grid[cx][cy].mon = e.type
+            e.moved = True
+            self.enemies.append(e)
+        st.mons = len(self.enemies)
 
     def rescan(self, player: Player, st: Status) -> None:
         """enemycheck(): rebuild the creature list from the current screen, column by column."""
@@ -161,10 +188,13 @@ class World:
     def leave_room(self) -> None:
         """goroom2 (first half): write-back rules applied to the screen being left."""
         pack = self.data.src.pack
+        self.carry = []
         for e in self.enemies:
             if e.__dict__.get('_risen'):                   # the raised go back to rest when the hero leaves
                 for cx, cy in self.cells(e):
                     self.grid[cx][cy].mon = 0
+                if e.__dict__.get('_follow') and e.life > 0:
+                    self.carry.append(e)                   # unless the spell said they follow him: until they die
         for x, y in self.room_tiles():
             q = self.grid[x][y]
             hidden = pack.trait(q.mon, 'hides_as') if q.mon else None

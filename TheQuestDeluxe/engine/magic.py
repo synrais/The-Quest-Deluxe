@@ -65,6 +65,8 @@ class Magic:
         q, eff = w.sq(x, y), self.effect(spell)
         if eff == 'resurrect':
             return self.corpse_at(x, y) is not None and (x, y) != (p.X, p.Y)
+        if eff == 'heal_target':                       # any creature, friend or foe
+            return w.enemy_at(x, y) is not None and q.wall == 0
         water = self.g.pack.spell(spell).get('freezes_water') is not None and \
             self.g.pack.wall(q.wall).get('freezes_to') and q.mon == 0
         if (q.wall != 0 or self.g.pack.item_type(q.item) in ('teleporter', 'exit') + LINK_ITEMS) \
@@ -213,6 +215,8 @@ class Magic:
         e = g.spawn(kind, x, y)
         e.att = -3
         e.__dict__['_risen'] = True
+        if g.pack.spell(spell).get('follows'):
+            e.__dict__['_follow'] = True                      # it goes where the hero goes, until it dies
         pct = self.tell(spell, SP_POWER)
         if pct:
             e.life = max(1, e.mlife * pct // 100)
@@ -294,6 +298,14 @@ class Magic:
             return
         if eff == 'resurrect':
             self.resurrect(spell, x, y)
+            return
+        if eff == 'heal_target':                            # mends whoever is there: an ally, a person, an enemy
+            if target is None:
+                return
+            self.anim(spell, x, y)
+            gained = min(power, max(0, target.mlife - target.life))
+            target.life += gained
+            g.report(f'The {g.monster_name(target.type)} is healed for {gained}.', 10, (x, y), f'+{gained}')
             return
         if eff == 'teleport':
             def move(sx, sy):

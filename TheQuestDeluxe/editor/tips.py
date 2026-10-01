@@ -130,6 +130,8 @@ FIELDS = {
              'Bones stay.',
     'freezes_water': 'Frost: turns water within this many squares to ice for the Duration (10 turns if none). '
                      'The water tile needs a "Freezes to" ice tile.',
+    'follows': 'The creature raised goes with the hero from screen to screen (and level to level) until it dies, '
+               'instead of resting when he leaves the screen.',
     'clones_hero': "Each clone has this percent of the hero's life, power and armour. Empty: the creature's own.",
     'npc_anger': 'Percent chance that each friendly person turns on the disguised hero (50 if empty).',
     'creatures': 'The shapes a disguise picks from. None ticked: any monster that shows.',

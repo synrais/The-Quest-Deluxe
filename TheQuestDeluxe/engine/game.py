@@ -1314,11 +1314,14 @@ class Game:
         for (i, ii), (fl, wa, it, mo, go, de) in d.room.items():
             if 1 <= i <= 10 and 1 <= ii <= 10:
                 w.grid[ox + i - 1][oy + ii - 1] = Square(fl, wa, mo, it, go, de)
-        w.enemies = []
+        w.enemies, w.carry = [], []
         for e in d.enemies[:max(0, self.status.mons)]:
             e = dict(e)
             e['x'], e['y'] = e['x'] + ox - 1, e['y'] + oy - 1
-            w.enemies.append(Enemy(**e))
+            ally = Enemy(**e)
+            if ally.att == -3 and ally.type > -100 and ally.type != 0:
+                ally.__dict__['_risen'] = ally.__dict__['_follow'] = True     # a raised ally follows on after a load
+            w.enemies.append(ally)
         self.target = None
         rules.status_update(p, self.status, self.items)
         self.overlay = None

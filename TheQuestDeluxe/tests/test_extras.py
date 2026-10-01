@@ -524,7 +524,7 @@ def resurrection():
     assert friend is not None and friend.type == -6 and friend.ally
     # a hostile monster comes: the raised creatures fight it, and the hero cannot hit his own side
     orc = g.spawn(2, ox + 4, oy + 5)
-    orc.att = 9
+    orc.att, orc.atk = 9, 0                                      # (it cannot hurt them, so that they are still there)
     start = orc.life
     hp = raised.life
     assert not g.try_move(-1, 0) and raised.life == hp           # bumping into him does not strike him
@@ -542,6 +542,50 @@ def resurrection():
     w.leave_room()
     assert all(w.sq(x, y).mon == 0 for x, y in risen)
     print('resurrection: a dead creature and a dead person rise at full life, fight beside the hero, rest when he leaves: ok')
+
+
+def followers_and_mending():
+    def spells(folder, json):
+        path = os.path.join(folder, 'spells.json')
+        data = json.load(open(path))
+        data['spells'] += [
+            {'id': 21, 'name': 'Raise', 'req_int': 1, 'mana': 5, 'range': 5, 'power': 0, 'duration': 0,
+             'effect': 'resurrect', 'follows': True},
+            {'id': 22, 'name': 'Mend', 'req_int': 1, 'mana': 5, 'range': 5, 'power': 30, 'duration': 0,
+             'effect': 'heal_target', 'anim': ['aheal2']}]
+        json.dump(data, open(path, 'w'))
+    g = with_changes(spells)
+    p, w = g.player, g.world
+    for e in list(w.enemies):
+        w.sq(e.x, e.y).mon = 0
+    w.enemies.clear()
+    ox, oy = w.origin
+    ox, oy = w.origin
+    for x, y in w.room_tiles():
+        q = w.sq(x, y)
+        q.wall = q.mon = q.item = q.deco = q.gold = 0
+    p.X, p.Y = ox + 9, oy + 5                                    # on the screen's east edge
+    p.hero.mana, p.spells[21], p.spells[22] = p.hero.mmana, 1, 1
+    victim = g.spawn(1, ox + 7, oy + 5)
+    g.combat.hurt(10000, victim, 3, by_hero=True)
+    g.magic.cast_at(21, ox + 7, oy + 5)
+    ally = w.enemy_at(ox + 7, oy + 5)
+    assert ally is not None and ally.__dict__.get('_follow')
+    ally.life = max(1, ally.mlife // 3)
+    g.magic.cast_at(22, ally.x, ally.y)                           # mend the ally
+    assert ally.life > ally.mlife // 3
+    foe = g.spawn(2, ox + 3, oy + 3)                               # and an enemy
+    foe.att, foe.life = 9, 1
+    g.magic.cast_at(22, foe.x, foe.y)
+    assert foe.life > 1
+    assert g.magic.valid_target(22, foe.x, foe.y) and not g.magic.valid_target(22, ox + 1, oy + 1)
+    # he walks into the next screen: the raised ally comes too
+    assert g.try_move(1, 0)
+    assert p.X == ox + 10
+    near = [e for e in w.enemies if e.type == 1 and e.__dict__.get('_risen')]
+    assert len(near) == 1 and near[0].life == ally.life and w.in_room(near[0].x, near[0].y)
+    assert max(abs(near[0].x - p.X), abs(near[0].y - p.Y)) <= 2
+    print('a raised ally follows from screen to screen; a mending spell heals allies and enemies: ok')
 
 
 def sizes_and_worn():
@@ -913,6 +957,7 @@ if __name__ == '__main__':
     creature_changes()
     fps_settings()
     resurrection()
+    followers_and_mending()
     shrinking()
     sizes_and_worn()
     disguise()

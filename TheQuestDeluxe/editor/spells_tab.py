@@ -11,11 +11,12 @@ EFFECTS = [('heal', 'heal: the hero gains life (power)'), ('bolt', 'bolt: damage
            ('freeze', 'freeze: a creature stops for a while'), ('drain', 'drain: damage, and the hero heals by it'),
            ('summon', 'summon: brings an ally'),
            ('resurrect', 'resurrect: a dead creature (or person) rises and fights at the hero\'s side on this screen'),
+           ('heal_target', 'heal a creature: any creature you target, friend or foe, gains life (power)'),
            ('shadow_clones', 'shadow clones: an ally on every square around the hero'),
            ('disguise', "disguise: the hero becomes a random creature; monsters leave him alone, people may not"), ('teleport', 'teleport: the hero jumps to a square'),
            ('shield', 'shield: stops blows up to a power'), ('fire_shield', 'fire shield: burns creatures next to the hero'),
            ('invisibility', 'invisibility: creatures lose sight of the hero')]
-ANIMS = ['aheal', 'arestore', 'acure', 'aflame', 'afireball', 'agflame', 'ainferno', 'athunder', 'alightning',
+ANIMS = ['aheal', 'aheal2', 'arestore', 'acure', 'aflame', 'afireball', 'agflame', 'ainferno', 'athunder', 'alightning',
          'adeaths', 'adeteriorate', 'ablackward', 'adarkhour', 'aearthq', 'aicering', 'adrain', 'ashield',
          'ainvisibility', 'asskeleton', 'astoneknight', 'asscorpion', 'ateleport']
 
@@ -81,6 +82,8 @@ class SpellsTab(TableTab):
                 'a screen (empty: 50)', when=eff('disguise')),
             Field('creatures', 'Can become', 'multi', monsters, when=eff('disguise'),
                   hint='the shapes it picks from (none ticked: any monster that shows)'),
+            Field('follows', 'Follows him', 'bool', when=eff('resurrect'),
+                  hint='the raised creature goes with the hero from screen to screen until it dies'),
             opt('clones_hero', 'Clones are % of the hero', "each clone's life, power and armour as this percent of "
                 "the hero's (empty: the creature's own)", when=eff('shadow_clones')),
             opt('fizzle', 'Fails', '% chance the spell fails'),
@@ -106,7 +109,9 @@ class SpellsTab(TableTab):
         ('Disguise (a random creature, the reverse of hostile)', {'range': 0, 'power': 0, 'duration': 25,
                                                                   'effect': 'disguise', 'npc_anger': 50}),
         ('Resurrection (a body rises to fight beside the hero)', {'range': 4, 'power': 0, 'mana': 20,
-                                                                  'effect': 'resurrect', 'needs_target': False}),
+                                                                  'effect': 'resurrect', 'needs_target': False, 'follows': True}),
+        ('Mend (heals any creature you target, ally or enemy)', {'range': 4, 'power': 30, 'mana': 10,
+                                                                  'effect': 'heal_target', 'anim': ['aheal2']}),
         ('A blank spell', {'range': 3, 'power': 10, 'effect': 'bolt', 'anim': ['aflame', 0]}),
     ]
 
