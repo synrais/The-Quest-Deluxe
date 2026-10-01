@@ -896,6 +896,24 @@ class Game:
             self.overlay = ui.TitleScreen()
         self.load_game(on_no=no)
 
+    def disguised(self) -> bool:
+        """Is the hero in another creature's shape (the Disguise spell)?"""
+        return self.player.hero.invisible > 0 and bool(self.player.more.get('disguise'))
+
+    def a_name_of_creature(self, t: int) -> str:
+        name = self.monster_name(t)
+        return f'{"an" if name[:1] in "aeiou" else "a"} {name}'
+
+    def end_disguise(self):
+        """The shape wears off: people who turned on the hero calm down again."""
+        self.player.more.pop('disguise', None)
+        for e in self.world.enemies:
+            if e.is_npc and e.att == 8:
+                ms = self.data.monsters.get(e.type)
+                e.att = ms.att if ms else -2
+        self.count_hostiles()
+        self.report('You are yourself again.', 7)
+
     def foresight(self) -> bool:
         """Is the hero under a potion of foresight (quest.json's "foresight" turns)? Invisible creatures show
         for what they really are: drawn as the creature they turn into (`reveals_as`), and a target."""
@@ -954,6 +972,8 @@ class Game:
             st.Shield -= 1
         if st.fShield >= 0:
             st.fShield -= 1
+        if h.invisible == 0 and p.more.get('disguise'):
+            self.end_disguise()
         if h.invisible == 0:
             h.invisible = -1
             for e in self.world.enemies:

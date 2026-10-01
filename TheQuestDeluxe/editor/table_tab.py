@@ -322,8 +322,6 @@ class TableTab(ttk.Frame):
                 fill='x')
             ttk.Button(box, text='Import...', command=lambda f=folder, b=is_bag: self.import_picture(f, b)).pack(
                 fill='x')
-            if is_bag:
-                ttk.Button(box, text='From the map picture', command=self.bag_from_map).pack(fill='x')
 
     def paint(self, folder, is_bag, label):
         """Open the painter on this picture; saving puts it back here."""
@@ -374,16 +372,6 @@ class TableTab(ttk.Frame):
         self.app.changed()
         self._show_pictures()
         self.fill_list()
-
-    def bag_from_map(self):
-        p, v = self.app.project, self.row['id']
-        mp = next((f for _, f, b in self.PICTURES if not b), None)
-        bag = next((f for _, f, b in self.PICTURES if b), None)
-        img = p.picture(mp, v)
-        if img is None:
-            messagebox.showinfo('Bag picture', 'This entry has no map picture yet.')
-            return
-        self.set_picture(bag, bag_cell(p, img), True)
 
     # ── new, duplicate, delete ──────────────────────────────────────────────
     def new(self):

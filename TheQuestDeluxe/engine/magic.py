@@ -46,7 +46,7 @@ class Magic:
     def fizzles(self, spell: int) -> bool:
         """Rashness (20% while enemies are near) and Invisibility's own 50% / shield conflicts."""
         p, st = self.g.player, self.g.status
-        if p.hero.invisible > -1:
+        if p.hero.invisible > -1 and not self.g.disguised():
             p.hero.invisible = 0
         fail = False
         if p.skill.ras == 1 and st.ems > 0 and random(100) > 79:
@@ -112,6 +112,8 @@ class Magic:
                 if e.att > 0 and e.att != 8 and e.att > -10:
                     e.att = -5
             self.anim(spell, p.X, p.Y)
+        elif eff == 'disguise':
+            self.disguise(spell, dur)
         elif eff == 'shield':
             st.Shield, st.fShield = dur, 0
             self.anim(spell, p.X, p.Y)
@@ -126,6 +128,31 @@ class Magic:
             h.mana = 0
             for _ in range(sp.get('repeat', 1)):
                 self.area(spell, ring)
+
+    def disguise(self, spell: int, dur: int):
+        """The hero takes a random creature's shape (from the spell's `creatures`, else any monster that can be
+        seen) for `dur` turns: the opposite of being hostile. Monsters take him for one of their own and leave
+        him alone, as under Invisibility (and, unlike it, he can fight and cast without giving it up); but
+        each friendly person near rolls `npc_anger` percent (50 if left out) to turn on him. People anywhere
+        he walks into while it lasts roll the same."""
+        g, p, h = self.g, self.g.player, self.g.player.hero
+        sp = g.pack.spell(spell)
+        pool = [c for c in (sp.get('creatures') or sorted(g.pack.creatures))
+                if c > 0 and c in g.pack.creatures and not g.pack.trait(c, 'invisible')]
+        if not pool:
+            g.report('Nothing happens.', 7)
+            return
+        shape = pool[random(len(pool))]
+        chance = sp.get('npc_anger', 50)
+        h.invisible = dur + 1
+        p.more['disguise'] = [shape, chance]
+        for e in g.world.enemies:
+            if e.att > 0 and e.att != 8 and e.att > -10:
+                e.att = -5                                    # monsters take him for one of them
+            elif e.is_npc and e.type != -5 and e.att > -10 and e.att != 8 and random(100) < chance:
+                e.att = 8                                     # a friendly person sees through it
+        self.anim(spell, p.X, p.Y)
+        g.report(f'You turn into {g.a_name_of_creature(shape)}!', 13)
 
     def clones(self, spell: int, tiles):
         """Shadow clones: the spell's `creature` (an ally) on every free square around the hero. With

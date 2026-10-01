@@ -411,6 +411,46 @@ def event_code_text():
     print('events: rules are written into the right handler, made when missing, and read by the game: ok')
 
 
+def disguise():
+    def spell(folder, json):
+        path = os.path.join(folder, 'spells.json')
+        data = json.load(open(path))
+        data['spells'].append({'id': 21, 'name': 'Disguise', 'req_int': 1, 'mana': 5, 'range': 0, 'power': 0,
+                               'duration': 5, 'effect': 'disguise', 'npc_anger': 100, 'creatures': [1]})
+        json.dump(data, open(path, 'w'))
+    from engine.state import Enemy
+    g = with_changes(spell)
+    p, w, h = g.player, g.world, g.player.hero
+    for e in list(w.enemies):
+        w.sq(e.x, e.y).mon = 0
+    w.enemies.clear()
+    ox, oy = w.origin
+    p.X, p.Y = ox + 5, oy + 5
+    friend = g.spawn(-6, ox + 2, oy + 2)                          # a farmer, friendly
+    friend.att = -2
+    orc = g.spawn(1, ox + 8, oy + 8)
+    orc.att = 9
+    p.hero.mana, p.spells[21] = p.hero.mmana, 1
+    assert not g.disguised()
+    g.magic.cast_self(21)
+    assert g.disguised() and p.more['disguise'][0] == 1
+    assert orc.att == -5 and friend.att == 8                       # monsters leave him be, the farmer does not
+    g.renderer.draw(g, present=False)                              # drawn in the creature's shape
+    px, py = (p.X - ox) * 40, (p.Y - oy) * 40
+    shape = g.renderer.sprites.get('enemy', 1)
+    assert shape is not None and g.renderer.screen.get_at((px + 20, py + 20)) in (shape.get_at((20, 20)),
+                                                                                  shape.get_at((20, 21)))
+    g.combat.wake_on_attack(orc)                                   # fighting does not end it
+    assert g.disguised()
+    for _ in range(5):
+        g.upkeep()
+    assert g.disguised()                                           # its turns, and the one of the cast
+    g.upkeep()
+    assert g.disguised() is False and 'disguise' not in p.more
+    assert orc.att == 9 and friend.att == -2                       # everyone is as they were
+    print('disguise: a random shape, monsters leave him, a friendly person turns on him, and it wears off: ok')
+
+
 if __name__ == '__main__':
     fire()
     ice()
@@ -418,6 +458,7 @@ if __name__ == '__main__':
     blood_regen()
     foresight()
     clones()
+    disguise()
     event_code_text()
     links()
     moved_walls()

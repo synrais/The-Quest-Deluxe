@@ -141,6 +141,11 @@ class Renderer:
     def draw_hero(self, scr, game, hx, hy):
         """guy2(), ported call for call (engine.anim.draw_guy2), at pixel position (hx, hy)."""
         p, st = game.player, game.status
+        if game.disguised():                                     # the Disguise spell: in another creature's shape
+            shape = self.sprites.get('enemy', p.more['disguise'][0])
+            if shape is not None:
+                scr.blit(shape, (hx, hy))
+                return
         painted = self.sprites.hero.get(str(p.hero.type))        # sprites/heroes/<class>.png: a painted hero
         if painted is not None:
             if p.hero.invisible > 0:

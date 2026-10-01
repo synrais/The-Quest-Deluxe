@@ -10,7 +10,8 @@ EFFECTS = [('heal', 'heal: the hero gains life (power)'), ('bolt', 'bolt: damage
            ('dark_hour', 'dark hour: the ward, repeated; mana to 0'), ('earthquake', 'earthquake: a cross of blows'),
            ('freeze', 'freeze: a creature stops for a while'), ('drain', 'drain: damage, and the hero heals by it'),
            ('summon', 'summon: brings an ally'),
-           ('shadow_clones', 'shadow clones: an ally on every square around the hero'), ('teleport', 'teleport: the hero jumps to a square'),
+           ('shadow_clones', 'shadow clones: an ally on every square around the hero'),
+           ('disguise', "disguise: the hero becomes a random creature; monsters leave him alone, people may not"), ('teleport', 'teleport: the hero jumps to a square'),
            ('shield', 'shield: stops blows up to a power'), ('fire_shield', 'fire shield: burns creatures next to the hero'),
            ('invisibility', 'invisibility: creatures lose sight of the hero')]
 ANIMS = ['aheal', 'arestore', 'acure', 'aflame', 'afireball', 'agflame', 'ainferno', 'athunder', 'alightning',
@@ -56,6 +57,8 @@ class SpellsTab(TableTab):
                                                          hint=hint, when=when)
         creatures = sorted((c['id'], f'{c["id"]} {c.get("name", "")}') for c in self.app.project.tables['creatures']
                            if c['id'] <= -100)
+        monsters = [(c['id'], f'{c["id"]} {c.get("name", "")}') for c in
+                    sorted(self.app.project.tables['creatures'], key=lambda c: c['id']) if c['id'] > 0]
         spells = [(None, '(its own)')] + [(r['id'], f'{r["id"]} {r.get("name", "")}')
                                           for r in sorted(self.rows, key=lambda r: r['id'])]
         return [
@@ -73,6 +76,10 @@ class SpellsTab(TableTab):
                 when=eff('bolt', 'dark_hour', 'ward')),
             Field('creature', 'Summons', 'choice', creatures, when=eff('summon', 'shadow_clones'),
                   hint='an ally (-100 and below)'),
+            opt('npc_anger', 'Friendly people turn on him %', 'each person near, when it is cast and when he walks into '
+                'a screen (empty: 50)', when=eff('disguise')),
+            Field('creatures', 'Can become', 'multi', monsters, when=eff('disguise'),
+                  hint='the shapes it picks from (none ticked: any monster that shows)'),
             opt('clones_hero', 'Clones are % of the hero', "each clone's life, power and armour as this percent of "
                 "the hero's (empty: the creature's own)", when=eff('shadow_clones')),
             opt('fizzle', 'Fails', '% chance the spell fails'),
@@ -88,11 +95,32 @@ class SpellsTab(TableTab):
                   hint="Quest I's Ring of Ice reads spell 4's power", when=eff('freeze')),
         ]
 
+    TEMPLATES = [
+        ('A bolt (a fire spell that burns blood away)', {'range': 3, 'power': 12, 'effect': 'bolt',
+                                                         'anim': ['aflame', 0], 'burns': 1}),
+        ('Frost (freezes water to ice and creatures)', {'range': 3, 'power': 10, 'duration': 10, 'effect': 'freeze',
+                                                        'anim': ['aicering'], 'freezes_water': 1}),
+        ('Shadow clones (allies all around the hero)', {'range': 0, 'power': 0, 'duration': 12,
+                                                        'effect': 'shadow_clones', 'clones_hero': 50}),
+        ('Disguise (a random creature, the reverse of hostile)', {'range': 0, 'power': 0, 'duration': 25,
+                                                                  'effect': 'disguise', 'npc_anger': 50}),
+        ('A blank spell', {'range': 3, 'power': 10, 'effect': 'bolt', 'anim': ['aflame', 0]}),
+    ]
+
     def new_row(self):
+        from .uikit import choose
+        pick = choose(self, 'New spell', 'Start from which kind of spell?', [t[0] for t in self.TEMPLATES])
+        if pick is None:
+            return None
         used = {r['id'] for r in self.rows}
         v = next(n for n in range(1, len(used) + 2) if n not in used)
-        return {'id': v, 'name': 'New spell', 'req_int': 10, 'mana': 5, 'range': 3, 'power': 10, 'duration': 0,
-                'effect': 'bolt', 'anim': ['aflame', 0]}
+        row = {'id': v, 'name': 'New spell', 'req_int': 10, 'mana': 5, 'range': 3, 'power': 10, 'duration': 0}
+        row.update(self.TEMPLATES[pick][1])
+        if row['effect'] in ('shadow_clones',) and self.app.project.tables['creatures']:
+            allies = [c['id'] for c in self.app.project.tables['creatures'] if c['id'] <= -100]
+            if allies:
+                row['creature'] = allies[0]
+        return row
 
     def duplicate_id(self, row):
         used = {r['id'] for r in self.rows}

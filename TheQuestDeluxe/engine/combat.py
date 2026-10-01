@@ -328,7 +328,7 @@ class Combat:
     # ── the hero attacks ──────────────────────────────────────────────────────
     def wake_on_attack(self, e: Enemy):
         h, sk = self.p.hero, self.p.skill
-        if h.invisible > -1:
+        if h.invisible > -1 and not self.g.disguised():
             h.invisible = 0
         if sk.hon == 1:
             sk.hon = 2

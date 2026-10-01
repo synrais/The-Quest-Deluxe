@@ -149,6 +149,10 @@ class World:
                 e.warm, e.marm, e.range, e.att = ms.warm, ms.marm, ms.range, ms.att
                 if t < 0 and player.hero.rep <= -4:
                     e.att = 9                              # bad reputation: NPCs turn hostile
+            shape = player.more.get('disguise')
+            if shape and player.hero.invisible > 0 and e.is_npc and e.type != -5 and e.att > -10 \
+                    and rules.random(100) < shape[1]:
+                e.att = 8                                  # a disguised hero: some people see through it
             if player.hero.invisible > 0 and e.att >= 0 and e.att != 8:
                 e.att = -5                                 # can't see the invisible hero
             self.enemies.append(e)

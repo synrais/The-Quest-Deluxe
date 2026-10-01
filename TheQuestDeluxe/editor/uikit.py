@@ -61,3 +61,64 @@ def scroll_canvas(canvas, lines_per_step=3):
     def handler(steps, ctrl, shift):
         (canvas.xview_scroll if shift else canvas.yview_scroll)(steps * lines_per_step, 'units')
     return handler
+
+
+# ── drop-downs that are wide enough for their longest choice ─────────────────
+from tkinter import ttk  # noqa: E402
+
+_Combobox = ttk.Combobox
+MAX_WIDTH = 72
+
+
+class FitCombobox(_Combobox):
+    """A Combobox that is at least as wide as the width asked for, and wider when a choice is longer, so that
+    a choice is never cut off. (Wider than the screen allows is left to scroll.)"""
+
+    def __init__(self, master=None, **kw):
+        self._asked = kw.get('width') or 10
+        super().__init__(master, **kw)
+        self._fit()
+
+    def configure(self, cnf=None, **kw):
+        if 'width' in kw:
+            self._asked = kw['width']
+        out = super().configure(cnf, **kw)
+        if 'values' in kw or (isinstance(cnf, dict) and 'values' in cnf):
+            self._fit()
+        return out
+
+    config = configure
+
+    def _fit(self):
+        try:
+            values = self.tk.splitlist(self.cget('values'))
+        except Exception:                           # noqa: BLE001
+            return
+        longest = max((len(str(v)) for v in values), default=0)
+        super().configure(width=min(MAX_WIDTH, max(self._asked, longest + 2)))
+
+
+ttk.Combobox = FitCombobox
+
+
+def choose(parent, title: str, prompt: str, labels: list[str]) -> int | None:
+    """Ask for one of several things from a drop-down; the number of the choice, or None if cancelled."""
+    import tkinter as tk
+    win = tk.Toplevel(parent)
+    win.title(title)
+    box = ttk.Frame(win, padding=12)
+    box.pack()
+    ttk.Label(box, text=prompt, justify='left').pack(anchor='w')
+    combo = ttk.Combobox(box, values=labels, state='readonly', width=30)
+    combo.current(0)
+    combo.pack(fill='x', pady=8)
+    answer = []
+    row = ttk.Frame(box)
+    row.pack(fill='x')
+    ttk.Button(row, text='OK', command=lambda: (answer.append(combo.current()), win.destroy())).pack(side='left')
+    ttk.Button(row, text='Cancel', command=win.destroy).pack(side='left', padx=6)
+    center(win, parent=parent.winfo_toplevel())
+    win.transient(parent.winfo_toplevel())
+    win.grab_set()
+    win.wait_window()
+    return answer[0] if answer else None

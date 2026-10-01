@@ -166,6 +166,11 @@
  {"id": 901, "name": "", "req_str": 0, "req_int": 0, "atk": 0, "def": 0, "warm": 0, "marm": 0, "str": 0, "int": 0, "power": 0, "kind": 0, "dex": 0, "acc": 0, "type": "treasure", "quest": true},
  {"id": 907, "name": "", "type": "treasure", "quest": true},
  {"id": 999, "name": "Lvl5 Teleporter", "type": "teleporter"},
- {"id": 1000, "name": "Level Exit", "type": "exit"}
+ {"id": 1000, "name": "Level Exit", "type": "exit"},
+ {"id": 1101, "name": "Ladder", "type": "ladder"},
+ {"id": 1102, "name": "Rope", "type": "rope"},
+ {"id": 1103, "name": "Stairs", "type": "stairs"},
+ {"id": 1104, "name": "Hole", "type": "hole"},
+ {"id": 1105, "name": "Jump Pad", "type": "jump_pad"}
  ]
 }
