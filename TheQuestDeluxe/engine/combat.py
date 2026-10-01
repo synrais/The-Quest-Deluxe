@@ -172,6 +172,8 @@ class Combat:
             self.g.change_rep(-3)
         if e.type > 0 and not self.g.pack.trait(e.type, 'animal') and witness > 0 and h.rep <= -4 and a == -1:
             self.g.change_rep(1)
+        if pk.trait(e.type, 'regenerates_from_blood'):
+            self.p.more.setdefault('reviving', []).append([w.level, e.x, e.y, e.type, -1, -1, 0])
         del w.enemies[i]
         if -100 < e.type < 0 and a == -1:
             for o in w.enemies:
@@ -200,6 +202,69 @@ class Combat:
         if drop:
             self.g.put_item(e.x, e.y, drop)
         return gold
+
+    # ── a creature that rises again from a pile of blood (creatures.json `regenerates_from_blood`) ──
+    def blood_squares(self) -> set:
+        pk = self.g.pack
+        return {pk.deco(role) for role in ('blood', 'remains', 'remains2')} - {0}
+
+    def revive_step(self):
+        """The end of a turn: for each fallen creature that feeds on blood, the nearest pile of blood on the
+        screen slides a square towards its body, and one that lands on the body makes the creature whole
+        again (when nobody stands there). Fire that burns the pile away sends the next-nearest. With no
+        blood left on the screen it stays dead. The entries are [level, x, y, creature, pile x, pile y,
+        turns stuck] in the hero's more['reviving']."""
+        g, w, p = self.g, self.w, self.p
+        entries = p.more.get('reviving')
+        if not entries:
+            return
+        blood, keep = self.blood_squares(), []
+        for entry in entries:
+            level, x, y, kind, px, py, stuck = entry
+            if level != w.level:
+                continue                                  # another level was reloaded
+            if not w.in_room(x, y):
+                keep.append(entry)                        # waits for the hero to come back to this screen
+                continue
+            if (px, py) != (x, y):
+                if not (px >= 0 and w.in_room(px, py) and w.sq(px, py).deco in blood):
+                    near = [(max(abs(sx - x), abs(sy - y)), abs(sx - x) + abs(sy - y), sx, sy)
+                            for sx, sy in w.room_tiles() if w.sq(sx, sy).deco in blood and (sx, sy) != (x, y)]
+                    if not near:
+                        continue                          # no blood left: the creature stays dead
+                    px, py = min(near)[2:]
+            moved = (px, py) == (x, y)                    # a pile already on the body only waits
+            if not moved:
+                dx, dy = (x > px) - (x < px), (y > py) - (y < py)
+                steps = [(dx, 0), (0, dy)] if abs(x - px) >= abs(y - py) else [(0, dy), (dx, 0)]
+                if dx and dy and abs(x - px) == abs(y - py):
+                    steps.insert(0, (dx, dy))
+                for sx, sy in steps:
+                    nx, ny = px + sx, py + sy
+                    if (sx, sy) == (0, 0) or not w.in_room(nx, ny):
+                        continue
+                    q, wall = w.sq(nx, ny), g.pack.wall(w.sq(nx, ny).wall)
+                    if wall.get('solid') or wall.get('door') or not (q.deco == 0 or q.deco in blood):
+                        continue
+                    pile = w.sq(px, py).deco
+                    w.sq(px, py).deco = 0
+                    q.deco, px, py, moved = pile, nx, ny, True
+                    break
+            entry[4:] = [px, py, 0 if moved else stuck + 1]
+            if (px, py) == (x, y):
+                if w.sq(x, y).mon == 0 and (x, y) != (p.X, p.Y):
+                    w.sq(x, y).deco = 0
+                    g.spawn(kind, x, y)
+                    g.report(f'The {g.monster_name(kind)} rises again, made whole by the blood!', 12, (x, y), 'reborn')
+                    g.count_hostiles()
+                    continue
+            elif entry[6] > 12:
+                continue                                  # blocked for good
+            keep.append(entry)
+        if keep:
+            p.more['reviving'] = keep
+        else:
+            p.more.pop('reviving', None)
 
     # ── elements: a weapon or ammunition that burns, freezes, poisons or drains (Deluxe) ──
     def apply_element(self, source: dict, e: Enemy, dealt: int):
@@ -232,8 +297,18 @@ class Combat:
             h.life = min(h.mlife, h.life + max(1, dealt // 2))
 
     def tick_effects(self):
-        """The end of a turn: what burns or is poisoned takes its damage and the turns run down."""
+        """The end of a turn: what burns or is poisoned takes its damage and the turns run down; summoned
+        clones whose time is up fade."""
         for e in list(self.w.enemies):
+            ttl = e.__dict__.get('_ttl')
+            if ttl is not None:
+                if ttl <= 1:
+                    self.w.sq(e.x, e.y).mon = 0
+                    self.w.enemies.remove(e)
+                    self.g.status.mons = len(self.w.enemies)
+                    self.g.report(f'The {self.g.monster_name(e.type)} fades away.', 8, (e.x, e.y), 'fades')
+                    continue
+                e.__dict__['_ttl'] = ttl - 1
             for kind in list(e.effects):
                 if e not in self.w.enemies or e.life <= 0:
                     break
@@ -321,7 +396,7 @@ class Combat:
                 continue
             if e.att == -1 and st.ems > 0:
                 continue
-            if self.g.pack.trait(e.type, 'invisible'):
+            if self.g.pack.trait(e.type, 'invisible') and not self.g.foresight():
                 continue
             out.append((d, e))
         out.sort(key=lambda t: t[0])

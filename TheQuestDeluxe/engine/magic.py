@@ -116,12 +116,36 @@ class Magic:
         elif eff == 'fire_shield':
             st.fShield, st.Shield = dur, 0
             self.anim(spell, p.X, p.Y)
+        elif eff == 'shadow_clones':
+            self.clones(spell, ring)
         elif eff == 'ward':
             self.area(spell, ring)
         elif eff == 'dark_hour':
             h.mana = 0
             for _ in range(sp.get('repeat', 1)):
                 self.area(spell, ring)
+
+    def clones(self, spell: int, tiles):
+        """Shadow clones: the spell's `creature` (an ally) on every free square around the hero. With
+        `clones_hero` (a percent) each takes that share of the hero's life, power, attack, defence and
+        armour; with a `duration` they fade after that many turns, else when the hero leaves the screen."""
+        g, h = self.g, self.g.player.hero
+        sp, dur = g.pack.spell(spell), self.tell(spell, SP_DURATION)
+        share = sp.get('clones_hero')
+        for x, y in tiles:
+            q = g.world.sq(x, y)
+            if not g.world.in_room(x, y) or q.mon or q.wall \
+                    or g.pack.item_type(q.item) in ('teleporter', 'exit'):
+                continue
+            self.anim(spell, x, y)
+            e = g.spawn(sp['creature'], x, y)
+            if share:
+                e.life = e.mlife = max(1, h.mlife * share // 100)
+                e.power, e.atk, e.defense = max(1, h.power * share // 100), h.atk, h.defense
+                e.warm, e.marm = h.warm, h.marm
+            if dur:
+                e.__dict__['_ttl'] = dur + 1
+        g.count_hostiles()
 
     def area(self, spell: int, tiles):
         """Black Ward / Dark Hour: each square around the hero in turn, animation then the blow."""

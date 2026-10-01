@@ -9,7 +9,8 @@ EFFECTS = [('heal', 'heal: the hero gains life (power)'), ('bolt', 'bolt: damage
            ('ward', 'ward: damage on the 8 squares around the hero'),
            ('dark_hour', 'dark hour: the ward, repeated; mana to 0'), ('earthquake', 'earthquake: a cross of blows'),
            ('freeze', 'freeze: a creature stops for a while'), ('drain', 'drain: damage, and the hero heals by it'),
-           ('summon', 'summon: brings an ally'), ('teleport', 'teleport: the hero jumps to a square'),
+           ('summon', 'summon: brings an ally'),
+           ('shadow_clones', 'shadow clones: an ally on every square around the hero'), ('teleport', 'teleport: the hero jumps to a square'),
            ('shield', 'shield: stops blows up to a power'), ('fire_shield', 'fire shield: burns creatures next to the hero'),
            ('invisibility', 'invisibility: creatures lose sight of the hero')]
 ANIMS = ['aheal', 'arestore', 'acure', 'aflame', 'afireball', 'agflame', 'ainferno', 'athunder', 'alightning',
@@ -68,7 +69,10 @@ class SpellsTab(TableTab):
                   hint='e.g. aflame 0, athunder, asskeleton 1'),
             opt('repeat', 'Repeats', 'how many times the animation (or the ward) repeats',
                 when=eff('bolt', 'dark_hour', 'ward')),
-            Field('creature', 'Summons', 'choice', creatures, when=eff('summon'), hint='an ally (-100 and below)'),
+            Field('creature', 'Summons', 'choice', creatures, when=eff('summon', 'shadow_clones'),
+                  hint='an ally (-100 and below)'),
+            opt('clones_hero', 'Clones are % of the hero', "each clone's life, power and armour as this percent of "
+                "the hero's (empty: the creature's own)", when=eff('shadow_clones')),
             opt('fizzle', 'Fails', '% chance the spell fails'),
             opt('burns', 'Burns blood away', 'a fire spell clears the blood on the ground within this many '
                 'squares of where it lands (0: that square only; bones stay)'),

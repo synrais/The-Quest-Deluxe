@@ -126,8 +126,112 @@ def elements():
     print('elements: fire and poison burn over turns, ice freezes, drain heals, resists stops them: ok')
 
 
+def blood_regen():
+    def feeds(folder, json):
+        path = os.path.join(folder, 'creatures.json')
+        data = json.load(open(path))
+        for r in data['creatures']:
+            if r['id'] == 1:
+                r['regenerates_from_blood'] = True
+        json.dump(data, open(path, 'w'))
+    g = with_changes(feeds)
+    p, w, pk = g.player, g.world, g.pack
+    for e in list(w.enemies):
+        w.sq(e.x, e.y).mon = 0
+    w.enemies.clear()
+    ox, oy = w.origin
+    for x, y in w.room_tiles():
+        q = w.sq(x, y)
+        q.wall, q.deco, q.mon, q.item = 0, 0, 0, 0
+    p.X, p.Y = ox, oy
+    cx, cy = ox + 5, oy + 5
+    mon = g.spawn(1, cx, cy)
+    near, far = (cx + 2, cy - 2), (cx + 4, cy)
+    blood = pk.deco('blood')
+    w.sq(*near).deco = w.sq(*far).deco = blood
+    full = mon.mlife
+    g.combat.hurt(1000, mon, 3, by_hero=True)
+    assert w.enemy_at(cx, cy) is None and p.more['reviving']
+    g.combat.revive_step()
+    assert w.sq(*near).deco == 0 and w.sq(cx + 1, cy - 1).deco == blood        # the nearer pile came a square
+    w.sq(cx + 1, cy - 1).deco = 0                                              # ... and is burnt away
+    g.combat.revive_step()
+    assert w.sq(*far).deco == 0 or w.sq(cx + 3, cy).deco == blood              # the other one comes instead
+    for _ in range(6):
+        g.combat.revive_step()
+    again = w.enemy_at(cx, cy)
+    assert again is not None and again.life == again.mlife == full and 'reviving' not in p.more
+    assert w.sq(cx, cy).deco == 0
+    g.combat.hurt(1000, again, 3, by_hero=True)                                 # no blood left but its own
+    for _ in range(3):
+        g.combat.revive_step()
+    assert w.enemy_at(cx, cy) is None and 'reviving' not in p.more
+    print('a creature that feeds on blood: the nearest pile slides to its body, it rises at full life, '
+          'burnt blood starves it: ok')
+
+
+def foresight():
+    def potion(folder, json):
+        path = os.path.join(folder, 'quest.json')
+        q = json.load(open(path))
+        q['potions'] = {'9': {'name': 'Foresight', 'colour': 13, 'foresight': 3}}
+        json.dump(q, open(path, 'w'))
+        path = os.path.join(folder, 'creatures.json')
+        data = json.load(open(path))
+        for r in data['creatures']:
+            if r['id'] == 2:
+                r['invisible'] = True
+                r['reveals_as'] = 3
+        json.dump(data, open(path, 'w'))
+    from engine.state import add_potions
+    g = with_changes(potion)
+    p = g.player
+    add_potions(p, 9, 1)
+    assert not g.foresight() and g.true_form(2) == 2
+    assert g.drink_extra(9) and g.foresight() and g.true_form(2) == 3
+    for _ in range(3):
+        g.upkeep()
+        assert g.foresight()
+    g.upkeep()
+    assert not g.foresight()
+    print('foresight: invisible creatures are drawn as what they are, for its turns: ok')
+
+
+def clones():
+    def spell(folder, json):
+        path = os.path.join(folder, 'spells.json')
+        data = json.load(open(path))
+        data['spells'].append({'id': 21, 'name': 'Shadow Clones', 'req_int': 1, 'mana': 5, 'range': 0, 'power': 0,
+                               'duration': 4, 'effect': 'shadow_clones', 'creature': -100, 'clones_hero': 50})
+        json.dump(data, open(path, 'w'))
+    g = with_changes(spell)
+    p, w = g.player, g.world
+    for e in list(w.enemies):
+        w.sq(e.x, e.y).mon = 0
+    w.enemies.clear()
+    ox, oy = w.origin
+    p.X, p.Y = ox + 5, oy + 5
+    for x, y in w.room_tiles():
+        w.sq(x, y).wall = w.sq(x, y).mon = 0
+    w.sq(p.X + 1, p.Y).wall = 1                                   # a tree: no clone there
+    p.hero.mana, p.spells[21] = 50, 1
+    g.magic.cast_self(21)
+    allies = [e for e in w.enemies if e.type == -100]
+    assert len(allies) == 7 and all(max(abs(e.x - p.X), abs(e.y - p.Y)) == 1 for e in allies)
+    assert all(e.life == max(1, p.hero.mlife * 50 // 100) for e in allies)
+    for _ in range(4):
+        g.combat.tick_effects()
+    assert len(w.enemies) == 7
+    g.combat.tick_effects()
+    assert not w.enemies and not any(w.sq(x, y).mon for x, y in w.room_tiles())
+    print('shadow clones: an ally on each free square around the hero, as strong as asked, fading after their turns: ok')
+
+
 if __name__ == '__main__':
     fire()
     ice()
     elements()
+    blood_regen()
+    foresight()
+    clones()
     print('all extras checks passed')

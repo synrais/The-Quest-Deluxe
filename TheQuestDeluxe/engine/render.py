@@ -106,8 +106,8 @@ class Renderer:
 
     def draw_creature(self, surf, px, py, q):
         s = self.sprites
-        if q.mon and not self.pack.trait(q.mon, 'invisible'):
-            img = s.get('enemy', q.mon)
+        if q.mon and (not self.pack.trait(q.mon, 'invisible') or self.game.foresight()):
+            img = s.get('enemy', self.game.true_form(q.mon))
             if img:
                 surf.blit(img, (px, py))
             else:
@@ -337,6 +337,8 @@ class Renderer:
             kinds = {'floor': 'floor', 'wall': 'wall', 'deco': 'extra', 'item': 'object', 'mon': 'enemy'}
 
             def picture(kind, v):
+                if kind == 'mon':
+                    v = game.true_form(v)
                 return s.gold if kind == 'gold' else s.get(kinds[kind], v)
 
             def square(x, y):
@@ -345,7 +347,7 @@ class Renderer:
                 q = w.grid[x][y]
                 return q.floor, q.wall, q.item, q.mon, q.gold, q.deco
             items = {v: (r.get('type', ''), r.get('view3d')) for v, r in pack.items.items()}
-            scene = view3d.Scene(pack.tiles, items, picture, square, hidden=lambda m: pack.trait(m, 'invisible'))
+            scene = view3d.Scene(pack.tiles, items, picture, square, hidden=lambda m: pack.trait(m, 'invisible') and not game.foresight())
             meta, dflt = game.events.meta, pack.quest.get('view3d', {})
             scene.sky = meta(w.level, 'SKY_3D', dflt.get('sky', view3d.Scene.sky))
             scene.fog = meta(w.level, 'FOG_3D', dflt.get('fog', scene.sky))

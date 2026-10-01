@@ -134,6 +134,8 @@ class CreaturesTab(TableTab):
             pick('hides_as', 'Hides again as', 'when the hero leaves the screen'),
             Field('rests_after_moving', 'Rests after moving', 'bool', hint="doesn't attack in a turn it moved"),
             Field('animal', 'Animal', 'bool', hint="doesn't fight people; killing it earns no reputation"),
+            Field('regenerates_from_blood', 'Rises from blood', 'bool',
+                  hint='after it dies the nearest pile of blood on the screen slides to its body, and it rises again at full life'),
             Field('resists', 'Resists', 'multi', [(k, v) for k, v in ELEMENT_NAMES], hint='elements and spells it shrugs off'),
             Field('silences_witnesses', 'Silences witnesses', 'bool', hint='nobody reports a killing near it'),
         ]

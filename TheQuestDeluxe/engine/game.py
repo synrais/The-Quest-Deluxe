@@ -653,7 +653,7 @@ class Game:
         pot = self.pack.extra_potions().get(n)
         if not pot or potions(p, n) <= 0:
             return False
-        heals = pot.get('life') or pot.get('mana') or pot.get('berserk')
+        heals = pot.get('life') or pot.get('mana') or pot.get('berserk') or pot.get('foresight')
         if pot.get('cure_poison') and not heals and not h.poisoned:
             return False                                  # like Cure Poison: only when poisoned
         add_potions(p, n, -1)
@@ -671,6 +671,9 @@ class Game:
             self.play('ampoisoned2', 0)
         if pot.get('berserk'):
             self.status.powboost = self.status.armboost = int(pot['berserk'])
+        if pot.get('foresight'):
+            p.more['foresight'] = int(pot['foresight']) + 1       # this turn's upkeep takes one
+            self.report('Your eyes open: nothing hides from you.', 13)
         h.life, h.mana = min(h.life, h.mlife), min(h.mana, h.mmana)
         rules.status_update(p, self.status, self.items)
         self.report(f'You drink the {pot.get("name", f"potion {n}").lower()}.', 10)
@@ -805,6 +808,7 @@ class Game:
         self.combat.enemy_attacks()
         monsmove(self)
         self.combat.tick_effects()
+        self.combat.revive_step()
         self.combat.check_dead()
         # dying and death
         if h.life < 1:
@@ -833,6 +837,17 @@ class Game:
             self.overlay = ui.TitleScreen()
         self.load_game(on_no=no)
 
+    def foresight(self) -> bool:
+        """Is the hero under a potion of foresight (quest.json's "foresight" turns)? Invisible creatures show
+        for what they really are: drawn as the creature they turn into (`reveals_as`), and a target."""
+        return self.player.more.get('foresight', 0) > 0
+
+    def true_form(self, t: int) -> int:
+        """The creature number to draw for t: its true form (reveals_as) while the hero has foresight."""
+        if t and self.foresight() and self.pack.trait(t, 'invisible'):
+            return self.pack.trait(t, 'reveals_as') or t
+        return t
+
     def thaw(self):
         """Ice made by a spell melts back to water when its turns are up (not under a creature or the hero:
         it waits until the square is free)."""
@@ -859,6 +874,11 @@ class Game:
         """Top of the main2() loop after a turn: faults, poison, spell timers, boosts."""
         p, h, st, sk = self.player, self.player.hero, self.status, self.player.skill
         self.thaw()
+        if p.more.get('foresight'):
+            p.more['foresight'] -= 1
+            if p.more['foresight'] <= 0:
+                p.more.pop('foresight')
+                self.report('Your foresight fades.', 7)
         if sk.ras > 1:
             sk.ras -= 1
         if h.poisoned == 1 and h.life > 0:
