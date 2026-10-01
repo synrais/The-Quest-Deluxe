@@ -149,6 +149,33 @@ ct._set(size, None)
 assert 'size' not in ct.row
 print('creatures: pickers for what it turns into, and its size: ok')
 
+# painting: Alt picks only with Alt held (Num Lock sets bit 0x8 on Windows), and a picture can start from another
+from editor.painter import Painter
+class Click:
+    x, y, state = 5 * 12 + 2, 5 * 12 + 2, 0x0008          # a click with Num Lock on
+cl = app.classes_tab
+app.tabs.select(cl)
+pump()
+cl.select(1)
+pd = cl.paint('heroes', False, 'Painted hero')
+pump()
+assert pd.templates and any('Mage' in name for name, _ in pd.templates)
+assert any(c != -1 for col in pd.cells for c in col), 'it opens on the drawn hero'
+pd.left = 9
+pd._press(Click, 'left')
+assert pd.left == 9 and pd.cells[5][5] == 9, 'a plain click paints, whatever the Num Lock'
+pd._release(Click, 'left')
+pd._press(Click, 'left', alt=True)
+assert pd.left == 9 and pd.cells[5][5] == 9                  # Alt picked the colour that is there
+pd.template.set(next(name for name, _ in pd.templates if 'Mage' in name))
+pd.use_template()
+assert pd.undo_stack and any(c != -1 for col in pd.cells for c in col)
+pd.save()
+assert app.project.picture('heroes', 1) is not None
+pd.dirty = False
+pd.destroy()
+print('painting: a click paints, Alt picks, a picture starts from another, a hero can be painted: ok')
+
 # the Classes tab: a new class with a starting kit
 cl = app.classes_tab
 app.tabs.select(cl)

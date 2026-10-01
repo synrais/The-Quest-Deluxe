@@ -53,9 +53,11 @@ def to_surface(cells) -> pygame.Surface:
 
 
 class Painter(tk.Toplevel):
-    def __init__(self, master, title: str, surface, on_save, opaque: bool = False):
-        """opaque: every pixel has a colour (floors, bag cells); otherwise transparent is a colour too."""
+    def __init__(self, master, title: str, surface, on_save, opaque: bool = False, templates=None):
+        """opaque: every pixel has a colour (floors, bag cells); otherwise transparent is a colour too.
+        templates: [(name, function returning a picture)] the painter can start from."""
         super().__init__(master)
+        self.templates = list(templates or [])
         self.title(title)
         self.on_save, self.opaque = on_save, opaque
         self.cells = to_cells(surface, opaque)
@@ -106,6 +108,13 @@ class Painter(tk.Toplevel):
                                          ('Flip ↔', lambda: self.flip(True)), ('Flip ↕', lambda: self.flip(False)))):
             ttk.Button(moves, text=label, width=7, command=fn).grid(row=i // 2, column=i % 2, padx=1, pady=1)
         ttk.Button(left, text='Clear', command=self.clear).pack(fill='x')
+        if self.templates:
+            box = ttk.LabelFrame(left, text='Start from another picture', padding=4)
+            box.pack(fill='x', pady=6)
+            self.template = tk.StringVar()
+            ttk.Combobox(box, textvariable=self.template, state='readonly', width=22,
+                         values=[name for name, _ in self.templates]).pack(fill='x')
+            ttk.Button(box, text='Use it (Undo goes back)', command=self.use_template).pack(fill='x', pady=2)
         ttk.Button(left, text='Save', command=self.save).pack(fill='x', pady=(12, 2))
         ttk.Button(left, text='Close', command=self.close).pack(fill='x')
 
@@ -120,6 +129,9 @@ class Painter(tk.Toplevel):
             self.canvas.create_line(0, k * ZOOM, N * ZOOM, k * ZOOM, fill='#555')
         for b, which in (('1', 'left'), ('3', 'right')):
             self.canvas.bind(f'<ButtonPress-{b}>', lambda e, w=which: self._press(e, w))
+            # Alt+click picks a colour. Asked of the event's modifier bits this was wrong on Windows, where
+            # bit 0x8 is Num Lock: with it on, every click was a pick and nothing could be painted.
+            self.canvas.bind(f'<Alt-ButtonPress-{b}>', lambda e, w=which: self._press(e, w, alt=True))
             self.canvas.bind(f'<B{b}-Motion>', lambda e, w=which: self._drag(e, w))
             self.canvas.bind(f'<ButtonRelease-{b}>', lambda e, w=which: self._release(e, w))
         self.status = ttk.Label(mid, text='')
@@ -200,12 +212,12 @@ class Painter(tk.Toplevel):
             self.cells[x][y] = c
             self._paint_rect(x, y)
 
-    def _press(self, e, which):
+    def _press(self, e, which, alt=False):
         p = self._cell(e)
         if p is None:
             return
         colour = getattr(self, which)
-        tool = 'pick' if e.state & 0x0008 else self.tool.get()     # Alt: pick
+        tool = 'pick' if alt else self.tool.get()
         if tool == 'pick':
             setattr(self, which, self.cells[p[0]][p[1]])
             self.redraw_swatches()
@@ -265,6 +277,18 @@ class Painter(tk.Toplevel):
     def flip(self, horizontal):
         self._remember()
         self.cells = self.cells[::-1] if horizontal else [col[::-1] for col in self.cells]
+        self._commit()
+        self.redraw()
+
+    def use_template(self):
+        """Replace what is painted with another picture, to change it into this one."""
+        name = self.template.get()
+        make = next((m for n, m in self.templates if n == name), None)
+        picture = make() if make else None
+        if picture is None:
+            return
+        self._remember()
+        self.cells = to_cells(picture, self.opaque)
         self._commit()
         self.redraw()
 

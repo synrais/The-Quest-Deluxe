@@ -333,8 +333,20 @@ class TableTab(ttk.Frame):
             if self.row is not row:                  # another entry is showing: store it all the same
                 self.select(row['id'])
             self.set_picture(folder, surface, is_bag)
-        return Painter(self, f'{label}: {self.label(row)}', self.app.project.picture(folder, row['id']), keep,
-                       opaque=opaque)
+        return Painter(self, f'{label}: {self.label(row)}', self.start_picture(folder, row), keep,
+                       opaque=opaque, templates=self.templates(folder, row))
+
+    def start_picture(self, folder, row):
+        """What the painter opens with: the entry's picture, if it has one."""
+        return self.app.project.picture(folder, row['id'])
+
+    def templates(self, folder, row):
+        """Every other entry with a picture in this folder: a new picture can start as a copy of one."""
+        p, out = self.app.project, []
+        for r in sorted(self.rows, key=lambda r: r['id']):
+            if r is not row and p.picture(folder, r['id']) is not None:
+                out.append((self.label(r), lambda r=r: p.picture(folder, r['id'])))
+        return out
 
     def import_picture(self, folder, is_bag):
         path = filedialog.askopenfilename(title='A picture (40 x 40 is best)',

@@ -55,11 +55,30 @@ def one_as_name(f: Field) -> Field:
     return f
 
 
+def drawn_hero(row) -> pygame.Surface:
+    """The hero as the original's guy2() draws him for this class, on a transparent background."""
+    from engine.anim import draw_guy2
+    from engine.bgi import BGI
+    key = (255, 0, 255)
+    s = pygame.Surface((40, 40))
+    s.fill(key)
+    draw_guy2(BGI(s), 1, 1, row['id'], -1, 0, 0, 0, 0, 0, look=row.get('look') or {})
+    out = pygame.Surface((40, 40), pygame.SRCALPHA)
+    for x in range(40):
+        for y in range(40):
+            c = s.get_at((x, y))
+            if tuple(c)[:3] != key:
+                out.set_at((x, y), (*tuple(c)[:3], 255))
+    return out
+
+
 class ClassesTab(TableTab):
     TABLE = 'classes'
+    PICTURES = [('Painted hero', 'heroes', False)]
     INTRO = ('The classes a new hero can choose. Character creation lists them in this order, then the '
              "questionnaire (which picks between Quest I's four). The hero is drawn by the original's guy2() "
-             'in the class colour; the Knight also carries a shield and sword.')
+             'in the class colour; the Knight also carries a shield and sword. Or paint the hero: a painted picture '
+             'takes the place of the drawn one (Paint starts from the drawn hero, or from another class).')
 
     def fields(self):
         p = self.app.project
@@ -97,8 +116,21 @@ class ClassesTab(TableTab):
         from engine.bgi import BGI
         s = pygame.Surface((40, 40))
         s.fill((0, 168, 0))                                  # on grass, as in the game
-        draw_guy2(BGI(s), 1, 1, row['id'], -1, 0, 0, 0, 0, 0, look=row.get('look') or {})
+        painted = self.app.project.picture('heroes', row['id'])
+        if painted is not None:
+            s.blit(painted, (0, 0))
+        else:
+            draw_guy2(BGI(s), 1, 1, row['id'], -1, 0, 0, 0, 0, 0, look=row.get('look') or {})
         return s
+
+    def start_picture(self, folder, row):
+        return super().start_picture(folder, row) or drawn_hero(row)
+
+    def templates(self, folder, row):
+        """The drawn heroes of the classes, and the painted ones."""
+        out = [(f'{r["id"]} {r.get("name", "")} (drawn)', lambda r=r: drawn_hero(r))
+               for r in sorted(self.rows, key=lambda r: r['id'])]
+        return out + super().templates(folder, row)
 
     def new_row(self):
         v = self.app.project.next_id('classes', 5)
@@ -107,3 +139,7 @@ class ClassesTab(TableTab):
 
     def uses(self, row):
         return []
+
+    def set_picture(self, folder, surface, is_bag=False):
+        super().set_picture(folder, surface, is_bag)
+        self.app.map_tab.art.forget('mon', self.row['id'])

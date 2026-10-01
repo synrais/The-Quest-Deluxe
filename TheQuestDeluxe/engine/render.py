@@ -141,6 +141,13 @@ class Renderer:
     def draw_hero(self, scr, game, hx, hy):
         """guy2(), ported call for call (engine.anim.draw_guy2), at pixel position (hx, hy)."""
         p, st = game.player, game.status
+        painted = self.sprites.hero.get(str(p.hero.type))        # sprites/heroes/<class>.png: a painted hero
+        if painted is not None:
+            if p.hero.invisible > 0:
+                painted = painted.copy()
+                painted.set_alpha(70)                            # invisible: a ghost of him
+            scr.blit(painted, (hx, hy))
+            return
         self.bgi.s = scr
         anim.draw_guy2(self.bgi, hx // TILE + 1, hy // TILE + 1, p.hero.type, p.hero.invisible, p.hero.poisoned,
                        st.killer, st.powboost, st.Shield, st.fShield,

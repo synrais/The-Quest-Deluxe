@@ -125,6 +125,8 @@ Traits (all optional):
 
 Pictures: `sprites/creatures/<id>.png`.
 
+A hero class can be painted: `sprites/heroes/<class id>.png` (40 x 40, see-through where the floor shows) takes the place of the drawn hero (the original's guy2(), in the class colour). The editor's Classes tab paints it, starting from the drawn hero or from another class.
+
 ## spells.json
 
 | Field | Meaning |

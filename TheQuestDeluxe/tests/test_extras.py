@@ -378,6 +378,23 @@ def moved_walls():
     print('an item moves a wall: the boulder gives way to the crowbar, which is used up: ok')
 
 
+def painted_hero():
+    def paint(folder, json):
+        os.makedirs(os.path.join(folder, 'sprites', 'heroes'), exist_ok=True)
+        img = pygame.Surface((40, 40), pygame.SRCALPHA)
+        img.fill((0, 0, 0, 0))
+        pygame.draw.rect(img, (255, 0, 255, 255), (10, 10, 20, 20))
+        pygame.image.save(img, os.path.join(folder, 'sprites', 'heroes', '2.png'))
+    g = with_changes(paint)                                       # quick_start(2, 1): a Mage
+    p = g.player
+    g.renderer.draw(g, present=False)
+    ox, oy = g.world.origin
+    px, py = (p.X - ox) * 40, (p.Y - oy) * 40
+    assert tuple(g.renderer.screen.get_at((px + 20, py + 20)))[:3] == (255, 0, 255)      # his painted picture
+    assert tuple(g.renderer.screen.get_at((px + 2, py + 2)))[:3] != (255, 0, 255)
+    print('a painted hero (sprites/heroes/<class>.png) takes the place of the drawn one: ok')
+
+
 if __name__ == '__main__':
     fire()
     ice()
@@ -387,5 +404,6 @@ if __name__ == '__main__':
     clones()
     links()
     moved_walls()
+    painted_hero()
     big_creature(sys.argv[1] if len(sys.argv) > 1 else None)
     print('all extras checks passed')
