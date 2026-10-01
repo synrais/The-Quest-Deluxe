@@ -544,6 +544,115 @@ def resurrection():
     print('resurrection: a dead creature and a dead person rise at full life, fight beside the hero, rest when he leaves: ok')
 
 
+def sizes_and_worn():
+    def setup(folder, json):
+        path = os.path.join(folder, 'quest.json')
+        q = json.load(open(path))
+        q['potions'] = {'9': {'name': 'Shrinking', 'colour': 11, 'shrink': 5},
+                        '10': {'name': 'Gigantism', 'colour': 12, 'grow': 5}}
+        json.dump(q, open(path, 'w'))
+        path = os.path.join(folder, 'tiles.json')
+        tiles = json.load(open(path))
+        tiles['walls'].append({'id': 43, 'name': 'Barricade', 'solid': True, 'giant_breaks': True,
+                               'message': 'Crash!'})
+        json.dump(tiles, open(path, 'w'))
+        shutil.copy(os.path.join(folder, 'sprites', 'walls', '1.png'), os.path.join(folder, 'sprites', 'walls', '43.png'))
+        path = os.path.join(folder, 'items.json')
+        data = json.load(open(path))
+        data['items'] += [
+            {'id': 2001, 'name': 'Big Mushroom', 'type': 'treasure', 'pickup': {'grow': 6, 'message': 'Mmm.'}},
+            {'id': 2002, 'name': 'Small Mushroom', 'type': 'treasure', 'pickup': {'shrink': 6}},
+            {'id': 2003, 'name': 'Bad Mushroom', 'type': 'treasure', 'pickup': {'poison': True, 'life': -2}},
+            {'id': 2010, 'name': 'Ring of Mending', 'type': 'amulet', 'regen': 2, 'mana_regen': 1, 'sight': 3,
+             'thorns': 4, 'lifesteal': 50, 'see_invisible': True, 'water_walk': True, 'poison_immune': True},
+            {'id': 2011, 'name': 'Ring of Shrinking', 'type': 'amulet', 'makes_small': True},
+            {'id': 2012, 'name': 'Belt of Giants', 'type': 'amulet', 'makes_giant': True}]
+        json.dump(data, open(path, 'w'))
+    from engine.state import add_potions, SLOT_AMULET, Enemy
+    g = with_changes(setup)
+    p, w, h = g.player, g.world, g.player.hero
+    for e in list(w.enemies):
+        w.sq(e.x, e.y).mon = 0
+    w.enemies.clear()
+    assert g.size_state() == 'normal' and g.renderer.EYES['small'] < 0.5 < g.renderer.EYES['giant']
+    # the eye: lower when small, higher when a giant; the frame differs
+    g.view3d = True
+    g.renderer.draw(g, present=False)
+    normal = pygame.image.tostring(g.renderer.screen.subsurface((0, 0, 400, 400)), 'RGB')
+    add_potions(p, 9, 1)
+    add_potions(p, 10, 1)
+    assert g.drink_extra(9) and g.size_state() == 'small'
+    for _ in range(40):
+        g.renderer.draw(g, present=False)                        # the eye eases down over a few frames
+    assert abs(g.renderer._eye_now - g.renderer.EYES['small']) < 0.02
+    small = pygame.image.tostring(g.renderer.screen.subsurface((0, 0, 400, 400)), 'RGB')
+    assert small != normal
+    assert g.drink_extra(10) and g.size_state() == 'normal' and not p.more.get('shrunk')     # they cancel
+    add_potions(p, 10, 1)
+    assert g.drink_extra(10) and g.grown() and g.size_state() == 'giant'
+    for _ in range(40):
+        g.renderer.draw(g, present=False)
+    giant = pygame.image.tostring(g.renderer.screen.subsurface((0, 0, 400, 400)), 'RGB')
+    assert giant != normal and giant != small
+    # a giant smashes the barricade; a normal hero cannot, and a giant hits half as hard again
+    w.sq(p.X + 1, p.Y).wall = 43
+    x0 = p.X
+    assert g.try_move(1, 0) and w.sq(x0 + 1, p.Y).wall == 0 and p.X == x0
+    g.view3d = False
+    g.renderer.draw(g, present=False)                            # a giant is drawn big
+    p.more.pop('grown')
+    w.sq(p.X + 1, p.Y).wall = 43
+    assert not g.try_move(1, 0) and w.sq(p.X + 1, p.Y).wall == 43
+    w.sq(p.X + 1, p.Y).wall = 0
+    # mushrooms: picked up with Enter, used on the spot
+    q = w.sq(p.X, p.Y)
+    q.item = 2001
+    assert g.pick_up() and q.item == 0 and g.grown() and not any(v == 2001 for v in p.bag.values())
+    p.more.pop('grown')
+    q.item = 2002
+    g.pick_up()
+    assert g.shrunk()
+    p.more.pop('shrunk')
+    h.life = h.mlife
+    q.item = 2003
+    g.pick_up()
+    assert h.poisoned == 1 and h.life == h.mlife - 2
+    h.poisoned = 0
+    # what he wears
+    p.bag[SLOT_AMULET] = 2010
+    rules_ok = g.worn_sum('regen') == 2 and g.sight_bonus() == 3 and g.foresight()
+    assert rules_ok
+    h.life = h.mlife - 10
+    h.mana = max(0, h.mmana - 5)
+    life, mana = h.life, h.mana
+    g.upkeep()
+    assert h.life == life + 2 and h.mana == mana + 1
+    g.combat.poison_hero()
+    assert not h.poisoned                                          # immune
+    foe = g.spawn(1, p.X + 1, p.Y)
+    foe.att, foe.life, foe.mlife, foe.atk, foe.power = 9, 50, 50, 1000, 5
+    before = foe.life
+    g.combat.enemy_melee(foe, 'foe')
+    assert foe.life < before                                       # thorns hurt it
+    w.sq(p.X + 1, p.Y).mon = 0
+    w.enemies.clear()
+    wallet = w.sq(p.X + 1, p.Y)
+    wallet.wall = 2                                                # water
+    g.pack.walls[2]['water'] = True
+    assert g.try_move(1, 0)                                        # walked on with the ring
+    p.X -= 1
+    p.bag[SLOT_AMULET] = 0
+    assert not g.try_move(1, 0)                                    # and not without
+    p.bag[SLOT_AMULET] = 2010
+    p.bag[SLOT_AMULET] = 2011
+    assert g.shrunk()
+    p.bag[SLOT_AMULET] = 2012
+    assert g.grown()
+    p.bag[SLOT_AMULET] = 0
+    assert g.size_state() == 'normal' and g.sight_bonus() == 0
+    print('sizes and worn items: eye height, gigantism, mushrooms, regen, thorns, sight, immunities: ok')
+
+
 if __name__ == '__main__':
     fire()
     ice()
@@ -553,6 +662,7 @@ if __name__ == '__main__':
     clones()
     resurrection()
     shrinking()
+    sizes_and_worn()
     disguise()
     event_code_text()
     links()

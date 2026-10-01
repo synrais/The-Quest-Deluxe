@@ -174,6 +174,17 @@ pd.save()
 assert app.project.picture('heroes', 1) is not None
 pd.dirty = False
 pd.destroy()
+# the four default heroes: Marksmanship is not offered to any but the Rogue (it comes free with that class)
+cl.select(1)
+assert cl.row['no_skill'] in ('mar', ['mar']) or 'mar' in cl.row['no_skill'], cl.row.get('no_skill')   # Knight
+cl.select(2)
+assert 'mar' in (cl.row['no_skill'] if isinstance(cl.row['no_skill'], list) else [cl.row['no_skill']])  # Mage
+cl.select(3)
+rogue = cl.row.get('no_skill') or []
+assert 'mar' not in (rogue if isinstance(rogue, list) else [rogue])                                   # Rogue has it free
+cl.select(4)
+assert 'mar' in (cl.row['no_skill'] if isinstance(cl.row['no_skill'], list) else [cl.row['no_skill']])  # Monk
+print('classes: Marksmanship shows as not offered to all but the Rogue: ok')
 print('painting: a click paints, Alt picks, a picture starts from another, a hero can be painted: ok')
 
 # the Classes tab: a new class with a starting kit
@@ -348,9 +359,9 @@ ct._toggle(f, 'ras', False)
 assert ct.row['no_fault'] == 'cow'
 f = next(f for f in ct.fields() if f.key == 'no_skill')
 ct._toggle(f, 'bar', True)
-assert ct.row['no_skill'] == 'bar'
+assert ct.row['no_skill'] == ['bar', 'mar'], ct.row['no_skill']        # Marksmanship is never offered to a Knight
 ct._toggle(f, 'bar', False)
-assert 'no_skill' not in ct.row
+assert ct.row['no_skill'] == 'mar'
 print("classes: skills and faults hidden from a class: ok")
 
 assert app.dirty

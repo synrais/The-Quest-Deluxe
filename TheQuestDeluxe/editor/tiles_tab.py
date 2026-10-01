@@ -98,6 +98,8 @@ class TilesTab(TableTab):
                     Field('key', 'Key', 'choice', key_choices(self.app.project.quest), when=lambda r: r.get('door') == 'locked',
                           hint='the key colour that opens it')]
         if self.kind == 'walls':
+            out.append(Field('water', 'Is water', 'bool', when=lambda r: r.get('solid'),
+                             hint='an item that lets him walk on water crosses it (walls that freeze count as water too)'))
             walls = [(None, '(does not freeze)')] + [(w['id'], f'{w["id"]} {w.get("name", "")}')
                                                     for w in sorted(self.app.project.tiles.get('walls', []),
                                                                     key=lambda w: w['id'])]
@@ -111,11 +113,14 @@ class TilesTab(TableTab):
                                                                          key=lambda w: w['id'])]
             out += [Field('small_only', 'Only a shrunk hero passes', 'bool', when=lambda r: r.get('solid'),
                           hint='a crack or a mouse hole: solid for everyone except a hero under a shrinking potion'),
+                    Field('giant_breaks', 'A giant smashes it', 'bool', when=lambda r: r.get('solid'),
+                          hint='solid for everyone but a hero under a potion of gigantism, who smashes it down'),
                     Field('needs_item', 'Moved by the item', 'choice', items,
                           hint='walked into with this item in the bag, the wall gives way (a boulder, rubble, a hedge)'),
-                    Field('becomes', 'Then it becomes', 'choice', walls, when=lambda r: r.get('needs_item'), default=0),
+                    Field('becomes', 'Then it becomes', 'choice', walls,
+                          when=lambda r: r.get('needs_item') or r.get('giant_breaks'), default=0),
                     Field('consumes', 'Uses the item up', 'bool', when=lambda r: r.get('needs_item')),
-                    Field('message', 'Message', 'str', when=lambda r: r.get('needs_item'),
+                    Field('message', 'Message', 'str', when=lambda r: r.get('needs_item') or r.get('giant_breaks'),
                           hint='in the combat log when it gives way (empty: "You use the <item>.")'),
                     Field('blocked_message', 'Without the item', 'str', when=lambda r: r.get('needs_item'),
                           hint='in the combat log when you walk into it without the item')]

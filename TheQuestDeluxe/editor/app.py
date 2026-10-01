@@ -66,11 +66,11 @@ class QuestTab(ttk.Frame):
         box = ttk.LabelFrame(body, text='Potions 9 and 10 (keys 9 and 0; 1-8 are the original\'s)', padding=6)
         box.grid(row=n + 3, column=0, columnspan=2, sticky='w', pady=8)
         self.pots = {}
-        for c, label in enumerate(('', 'Name', 'Colour (0-15)', 'Life', 'Mana', 'Cures poison', 'Berserk turns', 'Foresight turns', 'Shrink turns')):
+        for c, label in enumerate(('', 'Name', 'Colour (0-15)', 'Life', 'Mana', 'Cures poison', 'Berserk turns', 'Foresight turns', 'Shrink turns', 'Grow turns')):
             ttk.Label(box, text=label).grid(row=0, column=c, sticky='w', padx=3)
         for r, k in enumerate(('9', '10'), start=1):
             ttk.Label(box, text=f'Potion {k}').grid(row=r, column=0, sticky='w')
-            v = {f: tk.StringVar() for f in ('name', 'colour', 'life', 'mana', 'berserk', 'foresight', 'shrink')}
+            v = {f: tk.StringVar() for f in ('name', 'colour', 'life', 'mana', 'berserk', 'foresight', 'shrink', 'grow')}
             v['cure_poison'] = tk.BooleanVar()
             for c, f, w in ((1, 'name', 22), (2, 'colour', 5), (3, 'life', 7), (4, 'mana', 7)):
                 ttk.Entry(box, textvariable=v[f], width=w).grid(row=r, column=c, sticky='w', padx=3)
@@ -78,9 +78,10 @@ class QuestTab(ttk.Frame):
             ttk.Entry(box, textvariable=v['berserk'], width=5).grid(row=r, column=6, sticky='w', padx=3)
             ttk.Entry(box, textvariable=v['foresight'], width=5).grid(row=r, column=7, sticky='w', padx=3)
             ttk.Entry(box, textvariable=v['shrink'], width=5).grid(row=r, column=8, sticky='w', padx=3)
+            ttk.Entry(box, textvariable=v['grow'], width=5).grid(row=r, column=9, sticky='w', padx=3)
             self.pots[k] = v
         ttk.Label(box, text='Life and mana: half, full or a number. An empty name: no such potion.',
-                  foreground='#555').grid(row=3, column=0, columnspan=9, sticky='w', pady=(4, 0))
+                  foreground='#555').grid(row=3, column=0, columnspan=10, sticky='w', pady=(4, 0))
         # key colours past the original's yellow, red and blue
         ttk.Label(body, text='More key colours').grid(row=n + 4, column=0, sticky='w')
         self.keys = tk.StringVar()
@@ -111,7 +112,7 @@ class QuestTab(ttk.Frame):
         self.potions.set(', '.join(f'{k}: {v}' for k, v in q.get('start_potions', {}).items()))
         for k, v in self.pots.items():
             pot = (q.get('potions') or {}).get(k, {})
-            for f in ('name', 'colour', 'life', 'mana', 'berserk', 'foresight', 'shrink'):
+            for f in ('name', 'colour', 'life', 'mana', 'berserk', 'foresight', 'shrink', 'grow'):
                 v[f].set('' if pot.get(f) is None else str(pot.get(f)))
             v['cure_poison'].set(bool(pot.get('cure_poison')))
         fixes = q.get('fixes')
@@ -154,6 +155,8 @@ class QuestTab(ttk.Frame):
                     pot['foresight'] = int(v['foresight'].get())
                 if v['shrink'].get().strip():
                     pot['shrink'] = int(v['shrink'].get())
+                if v['grow'].get().strip():
+                    pot['grow'] = int(v['grow'].get())
                 extra[k] = pot
             if extra:
                 q['potions'] = extra

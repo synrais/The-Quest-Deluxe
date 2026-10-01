@@ -140,7 +140,8 @@ class Renderer:
 
     def draw_hero(self, scr, game, hx, hy):
         """The hero at pixel position (hx, hy); half size, standing on the square's floor, while he is shrunk."""
-        if not game.shrunk():
+        size = game.size_state()
+        if size == 'normal':
             self._hero_pixels(scr, game, hx, hy)
             return
         area = (hx, hy, TILE, TILE)
@@ -154,7 +155,11 @@ class Renderer:
         layer = pygame.Surface((TILE, TILE), pygame.SRCALPHA)
         changed.to_surface(layer, setsurface=colours, unsetcolor=(0, 0, 0, 0))
         scr.blit(before, (hx, hy))
-        scr.blit(pygame.transform.scale(layer, (TILE // 2, TILE // 2)), (hx + TILE // 4, hy + TILE // 2))
+        if size == 'small':
+            scr.blit(pygame.transform.scale(layer, (TILE // 2, TILE // 2)), (hx + TILE // 4, hy + TILE // 2))
+        else:                                                    # a giant: half as big again, his feet on his square
+            big = pygame.transform.scale(layer, (TILE * 3 // 2, TILE * 3 // 2))
+            scr.blit(big, (hx - TILE // 4, hy - TILE // 2))
 
     def _hero_pixels(self, scr, game, hx, hy):
         """guy2(), ported call for call (engine.anim.draw_guy2), at pixel position (hx, hy)."""
@@ -435,6 +440,20 @@ class Renderer:
         da = (a1 - a0 + math.pi) % (2 * math.pi) - math.pi
         return x0 + (x1 - x0) * t, y0 + (y1 - y0) * t, a0 + da * t
 
+    EYES = {'small': 0.2, 'normal': 0.5, 'giant': 0.82}
+
+    def eye_height(self, game) -> float:
+        """The eye's height in FPS mode: low for a shrunk hero (the world towers over him), high for a giant. It eases
+        to the new height over a few frames."""
+        goal = self.EYES[game.size_state()]
+        now = getattr(self, '_eye_now', goal)
+        if game.fast or abs(goal - now) < 0.01:
+            now = goal
+        else:
+            now += (goal - now) * 0.25
+        self._eye_now = now
+        return now
+
     def gliding(self, game) -> bool:
         """Is the eye still on its way to where the hero now is?"""
         return self.camera(game) != self._cam['goal']
@@ -442,7 +461,13 @@ class Renderer:
     def draw_3d(self, game, scr, snap=False):
         if not hasattr(self, 'v3d'):
             self.v3d = view3d.View3D()
-        frame = self.v3d.render(self.scene3d(game), self.camera(game, snap))
+        scene = self.scene3d(game)
+        base = getattr(scene, 'base_range', None)
+        if base is None:
+            base = scene.base_range = scene.range
+        scene.range = base + game.sight_bonus()                    # a worn item that sees further
+        self.v3d.eye = self.eye_height(game)
+        frame = self.v3d.render(scene, self.camera(game, snap))
         k = MAP_PX // view3d.RES
         scr.blit(pygame.transform.scale(frame, (MAP_PX, MAP_PX)), (0, 0))
         t = game.target

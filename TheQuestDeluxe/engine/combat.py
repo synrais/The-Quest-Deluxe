@@ -361,6 +361,8 @@ class Combat:
             rules.status_update(p, self.g.status, items)
             g.start_swing()                           # FPS mode: the weapon in view swings (Deluxe)
             dmg = rules.hero_hit(p, e, items)
+            if dmg > 0 and g.grown():
+                dmg = dmg * 3 // 2                                # a giant hits half as hard again
             kind = items.tell(p.item(SLOT_WEAPON), IT_KIND)
             if dmg > 0 and kind == 3:
                 g.tones((450, 20))                    # herohit(): a magic weapon rings
@@ -372,6 +374,9 @@ class Combat:
                 g.play_at('ahit', e.x, e.y, where, 1, in_view=False)     # FPS mode: the weapon shows it
                 e.life -= dmg
                 g.report(f'You hit the {name} for {dmg}.', 14, (e.x, e.y), dmg)
+                steal = g.worn_sum('lifesteal')
+                if steal:
+                    p.hero.life = min(p.hero.mlife, p.hero.life + max(1, dmg * steal // 100))
                 self.apply_element(g.pack.item(p.item(SLOT_WEAPON)), e, dmg)
                 q = self.w.sq(e.x, e.y)
                 if q.deco == 0 and e.life > 0 and bleeds(self.g.pack, e):
@@ -494,6 +499,9 @@ class Combat:
         return 3 if e.x < p.X else 1 if e.x > p.X else 2 if e.y > p.Y else 4
 
     def poison_hero(self):
+        if self.g.worn_any('poison_immune'):
+            self.g.report('Your armour keeps the poison out.', 11)
+            return
         self.g.report('You are poisoned!', 10)
         self.p.hero.poisoned = 1
         self.g.play('ampoisoned2', 1)
@@ -519,6 +527,9 @@ class Combat:
             h.life -= dmg
             g.report(f'The {name} hits you for {dmg}.', 12, (p.X, p.Y), dmg)
             g.play_at('ahit', p.X, p.Y, self.side_seen(e), 2)
+            thorns = g.worn_sum('thorns')
+            if thorns and e.life > 0:
+                self.hurt(thorns, e, 3, by_hero=True, how='thorns')   # what he wears hurts whoever strikes him
             self.bleed_hero()
             n = g.pack.trait(e.type, 'poison_melee')
             if n and random(n) == 1 and not h.poisoned:

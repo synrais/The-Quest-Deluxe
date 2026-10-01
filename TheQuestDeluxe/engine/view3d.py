@@ -95,6 +95,8 @@ class View3D:
         self._fog: dict = {}
         self._ground_key = None
         self.sprite_rects: dict = {}              # (x, y) of each creature drawn -> its rect in the view
+        self.eye = 0.5                            # the eye's height as a part of a wall's: 0.5 is the middle;
+                                                  # lower (a shrunk hero) makes everything tower, higher shrinks it
 
     # ── helpers ─────────────────────────────────────────────────────────────
     def fog_pattern(self, colour: int, level: int) -> pygame.Surface:
@@ -138,7 +140,7 @@ class View3D:
         cx, cy, a = cam
         f = self.frame
         ground, roof = self.ground(scene, cx, cy)
-        key = (cam, self._ground_key, id(scene))
+        key = (cam, self._ground_key, id(scene), self.eye)
         if key == getattr(self, '_frame_key', None):
             return f                                      # nothing moved: the last frame stands
         self._frame_key = key
@@ -235,7 +237,7 @@ class View3D:
             return None
         side = inv * (dy * sx - dx * sy)
         s = SCALE / depth
-        return RES / 2 * (1 + side / (depth * PLANE)), RES / 2 + 0.5 * s, s
+        return RES / 2 * (1 + side / (depth * PLANE)), RES / 2 + self.eye * s, s
 
     def cast_ground(self, scene, f, img, cx, cy, a, below):
         g, R = img
@@ -253,7 +255,7 @@ class View3D:
         fog_c = scene.fog
         for y in rows:
             p = (y - horizon + 0.5) if below else (horizon - y - 0.5)
-            d = 0.5 * SCALE / p
+            d = (self.eye if below else 1 - self.eye) * SCALE / p       # how far the ground (or the roof) is there
             if d > scene.range:
                 if not below:
                     continue
@@ -318,7 +320,7 @@ class View3D:
                 wx = cx + d * rx
             wx -= math.floor(wx)
             h = SCALE / d
-            top = horizon - h / 2
+            top = horizon - h * (1 - self.eye)
             if tex is None:
                 pygame.draw.line(f, EGA[8 if side else 7], (x, max(0, top)), (x, min(RES - 1, top + h)))
             else:
@@ -389,7 +391,7 @@ class View3D:
             if w < 1:
                 continue
             mid = RES / 2 * (1 + side / (depth * PLANE))
-            bottom = horizon + 0.5 * s
+            bottom = horizon + self.eye * s
             left, top = int(mid - w / 2), int(bottom - w)
             if left >= RES or left + w <= 0:
                 continue

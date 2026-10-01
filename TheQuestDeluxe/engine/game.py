@@ -17,7 +17,7 @@ from dataclasses import asdict
 import pygame
 
 from .formats import GameData, Square, MAP_SIZE
-from .state import (LINK_ITEMS, Status, Player, Hero, Inventory, Skills, new_player, POTION_FIELDS, KNIGHT, Enemy,
+from .state import (SLOT_WEAPON, SLOT_OFFHAND, SLOT_HELMET, SLOT_ARMOR, SLOT_AMULET, LINK_ITEMS, Status, Player, Hero, Inventory, Skills, new_player, POTION_FIELDS, KNIGHT, Enemy,
                     potions, add_potions, has_key, give_key)
 from .world import World, screen_of, room_origin
 from .savefile import SaveData, Slots
@@ -496,9 +496,17 @@ class Game:
         wall = self.pack.wall(q.wall)
         if wall.get('needs_item') and self.use_on_wall(q, wall):
             return True
-        if wall.get('solid') and not (wall.get('small_only') and self.shrunk()):
+        if wall.get('giant_breaks') and self.grown():
+            q.wall = wall.get('becomes', 0)                       # a giant smashes it down
+            self.tones((200, 80), (150, 80))
+            self.report(wall.get('message') or 'You smash it down!', 14)
+            return True
+        if wall.get('solid') and not (wall.get('small_only') and self.shrunk()) \
+                and not ((wall.get('water') or wall.get('freezes_to')) and self.worn_any('water_walk')):
             if wall.get('small_only'):
                 self.report('You are too big to squeeze through.', 7)
+            elif wall.get('giant_breaks'):
+                self.report('It is too solid. Something much bigger might smash it.', 7)
             return False
         e = w.enemy_at(nx, ny)
         if e and not e.ally and (st.killer or e.att > -1 or e.type > 0):
@@ -638,6 +646,9 @@ class Game:
         p, q = self.player, self.world.sq(self.player.X, self.player.Y)
         if self.pack.item_type(q.item) in LINK_ITEMS:       # Enter on a ladder, stairs ...: use it
             return self.take_link()
+        if q.item and self.pack.item(q.item).get('pickup'):  # a mushroom: used on the spot
+            self.eat(q, self.pack.item(q.item)['pickup'])
+            return True
         turn = bool(q.item or q.gold)
         if turn:
             self.tones((300, 50), (400, 50))
@@ -714,7 +725,7 @@ class Game:
         pot = self.pack.extra_potions().get(n)
         if not pot or potions(p, n) <= 0:
             return False
-        heals = pot.get('life') or pot.get('mana') or pot.get('berserk') or pot.get('foresight') or pot.get('shrink')
+        heals = pot.get('life') or pot.get('mana') or pot.get('berserk') or pot.get('foresight') or pot.get('shrink') or pot.get('grow')
         if pot.get('cure_poison') and not heals and not h.poisoned:
             return False                                  # like Cure Poison: only when poisoned
         add_potions(p, n, -1)
@@ -733,8 +744,9 @@ class Game:
         if pot.get('berserk'):
             self.status.powboost = self.status.armboost = int(pot['berserk'])
         if pot.get('shrink'):
-            p.more['shrunk'] = int(pot['shrink']) + 1             # this turn's upkeep takes one
-            self.report('You shrink!', 13)
+            self.change_size('shrink', pot['shrink'])
+        if pot.get('grow'):
+            self.change_size('grow', pot['grow'])
         if pot.get('foresight'):
             p.more['foresight'] = int(pot['foresight']) + 1       # this turn's upkeep takes one
             self.report('Your eyes open: nothing hides from you.', 13)
@@ -901,10 +913,70 @@ class Game:
             self.overlay = ui.TitleScreen()
         self.load_game(on_no=no)
 
+    # ── what he wears, and his size ───────────────────────────────────────────
+    def worn_rows(self):
+        p = self.player
+        return [self.pack.item(p.bag[s]) for s in (SLOT_WEAPON, SLOT_OFFHAND, SLOT_HELMET, SLOT_ARMOR, SLOT_AMULET)
+                if p.bag.get(s)]
+
+    def worn_sum(self, attr: str) -> int:
+        """The total of an item attribute (regen, thorns, lifesteal, sight ...) over what he wears."""
+        return sum(int(r.get(attr) or 0) for r in self.worn_rows())
+
+    def worn_any(self, attr: str) -> bool:
+        return any(r.get(attr) for r in self.worn_rows())
+
+    def sight_bonus(self) -> int:
+        return self.worn_sum('sight')
+
+    def size_state(self) -> str:
+        """'small', 'normal' or 'giant': from a potion or a mushroom (more['shrunk'], more['grown']: turns left)
+        or from what he wears (`makes_small`, `makes_giant`). Small and giant together make him normal."""
+        more = self.player.more
+        small = more.get('shrunk', 0) > 0 or self.worn_any('makes_small')
+        giant = more.get('grown', 0) > 0 or self.worn_any('makes_giant')
+        return 'normal' if small == giant else 'small' if small else 'giant'
+
     def shrunk(self) -> bool:
-        """Is the hero shrunk (a potion with `shrink` turns)? He is small enough to go through walls that are
-        `small_only`."""
-        return bool(self.player.more.get('shrunk', 0) > 0)
+        """Is the hero small (a shrinking potion or mushroom, or an item)? He can go through `small_only` walls."""
+        return self.size_state() == 'small'
+
+    def grown(self) -> bool:
+        """Is the hero a giant? He hits harder, and can smash through `giant_breaks` walls."""
+        return self.size_state() == 'giant'
+
+    def change_size(self, kind: str, turns: int):
+        """Grow or shrink for `turns` turns. The opposite undoes the other: a shrinking potion while a giant makes
+        him his own size again."""
+        more = self.player.more
+        other, mine = ('grown', 'shrunk') if kind == 'shrink' else ('shrunk', 'grown')
+        if more.get(other):
+            more.pop(other)
+            self.report('You are your own size again.', 7)
+            return
+        more[mine] = int(turns) + 1                               # this turn's upkeep takes one
+        self.report('You shrink!' if kind == 'shrink' else 'You grow huge!', 13)
+
+    def eat(self, q, effect: dict):
+        """Picking up an item with a `pickup` effect (a mushroom): it is used on the spot, and gone. The effect:
+        grow / shrink (turns), life, mana (amounts), foresight (turns), poison (true), message."""
+        p, h = self.player, self.player.hero
+        name = self.item_name(q.item).lower() or 'it'
+        q.item = 0
+        self.report(effect.get('message') or f'You eat the {name}.', 10)
+        if effect.get('grow'):
+            self.change_size('grow', effect['grow'])
+        if effect.get('shrink'):
+            self.change_size('shrink', effect['shrink'])
+        if effect.get('life'):
+            h.life = max(1, min(h.mlife, h.life + int(effect['life'])))
+        if effect.get('mana'):
+            h.mana = max(0, min(h.mmana, h.mana + int(effect['mana'])))
+        if effect.get('foresight'):
+            p.more['foresight'] = int(effect['foresight']) + 1
+        if effect.get('poison') and not h.poisoned and not self.worn_any('poison_immune'):
+            self.combat.poison_hero()
+        self.tones((740, 100))
 
     def disguised(self) -> bool:
         """Is the hero in another creature's shape (the Disguise spell)?"""
@@ -925,9 +997,10 @@ class Game:
         self.report('You are yourself again.', 7)
 
     def foresight(self) -> bool:
-        """Is the hero under a potion of foresight (quest.json's "foresight" turns)? Invisible creatures show
-        for what they really are: drawn as the creature they turn into (`reveals_as`), and a target."""
-        return self.player.more.get('foresight', 0) > 0
+        """Is the hero under a potion of foresight (quest.json's "foresight" turns), or wearing something that
+        `see_invisible`s? Invisible creatures show for what they really are: drawn as the creature they turn
+        into (`reveals_as`), and a target."""
+        return self.player.more.get('foresight', 0) > 0 or self.worn_any('see_invisible')
 
     def true_form(self, t: int) -> int:
         """The creature number to draw for t: its true form (reveals_as) while the hero has foresight."""
@@ -961,15 +1034,21 @@ class Game:
         """Top of the main2() loop after a turn: faults, poison, spell timers, boosts."""
         p, h, st, sk = self.player, self.player.hero, self.status, self.player.skill
         self.thaw()
-        if p.more.get('shrunk'):
-            p.more['shrunk'] -= 1
-            if p.more['shrunk'] <= 0:
-                inside = self.pack.wall(self.world.sq(p.X, p.Y).wall).get('small_only')
-                if inside:
-                    p.more['shrunk'] = 1                          # not while squeezed into a wall
-                else:
-                    p.more.pop('shrunk')
-                    self.report('You grow back to your size.', 7)
+        for key, back in (('shrunk', 'You grow back to your size.'), ('grown', 'You shrink back to your size.')):
+            if p.more.get(key):
+                p.more[key] -= 1
+                if p.more[key] <= 0:
+                    inside = self.pack.wall(self.world.sq(p.X, p.Y).wall).get('small_only') and key == 'shrunk'
+                    if inside:
+                        p.more[key] = 1                           # not while squeezed into a wall
+                    else:
+                        p.more.pop(key)
+                        self.report(back, 7)
+        regen, mana_regen = self.worn_sum('regen'), self.worn_sum('mana_regen')
+        if regen and h.life > 0:
+            h.life = min(h.mlife, h.life + regen)                 # what he wears heals him a little each turn
+        if mana_regen:
+            h.mana = min(h.mmana, h.mana + mana_regen)
         if p.more.get('foresight'):
             p.more['foresight'] -= 1
             if p.more['foresight'] <= 0:

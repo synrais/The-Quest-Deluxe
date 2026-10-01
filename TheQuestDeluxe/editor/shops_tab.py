@@ -59,13 +59,21 @@ class ShopsTab(ttk.Frame):
         self.find.trace_add('write', lambda *a: self.fill_items())
         ttk.Entry(f, textvariable=self.find, width=24).pack(side='left', padx=4)
         ttk.Label(f, text='(only items with a price are listed)', foreground='#555').pack(side='left')
-        self.items = ttk.Treeview(right, columns=('price',), selectmode='browse', height=20)
-        self.items.heading('#0', text='Item')
-        self.items.heading('price', text='Price')
-        self.items.column('#0', width=280)
-        self.items.column('price', width=70, anchor='e')
-        self.items.pack(fill='both', expand=True, pady=4)
-        self.items.bind('<Double-1>', lambda e: self._put_on())
+        # the priced items in two tables side by side: half the scrolling
+        both = ttk.Frame(right)
+        both.pack(fill='both', expand=True, pady=4)
+        self.tables = []
+        for n in range(2):
+            t = ttk.Treeview(both, columns=('price',), selectmode='browse', height=20)
+            t.heading('#0', text='Item')
+            t.heading('price', text='Price')
+            t.column('#0', width=250)
+            t.column('price', width=60, anchor='e')
+            t.pack(side='left', fill='both', expand=True, padx=(0 if n == 0 else 6, 0))
+            t.bind('<Double-1>', lambda e: self._put_on())
+            t.bind('<<TreeviewSelect>>', lambda e, t=t: self._one_selection(t))
+            self.tables.append(t)
+        self.items = self.tables[0]
         ttk.Button(right, text='Put on the next shelf', command=self._put_on).pack(anchor='w')
 
     # ── data ────────────────────────────────────────────────────────────────
@@ -100,16 +108,34 @@ class ShopsTab(ttk.Frame):
         self.app.changed()
         self.draw()
 
+    def _one_selection(self, chosen):
+        """Only one of the two tables has a selection."""
+        if chosen.selection():
+            for t in self.tables:
+                if t is not chosen and t.selection():
+                    t.selection_remove(t.selection())
+
+    def _selected_item(self):
+        for t in self.tables:
+            if t.selection():
+                return int(t.selection()[0])
+        return None
+
     def fill_items(self):
-        t, want, art = self.items, self.find.get().strip().lower(), self.app.map_tab.art
-        t.delete(*t.get_children())
+        want, art = self.find.get().strip().lower(), self.app.map_tab.art
+        rows = []
         for r in sorted(self.app.project.tables['items'], key=lambda r: r['id']):
             if 'price' not in r or not r['id']:
                 continue
             text = f'{r["id"]}  {r.get("name") or ""}'
-            if want and want not in text.lower():
-                continue
-            t.insert('', 'end', iid=str(r['id']), text='  ' + text, values=(r['price'],), image=art.icon('bag', r['id']))
+            if not want or want in text.lower():
+                rows.append((r, text))
+        half = (len(rows) + 1) // 2
+        for t, part in zip(self.tables, (rows[:half], rows[half:])):
+            t.delete(*t.get_children())
+            for r, text in part:
+                t.insert('', 'end', iid=str(r['id']), text='  ' + text, values=(r['price'],),
+                         image=art.icon('bag', r['id']))
 
     # ── the shelves ─────────────────────────────────────────────────────────
     def draw(self):
@@ -155,14 +181,14 @@ class ShopsTab(ttk.Frame):
             self._store(stock)
 
     def _put_on(self):
-        sel = self.items.selection()
-        if not sel or not self.shop:
+        chosen = self._selected_item()
+        if chosen is None or not self.shop:
             return
         stock = self.stock
         if len(stock) >= 40:
             messagebox.showinfo('Shop', 'All 40 shelves are full.')
             return
-        stock.append(int(sel[0]))
+        stock.append(chosen)
         self._store(stock)
 
     def new_shop(self):

@@ -13,6 +13,7 @@ TYPES = [('weapon', 'Weapon (melee)'), ('launcher', 'Launcher (sling, bow)'), ('
          ('ladder', 'Ladder (to another level)'), ('rope', 'Rope (to another level)'),
          ('stairs', 'Stairs (to another level)'), ('hole', 'Hole (one way down)'),
          ('jump_pad', 'Jump pad (one way)')]
+EATEN = ('treasure', 'potion')
 WORN = ('weapon', 'launcher', 'armour', 'shield', 'helmet', 'amulet')
 KINDS = [(0, '0 normal'), (1, '1 double strike (1 in 5)'), (2, '2 parry (1 in 5)'), (3, '3 magic (ignores armour)'),
          (4, '4 ranged (a launcher)'), (5, '5 two-handed'), (6, '6 two-handed, parry')]
@@ -109,6 +110,24 @@ class ItemsTab(TableTab):
                   hint='yellow, red and blue are the original\'s; more colours are defined on the Quest tab'),
             Field('quest', 'Quest item', 'bool', hint="can't be sold or dropped", when=is_('treasure', 'weapon', 'launcher', 'armour',
                                                                         'shield', 'helmet', 'amulet')),
+            Field('regen', 'Heals each turn', 'int', when=is_(*WORN), hint='life gained every turn it is worn'),
+            Field('mana_regen', 'Mana each turn', 'int', when=is_(*WORN), hint='mana gained every turn it is worn'),
+            Field('thorns', 'Hurts attackers', 'int', when=is_(*WORN), hint='damage dealt to a creature that hits the hero'),
+            Field('lifesteal', 'Steals life %', 'int', when=is_(*WORN), hint='percent of his melee damage the hero heals'),
+            Field('sight', 'Sees further', 'int', when=is_(*WORN), hint='squares more in FPS mode'),
+            Field('poison_immune', 'Poison cannot touch him', 'bool', when=is_(*WORN)),
+            Field('see_invisible', 'Sees the invisible', 'bool', when=is_(*WORN)),
+            Field('water_walk', 'Walks on water', 'bool', when=is_(*WORN)),
+            Field('makes_small', 'Makes him small', 'bool', when=is_(*WORN), hint='while worn (a ring of shrinking)'),
+            Field('makes_giant', 'Makes him a giant', 'bool', when=is_(*WORN), hint='while worn (a belt of giants)'),
+            Field('pickup.grow', 'Eaten: grows (turns)', 'int', when=lambda r: r.get('type') in EATEN,
+                  hint='picked up with Enter, it is used at once (a mushroom)'),
+            Field('pickup.shrink', 'Eaten: shrinks (turns)', 'int', when=lambda r: r.get('type') in EATEN),
+            Field('pickup.life', 'Eaten: life', 'int', when=lambda r: r.get('type') in EATEN, hint='a minus hurts'),
+            Field('pickup.mana', 'Eaten: mana', 'int', when=lambda r: r.get('type') in EATEN),
+            Field('pickup.foresight', 'Eaten: foresight (turns)', 'int', when=lambda r: r.get('type') in EATEN),
+            Field('pickup.poison', 'Eaten: poisons', 'bool', when=lambda r: r.get('type') in EATEN),
+            Field('pickup.message', 'Eaten: message', 'str', when=lambda r: r.get('type') in EATEN),
             Field('element', 'Element', 'choice', ELEMENTS, when=is_('weapon', 'launcher', 'ammo'),
                   hint='what a hit adds: burns, poisons or freezes the creature, or heals the hero. '
                        'A bow and its arrows both count.'),

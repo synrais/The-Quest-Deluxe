@@ -132,10 +132,33 @@ class ClassesTab(TableTab):
                for r in sorted(self.rows, key=lambda r: r['id'])]
         return out + super().templates(folder, row)
 
+    def only_free_skills(self) -> list:
+        """The skills that only come free with a class (Marksmanship): the game lists them for that class alone."""
+        return [s['id'] for s in self.app.project.tables['skills'] if s['kind'] == 'skill' and s.get('only_free')]
+
+    def _show(self, row):
+        """Clicking a class shows what the game really does: a skill that only comes free with a class is not offered
+        to the others, so it is ticked under "Not offered the skills" (and written there, which changes nothing in
+        the game: it hides them already)."""
+        if row is not None:
+            have = row.get('no_skill')
+            have = [have] if isinstance(have, str) else list(have or [])
+            for sid in self.only_free_skills():
+                if sid != row.get('skill') and sid not in have:
+                    have.append(sid)
+            if have != (row.get('no_skill') if isinstance(row.get('no_skill'), list) else
+                        [row['no_skill']] if row.get('no_skill') else []):
+                row['no_skill'] = have[0] if len(have) == 1 else have
+        super()._show(row)
+
     def new_row(self):
         v = self.app.project.next_id('classes', 5)
-        return {'id': v, 'name': 'New class', 'life': 30, 'mana': 10, 'str': 12, 'int': 12, 'dex': 12, 'acc': 12,
-                'growth': [4, 3], 'skill': 'bar', 'look': {'colour': 2}, 'bag': {'12,4': 201}, 'spells': []}
+        row = {'id': v, 'name': 'New class', 'life': 30, 'mana': 10, 'str': 12, 'int': 12, 'dex': 12, 'acc': 12,
+               'growth': [4, 3], 'skill': 'bar', 'look': {'colour': 2}, 'bag': {'12,4': 201}, 'spells': []}
+        free = self.only_free_skills()                      # a new class is not offered Marksmanship, as in the game
+        if free:
+            row['no_skill'] = free[0] if len(free) == 1 else free
+        return row
 
     def uses(self, row):
         return []
