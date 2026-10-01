@@ -51,6 +51,50 @@ def wants_to_fight(e: Enemy, o: Enemy, g: 'Game') -> bool:
     return False
 
 
+def open_square(g, e, x, y, bounds=None) -> bool:
+    """Could creature e stand with its top left on (x, y)? Every square it would cover must be open floor with
+    nothing on it (its own squares count as free), not the hero's, and inside the screen when bounds is given."""
+    w, p = g.world, g.player
+    n = w.size_of(e.type)
+    own = set(w.cells(e)) if n > 1 else {(e.x, e.y)}
+    hero = set(g.hero_cells())
+    for cx, cy in w.footprint(x, y, n):
+        if bounds and not (bounds[0] <= cx <= bounds[1] and bounds[2] <= cy <= bounds[3]):
+            return False
+        if not w.in_map(cx, cy):
+            return False
+        q = w.sq(cx, cy)
+        if not (q.wall == 0 and g.pack.item_type(q.item) not in ('teleporter', 'exit') + LINK_ITEMS
+                and (q.mon == 0 or (cx, cy) in own) and (cx, cy) not in hero):
+            return False
+    return True
+
+
+def flee_squares(g, e, bounds=None) -> list:
+    """The squares next to e that it could step to and be further from the hero, best first."""
+    p = g.player
+    if bounds is None:
+        ox, oy = g.world.origin
+        bounds = (ox, ox + 9, oy, oy + 9)                          # it cannot leave the screen
+    here = max(abs(e.x - p.X), abs(e.y - p.Y)), abs(e.x - p.X) + abs(e.y - p.Y)
+    out = []
+    for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+        nx, ny = e.x + dx, e.y + dy
+        far = max(abs(nx - p.X), abs(ny - p.Y)), abs(nx - p.X) + abs(ny - p.Y)
+        if far > here and open_square(g, e, nx, ny, bounds):
+            out.append((far, nx, ny))
+    out.sort(reverse=True)
+    return [(nx, ny) for _, nx, ny in out]
+
+
+def flees(g, e) -> bool:
+    """Is e one that runs from the hero (`flees_within`), and is he that close?"""
+    r = g.pack.trait(e.type, 'flees_within')
+    p = g.player
+    return bool(r) and e.att > 0 and g.player.hero.invisible == -1 and \
+        max(abs(e.x - p.X), abs(e.y - p.Y)) <= r
+
+
 def monsmove(g: 'Game') -> None:
     w, p, h = g.world, g.player, g.player.hero
     ox, oy = w.origin
@@ -59,17 +103,7 @@ def monsmove(g: 'Game') -> None:
     mover = [None]                                  # the creature being moved (a big one needs room for all of it)
 
     def free(x, y):
-        e = mover[0]
-        n = w.size_of(e.type) if e else 1
-        own = set(w.cells(e)) if n > 1 else ()
-        for cx, cy in w.footprint(x, y, n):
-            if not (x0 <= cx <= x1 and y0 <= cy <= y1):
-                return False
-            q = w.sq(cx, cy)
-            if not (q.wall == 0 and g.pack.item_type(q.item) not in ('teleporter', 'exit') + LINK_ITEMS
-                    and (q.mon == 0 or (cx, cy) in own) and (cx, cy) != (p.X, p.Y)):
-                return False
-        return True
+        return open_square(g, mover[0], x, y, (x0, x1, y0, y1))
 
     def step(e, nx, ny):
         cells = w.cells(e)
@@ -120,6 +154,13 @@ def monsmove(g: 'Game') -> None:
                 break
             if fought:
                 continue                                  # attacked this turn: no chase, no wandering
+            if not ranok and flees(g, e):
+                # ── run from the hero (flees_within): away if there is room, else stand and fight ─────
+                spots = flee_squares(g, e, (x0, x1, y0, y1))
+                if spots:
+                    step(e, *spots[0])
+                e.moved = True
+                continue
             if not ranok:
                 # ── chase ───────────────────────────────────────────────────
                 if e.ally and e.att == -3:                # summons hunt the nearest hostile
@@ -175,7 +216,9 @@ def chase(g, e, tx, ty, x0, x1, y0, y1, free, step):
     saved = e.att
     if e.att > 0:
         e.att = e.att + e.range - 1
-    sees = e.att >= dx and e.att >= dy and (h.invisible == -1 or e.att == 8)
+    reach = g.pack.trait(e.type, 'chase_range')                    # only comes for the hero within this many squares
+    reach = reach if reach and e.att > 0 else e.att
+    sees = reach >= dx and reach >= dy and (h.invisible == -1 or e.att == 8)
     if not (sees or e.att == -3):
         e.att = saved
         return

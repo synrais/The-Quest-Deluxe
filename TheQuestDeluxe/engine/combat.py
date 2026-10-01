@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 from . import rules
 from .rules import random, distance, LOW_HEALTH
+from .ai import flees, flee_squares
 from .state import (Enemy, SLOT_WEAPON, SLOT_OFFHAND, IT_KIND, KIND_RANGED)
 
 if TYPE_CHECKING:
@@ -189,8 +190,10 @@ class Combat:
             corpses[f'{w.level},{e.x},{e.y}'] = e.type
             while len(corpses) > 60:
                 corpses.pop(next(iter(corpses)))
-        if pk.trait(e.type, 'regenerates_from_blood') and not becomes:
-            self.p.more.setdefault('reviving', []).append([w.level, e.x, e.y, e.type, -1, -1, 0])
+        rises = e.__dict__.get('_rises', 0)
+        limit = pk.trait(e.type, 'rise_limit')                # how many times it can rise (empty: for ever)
+        if pk.trait(e.type, 'regenerates_from_blood') and not becomes and (not limit or rises < limit):
+            self.p.more.setdefault('reviving', []).append([w.level, e.x, e.y, e.type, -1, -1, 0, rises])
         del w.enemies[i]
         if -100 < e.type < 0 and a == -1:
             for o in w.enemies:
@@ -207,7 +210,7 @@ class Combat:
         for sx, sy in w.room_tiles():
             d = max(abs(sx - x), abs(sy - y))
             q = w.sq(sx, sy)
-            if 0 < d <= reach and q.wall == 0 and q.mon == 0 and (sx, sy) != (p.X, p.Y) \
+            if 0 < d <= reach and q.wall == 0 and q.mon == 0 and (sx, sy) not in self.g.hero_cells() \
                     and pk.item_type(q.item) not in ('teleporter', 'exit') + LINK_ITEMS:
                 if best is None or (d, sx, sy) < best[:3]:
                     best = (d, sx, sy)
@@ -323,7 +326,8 @@ class Combat:
             return
         blood, keep = self.blood_squares(), []
         for entry in entries:
-            level, x, y, kind, px, py, stuck = entry
+            level, x, y, kind, px, py, stuck, *rest = entry
+            times = rest[0] if rest else 0                       # how many times it has risen already
             if level != w.level:
                 continue                                  # another level was reloaded
             if not w.in_room(x, y):
@@ -355,11 +359,12 @@ class Combat:
                     w.sq(px, py).deco = 0
                     q.deco, px, py, moved = pile, nx, ny, True
                     break
-            entry[4:] = [px, py, 0 if moved else stuck + 1]
+            entry[4:7] = [px, py, 0 if moved else stuck + 1]
             if (px, py) == (x, y):
                 if w.sq(x, y).mon == 0 and (x, y) != (p.X, p.Y):
                     w.sq(x, y).deco = 0
-                    g.spawn(kind, x, y)
+                    risen = g.spawn(kind, x, y)
+                    risen.__dict__['_rises'] = times + 1
                     g.report(f'The {g.monster_name(kind)} rises again, made whole by the blood!', 12, (x, y), 'reborn')
                     g.count_hostiles()
                     continue
@@ -573,6 +578,8 @@ class Combat:
                 continue
             if e.moved and self.g.pack.trait(e.type, 'rests_after_moving'):
                 continue
+            if e.range == 1 and flees(self.g, e) and flee_squares(self.g, e):
+                continue                                       # it runs rather than fights, unless it is cornered
             if e.att != -4:
                 e.moved = True
             name = self.g.monster_name(e.type)

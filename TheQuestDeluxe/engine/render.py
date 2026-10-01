@@ -157,6 +157,9 @@ class Renderer:
         scr.blit(before, (hx, hy))
         if size == 'small':
             scr.blit(pygame.transform.scale(layer, (TILE // 2, TILE // 2)), (hx + TILE // 4, hy + TILE // 2))
+        elif game.hero_size() > 1:                               # a giant that takes up space: over all his squares
+            n = game.hero_size()
+            scr.blit(pygame.transform.scale(layer, (TILE * n, TILE * n)), (hx, hy))
         else:                                                    # a giant: half as big again, his feet on his square
             big = pygame.transform.scale(layer, (TILE * 3 // 2, TILE * 3 // 2))
             scr.blit(big, (hx - TILE // 4, hy - TILE // 2))

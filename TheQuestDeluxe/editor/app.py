@@ -32,7 +32,7 @@ SETTINGS = os.path.join(os.path.expanduser('~'), '.quest_editor.json')
 class QuestTab(ttk.Frame):
     """The quest's own settings (quest.json)."""
     FIELDS = [('title', 'Title', str), ('author', 'Author', str), ('year', 'Year', int),
-              ('first_level', 'First level', int)]
+              ('first_level', 'First level', int), ('giant_size', 'A giant takes up (squares across)', int)]
 
     def __init__(self, master, app):
         super().__init__(master)

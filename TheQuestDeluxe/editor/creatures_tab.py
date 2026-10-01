@@ -139,6 +139,10 @@ class CreaturesTab(TableTab):
             Field('invisible', 'Invisible', 'bool'),
             pick('reveals_as', 'Shows itself as', 'the creature it turns into when it attacks'),
             pick('hides_as', 'Hides again as', 'when the hero leaves the screen'),
+            Field('chase_range', 'Chases within', 'int', hint='a hostile creature only comes for the hero when he is '
+                  'within this many squares (empty: as far as it sees); beyond it stays where it is'),
+            Field('flees_within', 'Runs away within', 'int', hint='a hostile creature runs from the hero when he is '
+                  'within this many squares; cornered, it fights'),
             Field('rests_after_moving', 'Rests after moving', 'bool', hint="doesn't attack in a turn it moved"),
             Field('animal', 'Animal', 'bool', hint="doesn't fight people; killing it earns no reputation"),
             Field('size', 'Size', 'int', width=4,
@@ -155,6 +159,8 @@ class CreaturesTab(TableTab):
                   hint='when it has taken this much damage in all (empty: not by this)'),
             Field('regenerates_from_blood', 'Rises from blood', 'bool',
                   hint='after it dies the nearest pile of blood on the screen slides to its body, and it rises again at full life'),
+            Field('rise_limit', 'Times it can rise', 'int', when=lambda r: r.get('regenerates_from_blood'),
+                  hint='1, 2 ...: how many times it can rise from blood (empty: for ever)'),
             Field('blood_range', 'Blood reaches', 'int', when=lambda r: r.get('regenerates_from_blood'),
                   hint='squares from its body that blood still feeds it (empty: the whole screen). It can rise '
                        'again and again while there is blood in reach, its own spilled blood included'),

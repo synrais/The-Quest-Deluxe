@@ -760,6 +760,109 @@ def creature_changes():
     print('creatures: turn into another on death, burst into several, transform when hurt, drop things when hit: ok')
 
 
+def behaviour():
+    def traits(folder, json):
+        path = os.path.join(folder, 'creatures.json')
+        data = json.load(open(path))
+        for r in data['creatures']:
+            if r['id'] == 1:
+                r['chase_range'] = 3
+            if r['id'] == 2:
+                r['flees_within'] = 4
+            if r['id'] == 3:
+                r.update({'regenerates_from_blood': True, 'rise_limit': 2})
+        json.dump(data, open(path, 'w'))
+        path = os.path.join(folder, 'quest.json')
+        q = json.load(open(path))
+        q['giant_size'] = 2
+        q['potions'] = {'9': {'name': 'Gigantism', 'colour': 12, 'grow': 8}}
+        json.dump(q, open(path, 'w'))
+    from engine.ai import monsmove
+    from engine.state import add_potions
+    g = with_changes(traits)
+    p, w, pk = g.player, g.world, g.pack
+    ox, oy = w.origin
+
+    def clear():
+        for e in list(w.enemies):
+            w.sq(e.x, e.y).mon = 0
+        w.enemies.clear()
+        for x, y in w.room_tiles():
+            q = w.sq(x, y)
+            q.wall = q.mon = q.item = q.deco = q.gold = 0
+    clear()
+    p.X, p.Y = ox + 5, oy + 5
+    # chases only within its range
+    near = g.spawn(1, ox + 5, oy + 1)                             # 4 squares away
+    near.att = 9
+    for _ in range(3):
+        monsmove(g)
+        near.moved = False
+    assert (near.x, near.y) == (ox + 5, oy + 1), 'out of its chase range it stays where it is'
+    p.Y = oy + 3                                                  # now 2 squares away
+    monsmove(g)
+    assert abs(near.y - p.Y) < 2 or near.y > oy + 1, 'within range it comes'
+    clear()
+    # runs away, and fights when cornered
+    p.X, p.Y = ox + 5, oy + 5
+    runner = g.spawn(2, ox + 5, oy + 7)
+    runner.att = 9
+    for _ in range(3):
+        before = max(abs(runner.x - p.X), abs(runner.y - p.Y))
+        monsmove(g)
+        runner.moved = False
+        assert max(abs(runner.x - p.X), abs(runner.y - p.Y)) >= before
+    assert max(abs(runner.x - p.X), abs(runner.y - p.Y)) > 2
+    for _ in range(12):
+        monsmove(g)
+        runner.moved = False
+    clear()
+    p.X, p.Y = ox + 1, oy + 1
+    trapped = g.spawn(2, ox, oy)                                  # in a corner, the hero next to it
+    trapped.att, trapped.atk, trapped.power = 9, 1000, 1
+    w.sq(ox, oy + 1).wall = 1                                     # walled in on the other side
+    p.X, p.Y = ox + 1, oy
+    life = p.hero.life
+    g.combat.enemy_attacks()
+    assert p.hero.life < life, 'cornered, it fights'
+    clear()
+    # rises from blood a limited number of times
+    p.X, p.Y = ox + 8, oy + 8
+    blood = pk.deco('blood')
+    w.sq(ox + 1, oy + 1).deco = w.sq(ox + 1, oy + 2).deco = w.sq(ox + 2, oy + 1).deco = blood
+    m = g.spawn(3, ox + 4, oy + 4)
+    risen = 0
+    for _ in range(4):
+        g.combat.hurt(10000, m, 3, by_hero=True)
+        for _ in range(12):
+            g.combat.revive_step()
+        m = w.enemy_at(ox + 4, oy + 4)
+        if m is None:
+            break
+        risen += 1
+        w.sq(ox + 1, oy + 1).deco = w.sq(ox + 1, oy + 2).deco = w.sq(ox + 2, oy + 1).deco = blood   # more blood
+    assert risen == 2, risen
+    clear()
+    # a giant that takes up space: 2 x 2, restricted by walls, and the potion needs room
+    p.X, p.Y = ox + 5, oy + 5
+    ring = [(p.X + i, p.Y + j) for i in (-1, 0, 1) for j in (-1, 0, 1) if (i, j) != (0, 0)]
+    for cx, cy in ring:
+        w.sq(cx, cy).wall = 1                                     # trees all round: no room to grow
+    add_potions(p, 9, 1)
+    assert not g.drink_extra(9) and not g.grown()
+    for cx, cy in ring:
+        w.sq(cx, cy).wall = 0
+    assert g.drink_extra(9) and g.grown() and g.hero_size() == 2
+    x0 = p.X
+    w.sq(p.X + 2, p.Y).wall = w.sq(p.X + 2, p.Y + 1).wall = 0
+    w.sq(p.X + 2, p.Y + 1).wall = 1                               # blocks only the lower right square of the move
+    assert not g.try_move(1, 0) and p.X == x0, 'it does not all fit'
+    w.sq(p.X + 2, p.Y + 1).wall = 0
+    assert g.try_move(1, 0) and p.X == x0 + 1
+    g.renderer.draw(g, present=False)                            # drawn over his four squares
+    print('behaviour: chases within a range, runs away, rises a limited number of times, a giant fills 2 x 2: ok')
+
+
 if __name__ == '__main__':
     fire()
     ice()
@@ -767,6 +870,7 @@ if __name__ == '__main__':
     blood_regen()
     foresight()
     clones()
+    behaviour()
     creature_changes()
     fps_settings()
     resurrection()

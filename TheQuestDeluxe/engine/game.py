@@ -502,6 +502,9 @@ class Game:
             self.tones((200, 80), (150, 80))
             self.report(wall.get('message') or 'You smash it down!', 14)
             return True
+        if self.hero_size() > 1 and not self.fits(nx, ny):
+            self.report('You are too big to fit through there.', 7)
+            return False
         if wall.get('solid') and not (wall.get('small_only') and self.shrunk()) \
                 and not ((wall.get('water') or wall.get('freezes_to')) and self.worn_any('water_walk')):
             if wall.get('small_only'):
@@ -729,6 +732,9 @@ class Game:
         heals = pot.get('life') or pot.get('mana') or pot.get('berserk') or pot.get('foresight') or pot.get('shrink') or pot.get('grow')
         if pot.get('cure_poison') and not heals and not h.poisoned:
             return False                                  # like Cure Poison: only when poisoned
+        if pot.get('grow') and not p.more.get('shrunk') and not self.room_to_grow():
+            self.report('There is no room to grow here!', 12)
+            return False
         add_potions(p, n, -1)
 
         def gain(cur, mx, how):
@@ -937,6 +943,53 @@ class Game:
         small = more.get('shrunk', 0) > 0 or self.worn_any('makes_small')
         giant = more.get('grown', 0) > 0 or self.worn_any('makes_giant')
         return 'normal' if small == giant else 'small' if small else 'giant'
+
+    def hero_size(self) -> int:
+        """How many squares across the hero stands on: 1, or quest.json's `giant_size` while he is a giant."""
+        return max(1, int(self.pack.quest.get('giant_size') or 1)) if self.grown() else 1
+
+    def hero_cells(self, x: int | None = None, y: int | None = None) -> list:
+        """The squares the hero covers with his top left on (x, y) (where he is, if left out)."""
+        p = self.player
+        return self.world.footprint(p.X if x is None else x, p.Y if y is None else y, self.hero_size())
+
+    def fits(self, x: int, y: int) -> bool:
+        """Could a hero as big as he is now stand with his top left on (x, y)? The squares beyond the first are
+        what restricts a giant: they must be open floor with nobody on them (his own squares count as free)."""
+        w, mine = self.world, set(self.hero_cells())
+        for cx, cy in self.hero_cells(x, y)[1:]:
+            if (cx, cy) in mine:
+                continue
+            if not w.in_map(cx, cy):
+                return False
+            q = w.sq(cx, cy)
+            wall = self.pack.wall(q.wall)
+            if q.mon or wall.get('solid') or wall.get('door'):
+                return False
+        return True
+
+    def room_to_grow(self) -> bool:
+        """A giant that takes up space needs room where he stands; if his square has none, the nearest of the three
+        squares up and to the left will do (he is moved there). False if there is no room."""
+        n = max(1, int(self.pack.quest.get('giant_size') or 1))
+        if n < 2:
+            return True
+        p, w = self.player, self.world
+        for ax, ay in [(p.X - i, p.Y - j) for i in range(n) for j in range(n)]:
+            if not w.in_map(ax, ay):
+                continue
+            cells = w.footprint(ax, ay, n)
+            if all(w.in_map(cx, cy) and ((cx, cy) == (p.X, p.Y) or
+                                          not (w.sq(cx, cy).mon or self.pack.wall(w.sq(cx, cy).wall).get('solid')
+                                               or self.pack.wall(w.sq(cx, cy).wall).get('door')))
+                   for cx, cy in cells):
+                if (ax, ay) != (p.X, p.Y):
+                    w.leave_room()
+                    p.X, p.Y = ax, ay
+                    w.enter_room(p, self.status)
+                    self.count_hostiles()
+                return True
+        return False
 
     def shrunk(self) -> bool:
         """Is the hero small (a shrinking potion or mushroom, or an item)? He can go through `small_only` walls."""

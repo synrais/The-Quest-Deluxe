@@ -61,6 +61,11 @@ FIELDS = {
             'others free. Its picture is stretched to fit.',
     'regenerates_from_blood': 'After it dies the nearest pile of blood on the screen slides to its body and it rises '
                               'again at full life. Burn the blood and it stays dead.',
+    'rise_limit': 'How many times it can rise from blood: 1, 2 ... Empty: for ever (as long as there is blood).',
+    'chase_range': 'It only moves towards the hero when he is within this many squares of it. Further away it stays '
+                   'where it is. Empty: it chases as far as it sees.',
+    'flees_within': 'It runs away from the hero when he is within this many squares, and only fights when it is '
+                    'cornered. Archers and casters keep their distance and still shoot.',
     'blood_range': 'How many squares from its body blood still feeds it. Empty: the whole screen.',
     'resists': "Elements it shrugs off: fire, ice, poison, drain (weapons, arrows and spells).",
     # items
@@ -223,6 +228,9 @@ BUTTONS = {
     'New line': 'A new Dialogue line for the chosen level and person.',
     'Title': 'The quest\'s name, shown by the game and the editor.', 'Author': 'Who made the quest.',
     'Year': 'The year, shown on the title screen.', 'First level': 'The level a new game starts on.',
+    'A giant takes up (squares across)': 'Empty or 1: a giant hero stands on one square like anybody. 2: he takes up 2 x 2 '
+                                         'squares (his own and the ones right and below), so he cannot go where it does '
+                                         'not all fit, and a potion of gigantism needs room to grow.',
     'Class changes': 'Whether the hero can change class at level-ups, and by which rule.',
     'Starting potions': 'Potions a new hero carries: "potion number: count", e.g. 6: 1.',
     'More key colours': 'Key colours past the original\'s yellow, red and blue: "name: EGA colour".',
