@@ -26,7 +26,7 @@ import pygame
 
 from .art import Art, photo, FIELD
 from .project import SIZE
-from .uikit import on_wheel
+from .uikit import on_wheel, tip
 
 LAYERS = [('floor', 'Floor'), ('wall', 'Wall / door'), ('deco', 'Decoration'), ('item', 'Item'),
           ('mon', 'Creature'), ('gold', 'Gold')]
@@ -163,6 +163,12 @@ class MapTab(ttk.Frame):
         c.bind('<Enter>', lambda e: c.focus_set())
         for key, d in (('<Left>', (-1, 0)), ('<Right>', (1, 0)), ('<Up>', (0, -1)), ('<Down>', (0, 1))):
             c.bind(key, lambda e, d=d: self._scroll(d[0] * 5, d[1] * 5))
+        tip(self.canvas, 'The level, 100 x 100 squares. Click with the chosen tool. Wheel scrolls, Shift+wheel '
+                         'scrolls sideways, Ctrl+wheel zooms. Arrow keys scroll. Ctrl+Z undoes.')
+        tip(self.levels, 'The quest\'s levels. Click one to edit its map, script and settings.')
+        tip(self.palette, 'What the chosen layer can put on the map. Click one to paint with it; Find narrows the list.')
+        tip(self.zoom, 'How big the squares are (Ctrl+wheel on the map zooms too).')
+        tip(self.stories, 'Story numbers (Stories tab), e.g. 2, 3, shown before the level.')
 
     # ── the project ─────────────────────────────────────────────────────────
     def load(self):

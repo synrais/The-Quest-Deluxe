@@ -452,6 +452,24 @@ assert 'npc == -6 and m1 == 0' in script and 'give(' in script
 assert 'Wolves took my sheep.' in app.project.texts['talk']
 from engine.script import Script
 Script(script, 'level 1')                                     # the game reads what the wizard wrote
+from editor.tips import field_tip
+missing = []
+for tab in (app.items_tab, app.creatures_tab, app.spells_tab, app.classes_tab, app.tiles_tab):
+    app.tabs.select(tab)
+    pump()
+    for kind in (getattr(tab, 'KINDS', None) and ['floors', 'walls', 'decos'] or [None]):
+        if kind:
+            tab.kind = kind
+        tab.load()
+        for f in tab.fields():
+            if f.kind != 'readonly' and not field_tip(f):
+                missing.append((type(tab).__name__, f.key))
+assert not missing, f'fields without a tooltip: {missing}'
+assert getattr(app.map_tab.canvas, '_tip', None) is not None
+app.tabs.select(app.creatures_tab)
+pump()
+assert getattr(app.creatures_tab.form.winfo_children()[0], '_tip', None) is not None
+print('tooltips: every field and the map explain themselves: ok')
 print('events: the wizard makes a rule, its words and the script, and the game reads it: ok')
 root.destroy()
 print('all editor checks passed')

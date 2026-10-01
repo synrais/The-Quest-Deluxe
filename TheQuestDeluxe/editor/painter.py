@@ -20,6 +20,7 @@ from tkinter import ttk
 import pygame
 
 from .art import EGA, photo
+from .uikit import tip
 
 N = 40
 ZOOM = 12
@@ -68,6 +69,10 @@ class Painter(tk.Toplevel):
         self.before = None
         self.dirty = False
         self._build()
+        from .tips import apply as apply_tips
+        apply_tips(self)
+        tip(self.canvas, 'Left button paints the left colour, right button the right colour. '
+                         'Alt+click picks the colour under the pointer. Ctrl+Z / Ctrl+Y undo and redo.')
         self.redraw()
         self.bind('<Control-z>', lambda e: self.undo())
         self.bind('<Control-y>', lambda e: self.redo())

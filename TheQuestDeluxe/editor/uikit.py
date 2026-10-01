@@ -122,3 +122,63 @@ def choose(parent, title: str, prompt: str, labels: list[str]) -> int | None:
     win.grab_set()
     win.wait_window()
     return answer[0] if answer else None
+
+
+# ── tooltips ─────────────────────────────────────────────────────────────────
+class _Tip:
+    """The little yellow box that explains a widget while the pointer rests on it."""
+    DELAY = 550
+
+    def __init__(self, widget, text):
+        self.widget, self.text, self.after, self.box = widget, text, None, None
+        widget.bind('<Enter>', self._enter, add='+')
+        widget.bind('<Leave>', self._hide, add='+')
+        widget.bind('<ButtonPress>', self._hide, add='+')
+        widget.bind('<Destroy>', self._hide, add='+')
+
+    def _enter(self, _e=None):
+        self._hide()
+        self.after = self.widget.after(self.DELAY, self._show)
+
+    def _show(self):
+        import tkinter as tk
+        self.after = None
+        try:
+            x, y = self.widget.winfo_pointerx() + 14, self.widget.winfo_pointery() + 16
+            box = tk.Toplevel(self.widget)
+        except tk.TclError:
+            return
+        box.wm_overrideredirect(True)
+        tk.Label(box, text=self.text, justify='left', wraplength=340, background='#ffffe0', foreground='#202020',
+                 relief='solid', borderwidth=1, padx=6, pady=4).pack()
+        box.update_idletasks()
+        sw, sh = box.winfo_screenwidth(), box.winfo_screenheight()
+        x = min(x, sw - box.winfo_reqwidth() - 4)
+        y = y if y + box.winfo_reqheight() < sh - 4 else self.widget.winfo_pointery() - box.winfo_reqheight() - 8
+        box.wm_geometry(f'+{max(0, x)}+{max(0, y)}')
+        self.box = box
+
+    def _hide(self, _e=None):
+        if self.after is not None:
+            try:
+                self.widget.after_cancel(self.after)
+            except Exception:                       # noqa: BLE001
+                pass
+            self.after = None
+        if self.box is not None:
+            try:
+                self.box.destroy()
+            except Exception:                       # noqa: BLE001
+                pass
+            self.box = None
+
+
+def tip(widget, text: str):
+    """Explain a widget when the pointer rests on it. A second call changes the words."""
+    if not text:
+        return
+    old = getattr(widget, '_tip', None)
+    if old is not None:
+        old.text = text
+        return
+    widget._tip = _Tip(widget, text)

@@ -13,7 +13,8 @@ from tkinter import ttk, messagebox, filedialog
 import pygame
 
 from .art import photo, to_ega, bag_cell
-from .uikit import on_wheel, scroll_canvas
+from .uikit import on_wheel, scroll_canvas, tip
+from .tips import field_tip, apply as apply_tips
 
 OPAQUE = {'bag', 'spells', 'floors'}           # pictures with no transparent pixels
 
@@ -89,6 +90,7 @@ class TableTab(ttk.Frame):
 
         right = ttk.Frame(self)
         right.pack(side='left', fill='both', expand=True)
+        apply_tips(left)
         if self.INTRO:
             ttk.Label(right, text=self.INTRO, foreground='#555', wraplength=900, justify='left',
                       padding=(8, 4)).pack(anchor='w')
@@ -180,9 +182,15 @@ class TableTab(ttk.Frame):
         for f in self.fields():
             if f.when and not f.when(row):
                 continue
-            ttk.Label(self.form, text=f.label).grid(row=line, column=0, sticky='nw', pady=2, padx=(0, 8))
+            lab = ttk.Label(self.form, text=f.label)
+            lab.grid(row=line, column=0, sticky='nw', pady=2, padx=(0, 8))
             w = self._widget(f, row)
             w.grid(row=line, column=1, sticky='w', pady=2)
+            words = field_tip(f)
+            tip(lab, words)
+            tip(w, words)
+            for inner in w.winfo_children():                  # a row of check boxes
+                tip(inner, words)
             if f.hint:
                 ttk.Label(self.form, text=f.hint, foreground='#666', wraplength=300,
                           justify='left').grid(row=line, column=2, sticky='w', padx=8)
@@ -322,6 +330,10 @@ class TableTab(ttk.Frame):
                 fill='x')
             ttk.Button(box, text='Import...', command=lambda f=folder, b=is_bag: self.import_picture(f, b)).pack(
                 fill='x')
+            self.after_idle(self._picture_tips)
+
+    def _picture_tips(self):
+        apply_tips(self.pics)
 
     def paint(self, folder, is_bag, label):
         """Open the painter on this picture; saving puts it back here."""

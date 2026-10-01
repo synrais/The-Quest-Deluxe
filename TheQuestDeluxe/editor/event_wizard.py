@@ -7,7 +7,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 
 from . import dialogue, event_code
-from .uikit import center
+from .uikit import center, tip
 
 WHENS = [('talk', 'the hero talks to a person'), ('dies', 'a creature dies'),
          ('arrive', 'the hero arrives on the level'), ('chest', 'the hero opens a chest'),
@@ -109,6 +109,12 @@ class EventWizard(tk.Toplevel):
         self.msg.pack(side='left', padx=10)
         self._when_changed()
         self._action_changed()
+        from .tips import apply as apply_tips
+        apply_tips(self)
+        tip(self.when, 'What starts the event. The choice may ask who or which, beside it.')
+        tip(self.action, 'One thing the event does. Add as many as you like; they happen in order.')
+        tip(self.list, 'What happens, in order. Select one and use Remove to take it out.')
+        tip(self.preview, 'The code that will be written into the level script. You can change it there later.')
         center(self, parent=tab.winfo_toplevel())
         self.transient(tab.winfo_toplevel())
         self.grab_set()

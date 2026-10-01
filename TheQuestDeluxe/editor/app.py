@@ -14,7 +14,7 @@ from tkinter import ttk, filedialog, messagebox, simpledialog
 
 from engine.pack import PACKS_DIR, DEFAULT_PACK, ROOT
 from .project import Project
-from .uikit import center, install as install_wheel, on_wheel, scroll_canvas
+from .uikit import center, install as install_wheel, on_wheel, scroll_canvas, tip
 from .map_tab import MapTab
 from .text_tabs import EventsTab, TextTab
 from .items_tab import ItemsTab
@@ -228,6 +228,9 @@ class App:
         root.bind('<Control-z>', lambda e: self._undo(False))
         root.bind('<Control-y>', lambda e: self._undo(True))
         root.protocol('WM_DELETE_WINDOW', self.quit)
+        from .tips import apply as apply_tips, BUTTONS
+        apply_tips(root)
+        tip(self.play_class, 'The class of the hero for test play (F5).')
         last = self._settings().get('last')
         if last and not os.path.exists(os.path.join(last, 'quest.json')):
             last = None                              # a pack that has moved or gone: start from the default
