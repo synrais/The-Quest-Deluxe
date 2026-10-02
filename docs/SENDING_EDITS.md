@@ -3,7 +3,7 @@
 The editor's **Send my edits...** button (toolbar, and Help menu) uploads everything added or changed in the packs
 since the game came (new sprites, changed tables, `WISHES.txt`) to this repository as a **new branch**
 `edits/<name>-<date>`. It never writes to `main`. **Make zip instead** in the same window makes the dated zip as before
-(`Make Edits Zip.bat` still works too).
+.
 
 ## One-time setup (owner)
 
@@ -25,5 +25,5 @@ or hand it to Claude to build the features he asked for.
 ## Notes
 
 - Removed files are not sent; only new and changed ones.
-- `editor/pack_baseline.json` records the shipped pack; regenerate it with `python tools/pack_edits_zip.py --baseline`
+- `editor/pack_baseline.json` records the shipped pack; regenerate it with `python TheQuestDeluxe/editor/pack_edits.py --baseline`
   whenever the shipped pack changes.

@@ -1,6 +1,6 @@
 """The Wishes window: somewhere to write what the editor or the game can't do yet (a spell that does this, a tile
-that does that, a kind of creature ...). It is kept as WISHES.txt in the pack's folder; "Make Edits Zip.bat" puts it in
-the zip, and its text at the top of WHAT_CHANGED.txt (tools/pack_edits_zip.py reads it)."""
+that does that, a kind of creature ...). It is kept as WISHES.txt in the pack's folder; "Send my edits..." puts it in
+the upload or zip, and its text at the top of WHAT_CHANGED.txt (editor/pack_edits.py reads it)."""
 from __future__ import annotations
 
 import os
@@ -25,7 +25,7 @@ class WishesWindow(tk.Toplevel):
         top.pack(fill='both', expand=True)
         ttk.Label(top, justify='left', wraplength=620,
                   text='What do you wish the editor or the game could do? A spell, a tile, a kind of creature, a '
-                       'button, anything. Write it here and press Save: Send my edits (or Make Edits Zip.bat) sends it on with your '
+                       'button, anything. Write it here and press Save: Send my edits sends it on with your '
                        'edits, so the game can be changed to do it.').pack(anchor='w')
         row = ttk.Frame(top)
         row.pack(fill='x', pady=(8, 2))
@@ -77,7 +77,7 @@ class WishesWindow(tk.Toplevel):
         text = self.text.get('1.0', 'end-1c')
         with open(self.path, 'w', encoding='utf-8', newline='\n') as fh:
             fh.write(text if text.endswith('\n') or not text else text + '\n')
-        self.status.config(text='Saved. Make Edits Zip.bat sends it on.')
+        self.status.config(text='Saved. Send my edits sends it on.')
 
     def close(self):
         self.save()

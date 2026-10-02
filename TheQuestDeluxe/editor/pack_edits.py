@@ -1,7 +1,7 @@
 """What was added in the editor: found, listed, and either packed into a dated zip or uploaded (send_edits.py).
 
-The editor's "Send my edits..." button uses it, and so does "Make Edits Zip.bat" (in the main folder, next to
-TheQuestClassic and TheQuestDeluxe), which makes QuestEdits_<date>_<time>.zip beside it, holding:
+The editor's "Send my edits..." button uses it, and so does its "Make zip instead", which makes
+QuestEdits_<date>_<time>.zip beside the game folder, holding:
 
   - every file of packs/TheQuest that is new or different from the shipped pack (new pictures, the changed
     items.json, creatures.json, tiles.json, spells.json, maps, scripts ...),
@@ -14,10 +14,10 @@ TheQuestClassic and TheQuestDeluxe), which makes QuestEdits_<date>_<time>.zip be
 The paths inside the zip start at TheQuestDeluxe/..., so unzipping it over a copy of the repository puts every
 file where it belongs. Nothing is changed or deleted in the packs: the zip is only a copy.
 
-    python tools/pack_edits_zip.py             make the zip
-    python tools/pack_edits_zip.py --all       put every pack's every file in it
-    python tools/pack_edits_zip.py --note ...  add a note to say what was tried (the .bat asks for one)
-    python tools/pack_edits_zip.py --baseline  record the shipped packs/TheQuest as it is now (editor/pack_baseline.json:
+    python TheQuestDeluxe/editor/pack_edits.py             make the zip
+    python TheQuestDeluxe/editor/pack_edits.py --all       put every pack's every file in it
+    python TheQuestDeluxe/editor/pack_edits.py --note ...  add a note to say what was tried
+    python TheQuestDeluxe/editor/pack_edits.py --baseline  record the shipped packs/TheQuest as it is now (editor/pack_baseline.json:
                                                what "different from the shipped pack" is compared with; whoever changes
                                                the shipped pack runs this, and the tests fail until they do)
 

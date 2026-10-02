@@ -1,4 +1,4 @@
-"""tools/pack_edits_zip.py ("Make Edits Zip.bat"): the zip of what was added in the editor.
+"""editor/pack_edits.py (the zip behind "Send my edits..."): the zip of what was added in the editor.
 
     python tests/test_pack_zip.py
 """
@@ -39,7 +39,7 @@ def fresh_copy() -> str:
 def main():
     # the recorded baseline is the shipped pack as it is (whoever changes the shipped pack runs --baseline)
     shipped = pz.scan(os.path.join(ROOT, PACKS, pz.SHIPPED))
-    assert pz.read_baseline() == shipped, 'editor/pack_baseline.json is stale: run python tools/pack_edits_zip.py --baseline'
+    assert pz.read_baseline() == shipped, 'editor/pack_baseline.json is stale: run python TheQuestDeluxe/editor/pack_edits.py --baseline'
 
     tmp = fresh_copy()
     packs = os.path.join(tmp, PACKS)
@@ -122,10 +122,6 @@ def main():
     assert os.path.exists(os.path.join(other, PACKS, pz.SHIPPED, 'sprites', 'items', '2500.png'))
     # a wrong folder says so
     assert pz.build(os.path.join(tempfile.mkdtemp(), 'TheQuestDeluxe'))[0] is None
-    # the launcher is where it is said to be
-    bat = os.path.join(ROOT, 'Make Edits Zip.bat')
-    raw = open(bat, 'rb').read()
-    assert b'\r\n' in raw and b'tools\\pack_edits_zip.py' in raw
     print('Make Edits Zip: only what is new or changed goes in the zip, new packs whole, dated, unzips in place: ok')
 
 
