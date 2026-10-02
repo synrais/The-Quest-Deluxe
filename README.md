@@ -36,6 +36,7 @@ python TheQuestDeluxe/run_editor.py      The Quest Deluxe Editor (needs tkinter)
 
 | Folder | Holds |
 |---|---|
+| `Make Edits Zip.bat` | Double-click it to pack what was added in the editor (new pictures, items, creatures, spells, tiles, maps, and any pack made new) into `QuestEdits_<date>_<time>.zip` beside it, to send on. `tools/pack_edits_zip.py` does the work; `--all` packs every pack whole; `--baseline` re-records the shipped pack it compares with (the tests fail until you do, after changing the shipped pack). |
 | `TheQuestClassic/` | The faithful port: `engine/` (its code), `packs/TheQuest/` (the original as released), `sprites/`, its reverse-engineering tools and exe verifiers (`tools/re/`), notes and tests. |
 | `TheQuestDeluxe/` | The Quest Deluxe: `engine/` (its code), `editor/`, `packs/`, `docs/`, tests and `tools/make_pack.py`. |
 | `docs/` | Everything learned along the way: [findings about the original](docs/FINDINGS.md), [how the ports are verified](docs/VERIFICATION.md) and [the project's decisions and plans](docs/PROJECT.md). Start at [docs/README.md](docs/README.md). |

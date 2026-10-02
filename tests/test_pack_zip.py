@@ -1,0 +1,85 @@
+"""tools/pack_edits_zip.py ("Make Edits Zip.bat"): the zip of what was added in the editor.
+
+    python tests/test_pack_zip.py
+"""
+from __future__ import annotations
+
+import os
+import shutil
+import sys
+import tempfile
+import zipfile
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(ROOT, 'tools'))
+import pack_edits_zip as pz  # noqa: E402
+
+
+def fresh_copy() -> str:
+    """A main folder with just the packs, as a player has them."""
+    tmp = tempfile.mkdtemp()
+    shutil.copytree(os.path.join(ROOT, pz.PACKS), os.path.join(tmp, pz.PACKS))
+    return tmp
+
+
+def main():
+    # the recorded baseline is the shipped pack as it is (whoever changes the shipped pack runs --baseline)
+    shipped = pz.scan(os.path.join(ROOT, pz.PACKS, pz.SHIPPED))
+    assert pz.read_baseline() == shipped, 'tools/pack_baseline.json is stale: run python tools/pack_edits_zip.py --baseline'
+
+    tmp = fresh_copy()
+    packs = os.path.join(tmp, pz.PACKS)
+    path, report = pz.build(tmp)
+    assert path is None and 'nothing to pack' in report, report         # nothing edited: no zip
+    # Windows line endings are not an edit
+    items = os.path.join(packs, pz.SHIPPED, 'items.json')
+    data = open(items, 'rb').read().replace(b'\r\n', b'\n').replace(b'\n', b'\r\n')
+    open(items, 'wb').write(data)
+    assert pz.build(tmp)[0] is None
+
+    # an edit: a new picture, a changed table, a removed file, and a pack made new
+    shutil.copy(os.path.join(packs, pz.SHIPPED, 'sprites', 'items', '1101.png'),
+                os.path.join(packs, pz.SHIPPED, 'sprites', 'items', '2500.png'))
+    with open(items, 'a', encoding='utf-8') as fh:
+        fh.write('\n')
+    text = open(items, encoding='utf-8').read().replace('"Ladder"', '"Wooden Ladder"')
+    open(items, 'w', encoding='utf-8', newline='').write(text)
+    os.remove(os.path.join(packs, pz.SHIPPED, 'sprites', 'items', '1105.png'))
+    shutil.copytree(os.path.join(packs, pz.SHIPPED), os.path.join(packs, 'mypack'))
+    os.makedirs(os.path.join(packs, pz.SHIPPED, '__pycache__'))
+    open(os.path.join(packs, pz.SHIPPED, '__pycache__', 'x.pyc'), 'wb').write(b'0')
+
+    path, report = pz.build(tmp, when=1760000000)
+    assert path and os.path.dirname(path) == tmp and os.path.basename(path).startswith('QuestEdits_2025-10-09_'), path
+    assert path.endswith('.zip')
+    with zipfile.ZipFile(path) as z:
+        names = set(z.namelist())
+        said = z.read('WHAT_CHANGED.txt').decode()
+    assert f'TheQuestDeluxe/packs/{pz.SHIPPED}/sprites/items/2500.png' in names           # the new picture
+    assert f'TheQuestDeluxe/packs/{pz.SHIPPED}/items.json' in names                         # the changed table
+    assert f'TheQuestDeluxe/packs/{pz.SHIPPED}/sprites/items/1101.png' not in names         # shipped, untouched: not sent
+    assert not any('__pycache__' in n or n.endswith('.pyc') for n in names)
+    assert f'TheQuestDeluxe/packs/mypack/quest.json' in names and f'TheQuestDeluxe/packs/mypack/items.json' in names
+    assert 'new: sprites/items/2500.png' in said and 'changed: items.json' in said and 'removed: sprites/items/1105.png' in said
+    assert 'packs/mypack: a pack of its own' in said
+    # --all: everything
+    path_all, _ = pz.build(tmp, include_all=True, when=1760000060)
+    with zipfile.ZipFile(path_all) as z:
+        assert f'TheQuestDeluxe/packs/{pz.SHIPPED}/sprites/items/1101.png' in z.namelist()
+    # unzipped over a copy of the repository, the files land where they belong
+    other = fresh_copy()
+    with zipfile.ZipFile(path) as z:
+        z.extractall(other)
+    assert os.path.exists(os.path.join(other, pz.PACKS, 'mypack', 'quest.json'))
+    assert os.path.exists(os.path.join(other, pz.PACKS, pz.SHIPPED, 'sprites', 'items', '2500.png'))
+    # a wrong folder says so
+    assert pz.build(tempfile.mkdtemp())[0] is None
+    # the launcher is where it is said to be
+    bat = os.path.join(ROOT, 'Make Edits Zip.bat')
+    raw = open(bat, 'rb').read()
+    assert b'\r\n' in raw and b'tools\\pack_edits_zip.py' in raw
+    print('Make Edits Zip: only what is new or changed goes in the zip, new packs whole, dated, unzips in place: ok')
+
+
+if __name__ == '__main__':
+    main()
