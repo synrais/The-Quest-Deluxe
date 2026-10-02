@@ -518,8 +518,7 @@ win.text.insert('end', 'I also wish creatures could carry keys.\n')
 win.close()
 wished = open(os.path.join(pack, 'WISHES.txt'), encoding='utf-8').read()
 assert 'A spell that makes it rain' in wished and 'carry keys' in wished and wished.startswith('# Things I wish')
-sys.path.insert(0, os.path.join(os.path.dirname(ROOT), 'tools'))
-import pack_edits_zip as pz
+from editor import pack_edits as pz
 assert 'A spell that makes it rain' in pz.read_wishes(pack) and '#' not in pz.read_wishes(pack)
 print('wishes: written in the editor, kept with the pack, read by the zip tool: ok')
 print('events: the wizard makes a rule, its words and the script, and the game reads it: ok')

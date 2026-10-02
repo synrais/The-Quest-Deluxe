@@ -204,7 +204,8 @@ class App:
         bar.pack(fill='x')
         ttk.Button(bar, text='Save', command=self.save).pack(side='left')
         ttk.Button(bar, text='Play from here (F5)', command=self.play).pack(side='left', padx=6)
-        ttk.Button(bar, text='Wishes...', command=self.wishes).pack(side='right')
+        ttk.Button(bar, text='Send my edits...', command=self.send_edits).pack(side='right')
+        ttk.Button(bar, text='Wishes...', command=self.wishes).pack(side='right', padx=6)
         ttk.Label(bar, text='as').pack(side='left')
         self.play_class = ttk.Combobox(bar, state='readonly', width=12)
         self.play_class.pack(side='left', padx=4)
@@ -244,6 +245,14 @@ class App:
         self.open(pack or last or DEFAULT_PACK)
         self.fit_window()
 
+    def send_edits(self):
+        """The Send my edits window: what was added or changed goes to the game's repository, or into a zip."""
+        from .send_window import SendWindow
+        if getattr(self, '_send', None) is not None and self._send.winfo_exists():
+            self._send.lift()
+            return
+        self._send = SendWindow(self)
+
     def wishes(self):
         """The Wishes window: what the editor or the game can't do yet, kept with the pack (WISHES.txt)."""
         from .wishes import WishesWindow
@@ -281,6 +290,7 @@ class App:
         e.add_command(label='Redo map change', accelerator='Ctrl+Y', command=lambda: self._undo(True))
         m.add_cascade(label='Edit', menu=e)
         h = tk.Menu(m, tearoff=False)
+        h.add_command(label='Send my edits...', command=lambda: self.send_edits())
         h.add_command(label='Wishes: what do you wish it could do?', command=lambda: self.wishes())
         h.add_command(label='Map tools', command=lambda: self._help('map'))
         h.add_command(label='About', command=lambda: self._help('about'))

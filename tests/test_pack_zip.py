@@ -11,8 +11,10 @@ import tempfile
 import zipfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, os.path.join(ROOT, 'tools'))
-import pack_edits_zip as pz  # noqa: E402
+sys.path.insert(0, os.path.join(ROOT, 'TheQuestDeluxe'))
+from editor import pack_edits as pz  # noqa: E402
+
+PACKS = 'TheQuestDeluxe/packs'
 
 
 def png(w: int, h: int) -> bytes:
@@ -30,24 +32,24 @@ def png(w: int, h: int) -> bytes:
 def fresh_copy() -> str:
     """A main folder with just the packs, as a player has them."""
     tmp = tempfile.mkdtemp()
-    shutil.copytree(os.path.join(ROOT, pz.PACKS), os.path.join(tmp, pz.PACKS))
+    shutil.copytree(os.path.join(ROOT, PACKS), os.path.join(tmp, PACKS))
     return tmp
 
 
 def main():
     # the recorded baseline is the shipped pack as it is (whoever changes the shipped pack runs --baseline)
-    shipped = pz.scan(os.path.join(ROOT, pz.PACKS, pz.SHIPPED))
-    assert pz.read_baseline() == shipped, 'tools/pack_baseline.json is stale: run python tools/pack_edits_zip.py --baseline'
+    shipped = pz.scan(os.path.join(ROOT, PACKS, pz.SHIPPED))
+    assert pz.read_baseline() == shipped, 'editor/pack_baseline.json is stale: run python tools/pack_edits_zip.py --baseline'
 
     tmp = fresh_copy()
-    packs = os.path.join(tmp, pz.PACKS)
-    path, report = pz.build(tmp)
+    packs = os.path.join(tmp, PACKS)
+    path, report = pz.build(os.path.join(tmp, 'TheQuestDeluxe'))
     assert path is None and 'nothing to pack' in report, report         # nothing edited: no zip
     # Windows line endings are not an edit
     items = os.path.join(packs, pz.SHIPPED, 'items.json')
     data = open(items, 'rb').read().replace(b'\r\n', b'\n').replace(b'\n', b'\r\n')
     open(items, 'wb').write(data)
-    assert pz.build(tmp)[0] is None
+    assert pz.build(os.path.join(tmp, 'TheQuestDeluxe'))[0] is None
 
     # an edit: a new picture, a changed table, a removed file, and a pack made new
     shutil.copy(os.path.join(packs, pz.SHIPPED, 'sprites', 'items', '1101.png'),
@@ -61,7 +63,7 @@ def main():
     os.makedirs(os.path.join(packs, pz.SHIPPED, '__pycache__'))
     open(os.path.join(packs, pz.SHIPPED, '__pycache__', 'x.pyc'), 'wb').write(b'0')
 
-    path, report = pz.build(tmp, when=1760000000)
+    path, report = pz.build(os.path.join(tmp, 'TheQuestDeluxe'), when=1760000000)
     assert path and os.path.dirname(path) == tmp and os.path.basename(path).startswith('QuestEdits_2025-10-09_'), path
     assert path.endswith('.zip')
     with zipfile.ZipFile(path) as z:
@@ -89,7 +91,7 @@ def main():
     open(os.path.join(packs, pz.SHIPPED, 'sprites', 'items', 'new items', '9.png'), 'wb').write(png(40, 40))
     open(os.path.join(packs, pz.SHIPPED, 'sprites', 'creatures', '777.png'), 'wb').write(png(80, 80))
     open(os.path.join(packs, pz.SHIPPED, 'sprites', 'creatures', 'big.png'), 'wb').write(png(40, 40))
-    path3, report3 = pz.build(tmp, when=1760000120, note='I could not freeze the water.')
+    path3, report3 = pz.build(os.path.join(tmp, 'TheQuestDeluxe'), when=1760000120, note='I could not freeze the water.')
     assert "NEW items 2600 'Test Mushroom'" in report3 and "CHANGED walls 2 'Water': freezes_to: null -> -7" in report3
     assert 'sprites/creatures/777.png: 80 x 80   WARNING: 80 x 80, not 40 x 40: it is scaled' in report3
     assert 'sprites/items/new items/9.png: 40 x 40   WARNING: not where the editor looks' in report3
@@ -98,28 +100,28 @@ def main():
     with zipfile.ZipFile(path3) as z:
         assert z.read('NOTES.txt').decode().strip() == 'I could not freeze the water.'
     # a game folder without the recorded baseline says so, and sends all of the pack
-    nobase, said = pz.build(tmp, when=1760000180, baseline=os.path.join(tmp, 'missing.json'))
+    nobase, said = pz.build(os.path.join(tmp, 'TheQuestDeluxe'), when=1760000180, baseline=os.path.join(tmp, 'missing.json'))
     assert 'pack_baseline.json is missing' in said and nobase
     # what was written in the editor's Wishes window leads the report, and goes in the zip
     open(os.path.join(packs, pz.SHIPPED, 'WISHES.txt'), 'w', encoding='utf-8').write(
         '# Things I wish\n- 2026-10-02: a spell that makes it rain\n')
-    path4, report4 = pz.build(tmp, when=1760000240)
+    path4, report4 = pz.build(os.path.join(tmp, 'TheQuestDeluxe'), when=1760000240)
     assert 'WISHES (packs/TheQuest/WISHES.txt):\n- 2026-10-02: a spell that makes it rain' in report4
     assert '# Things I wish' not in report4
     with zipfile.ZipFile(path4) as z:
         assert f'TheQuestDeluxe/packs/{pz.SHIPPED}/WISHES.txt' in z.namelist()
     # --all: everything
-    path_all, _ = pz.build(tmp, include_all=True, when=1760000060)
+    path_all, _ = pz.build(os.path.join(tmp, 'TheQuestDeluxe'), include_all=True, when=1760000060)
     with zipfile.ZipFile(path_all) as z:
         assert f'TheQuestDeluxe/packs/{pz.SHIPPED}/sprites/items/1101.png' in z.namelist()
     # unzipped over a copy of the repository, the files land where they belong
     other = fresh_copy()
     with zipfile.ZipFile(path) as z:
         z.extractall(other)
-    assert os.path.exists(os.path.join(other, pz.PACKS, 'mypack', 'quest.json'))
-    assert os.path.exists(os.path.join(other, pz.PACKS, pz.SHIPPED, 'sprites', 'items', '2500.png'))
+    assert os.path.exists(os.path.join(other, PACKS, 'mypack', 'quest.json'))
+    assert os.path.exists(os.path.join(other, PACKS, pz.SHIPPED, 'sprites', 'items', '2500.png'))
     # a wrong folder says so
-    assert pz.build(tempfile.mkdtemp())[0] is None
+    assert pz.build(os.path.join(tempfile.mkdtemp(), 'TheQuestDeluxe'))[0] is None
     # the launcher is where it is said to be
     bat = os.path.join(ROOT, 'Make Edits Zip.bat')
     raw = open(bat, 'rb').read()
