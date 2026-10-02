@@ -492,6 +492,22 @@ app.tabs.select(app.creatures_tab)
 pump()
 assert getattr(app.creatures_tab.form.winfo_children()[0], '_tip', None) is not None
 print('tooltips: every field and the map explain themselves: ok')
+# an item that walks on water, with no tile marked as water yet: the editor says so and offers to mark the water
+import editor.items_tab as itab
+it = app.items_tab
+app.tabs.select(it)
+pump()
+walls = app.project.tiles['walls']
+for w_ in walls:
+    w_.pop('water', None)
+    w_.pop('freezes_to', None)
+it.select(501)                                  # an amulet
+asked = []
+itab.messagebox.askyesno = lambda *a, **k: asked.append(a) or True
+walk = next(f for f in it.fields() if f.key == 'water_walk')
+it._set(walk, True)
+assert asked and next(w_ for w_ in walls if w_['id'] == 2).get('water') is True, (asked, it.row, [(w_['id'], w_.get('name'), w_.get('water')) for w_ in walls][:5])
+print('items: ticking Walks on water offers to mark the water tile: ok')
 print('events: the wizard makes a rule, its words and the script, and the game reads it: ok')
 root.destroy()
 print('all editor checks passed')

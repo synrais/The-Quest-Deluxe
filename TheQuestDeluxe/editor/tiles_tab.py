@@ -144,6 +144,13 @@ class TilesTab(TableTab):
         return out
 
     def after_change(self, row, key, old):
+        if key == 'freezes_to' and row.get('freezes_to') is not None:
+            ice = next((w for w in self.app.project.tiles.get('walls', []) if w['id'] == row['freezes_to']), None)
+            if ice is not None and ice.get('solid') and messagebox.askyesno(
+                    'Freezes to', f'"{ice.get("name")}" is solid, so nobody could walk on the ice. Make it walkable '
+                                  '(not solid)?'):
+                ice.pop('solid', None)                           # new walls start solid; ice has to be walked on
+                self.app.project.touch('tiles')
         if key == 'door' and row.get('door') != 'locked':
             row.pop('key', None)
         if key == 'door' and row.get('door') == 'locked' and 'key' not in row:

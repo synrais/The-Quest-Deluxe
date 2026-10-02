@@ -1048,6 +1048,29 @@ def hands_react():
     print('hands: the second blow is the left hand\'s, a shield is knocked away by a hit and comes up for a miss: ok')
 
 
+def water_walking():
+    def amulet(folder, json):
+        path = os.path.join(folder, 'items.json')
+        data = json.load(open(path))
+        data['items'].append({'id': 2020, 'name': 'Undine Amulet', 'type': 'amulet', 'water_walk': True})
+        json.dump(data, open(path, 'w'))
+    from engine.state import SLOT_AMULET
+    g = with_changes(amulet)
+    p, w = g.player, g.world
+    for e in list(w.enemies):
+        w.sq(e.x, e.y).mon = 0
+    w.enemies.clear()
+    sq = w.sq(p.X + 1, p.Y)
+    sq.wall = sq.mon = sq.item = 0
+    sq.wall = 2                                                    # the Quest's own Water, as the pack ships it
+    assert g.pack.wall(2).get('water'), "the pack's water is marked as water"
+    x0 = p.X
+    assert not g.try_move(1, 0) and p.X == x0                       # without the amulet, water stops him
+    p.bag[SLOT_AMULET] = 2020
+    assert g.try_move(1, 0) and p.X == x0 + 1                       # with it he walks on the water
+    print('water walking: the amulet carries him over the pack\'s water: ok')
+
+
 if __name__ == '__main__':
     fire()
     ice()
@@ -1055,6 +1078,7 @@ if __name__ == '__main__':
     blood_regen()
     foresight()
     clones()
+    water_walking()
     hands_react()
     usable_items()
     behaviour()

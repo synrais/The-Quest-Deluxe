@@ -16,7 +16,7 @@
   {"id": -2, "name": "Locked Gold Key Door", "door": "locked", "key": "yellow"},
   {"id": -1, "name": "Door", "door": "plain", "map_colour": [0, 5]},
   {"id": 1, "name": "Pine Trees", "solid": true},
-  {"id": 2, "name": "Water", "solid": true, "map_colour": [1, 1], "view3d": "flat"},
+  {"id": 2, "name": "Water", "solid": true, "water": true, "map_colour": [1, 1], "view3d": "flat"},
   {"id": 3, "name": "Pine Trees", "solid": true, "map_colour": [10, 4]},
   {"id": 4, "name": "Diagonal Pinstripe White", "solid": true, "map_colour": [0, 5]},
   {"id": 5, "name": "Boulder", "solid": true, "map_colour_on_level": {"5": [8, 2]}},

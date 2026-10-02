@@ -94,7 +94,8 @@ FIELDS = {
     'sight': 'Squares further the eye sees in FPS mode, while worn.',
     'poison_immune': 'Nothing can poison him while he wears it.',
     'see_invisible': 'Invisible creatures show for what they are (like a potion of foresight), while worn.',
-    'water_walk': 'He can walk on water: walls that freeze to ice (water) do not stop him.',
+    'water_walk': 'He can walk on water, while it is worn: walls marked "Is water" on the Tiles tab (or that freeze to '
+                  'ice) do not stop him. Nothing happens until the water wall is marked.',
     'makes_small': 'He is small while he wears it: through small-only walls, low eyes in FPS mode. With Makes him a '
                    'giant as well, they cancel.',
     'makes_giant': 'He is a giant while he wears it: hits half as hard again, smashes giant-only walls, high eyes.',

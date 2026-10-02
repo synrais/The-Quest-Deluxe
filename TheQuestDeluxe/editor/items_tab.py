@@ -117,7 +117,8 @@ class ItemsTab(TableTab):
             Field('sight', 'Sees further', 'int', when=is_(*WORN), hint='squares more in FPS mode'),
             Field('poison_immune', 'Poison cannot touch him', 'bool', when=is_(*WORN)),
             Field('see_invisible', 'Sees the invisible', 'bool', when=is_(*WORN)),
-            Field('water_walk', 'Walks on water', 'bool', when=is_(*WORN)),
+            Field('water_walk', 'Walks on water', 'bool', when=is_(*WORN),
+                  hint='needs the water wall ticked "Is water" on the Tiles tab'),
             Field('makes_small', 'Makes him small', 'bool', when=is_(*WORN), hint='while worn (a ring of shrinking)'),
             Field('makes_giant', 'Makes him a giant', 'bool', when=is_(*WORN), hint='while worn (a belt of giants)'),
             Field('use.life', 'Used: restores life', 'int', when=lambda r: r.get('type') in EATEN,
@@ -144,6 +145,8 @@ class ItemsTab(TableTab):
         ]
 
     def after_change(self, row, key, old):
+        if key == 'water_walk' and row.get('water_walk'):
+            self._check_water()
         if key.startswith('element') and row.get('type') == 'ammo':      # every stack of the kind shoots alike
             for r in self.rows:
                 if r is not row and r.get('type') == 'ammo' and r.get('ammo') == row.get('ammo'):
@@ -215,6 +218,24 @@ class ItemsTab(TableTab):
                     p.set_picture(folder, r['id'], p.picture(folder, row['id']))
                     self.app.pictures_changed('item', r['id'])
             self.fill_list()
+
+    def _check_water(self):
+        """An item that walks on water needs a tile that is water: say so if none is marked, and offer to mark the
+        walls named like water."""
+        walls = self.app.project.tiles.get('walls', [])
+        if any(w.get('water') or w.get('freezes_to') for w in walls):
+            return
+        named = [w for w in walls if 'water' in (w.get('name') or '').lower()]
+        names = ', '.join(f'{w["id"]} {w.get("name")}' for w in named)
+        if named and messagebox.askyesno('Walks on water', 'No tile is marked as water yet, so this would walk on '
+                                         f'nothing. Mark these walls as water now?\n\n{names}'):
+            for w in named:
+                w['water'] = True
+            self.app.project.touch('tiles')
+            self.app.changed()
+        elif not named:
+            messagebox.showinfo('Walks on water', 'No tile is marked as water yet. On the Tiles tab, open the water '
+                                                  'wall and tick "Is water": only then does this item walk on it.')
 
     def uses(self, row):
         return self.app.project.uses('item', row['id'])
