@@ -495,5 +495,4445 @@
 "text/talk.txt": "4800fc96ea522c9a126b1675fb39051a15582f9d",
 "tiles.json": "464c521a9e24f1bf434d72b56c1c427728cc5b76"
 },
-"pack": "TheQuest"
+"pack": "TheQuest",
+"tables": {
+"classes.json": {
+"_comment": "Hero classes: starting life, mana and stats; growth = [life, mana] gained per level; skill = the skill it gets free (skills.json); no_fault = the fault it may not take; look = how guy2() draws it (body colour, the Knight's shield and sword); bag = starting items by bag cell \"column,row\" (12,4 weapon, 16,4 off hand, 14,2 helmet, 14,4 armour, 14,6 amulet, 12-15,8-11 backpack); spells = known at the start, in spell-book order.",
+"classes": [
+{
+"acc": 10,
+"bag": {
+"12,4": 201,
+"16,4": 301
+},
+"dex": 10,
+"growth": [
+7,
+3
+],
+"id": 1,
+"int": 10,
+"life": 50,
+"look": {
+"colour": 5,
+"shield_and_sword": true
+},
+"mana": 0,
+"name": "Knight",
+"no_fault": "cow",
+"skill": "amb",
+"spells": [],
+"str": 20
+},
+{
+"acc": 10,
+"bag": {
+"12,4": 201
+},
+"dex": 10,
+"growth": [
+1,
+5
+],
+"id": 2,
+"int": 20,
+"life": 20,
+"look": {
+"colour": 4
+},
+"mana": 30,
+"name": "Mage",
+"no_fault": "ras",
+"skill": "mem",
+"spells": [
+1,
+2,
+3
+],
+"str": 10
+},
+{
+"acc": 15,
+"bag": {
+"12,4": 201,
+"12,8": 230,
+"13,8": 620
+},
+"dex": 15,
+"growth": [
+4,
+4
+],
+"id": 3,
+"int": 10,
+"life": 35,
+"look": {
+"colour": 8
+},
+"mana": 15,
+"name": "Rogue",
+"no_fault": "hon",
+"skill": "mar",
+"spells": [],
+"str": 10
+},
+{
+"acc": 10,
+"bag": {
+"12,4": 201,
+"14,6": 502
+},
+"dex": 10,
+"growth": [
+3,
+3
+],
+"id": 4,
+"int": 15,
+"life": 30,
+"look": {
+"colour": 15
+},
+"mana": 20,
+"name": "Monk",
+"skill": "sch",
+"spells": [
+1
+],
+"str": 15
+}
+]
+},
+"creatures.json": {
+"_comment": "Creatures: monsters (id > 0), people (-99..-1; -5 = shopkeeper) and summoned allies (<= -100). MONSTERS.DAT stats: life, power, attack, defence, weapon/magic armour, range (1 = melee), attitude. monsdeath2() rewards: exp, and loot rules [lo, hi, \"gold\", n, base] / [lo, hi, \"item\", id] tried with roll = random(100) + 1 (the first with lo < roll <= hi applies). Traits (docs/QUEST_PACKS.md): bleeds, corpse, invisible, reveals_as, hides_as, magic_attack, poison_melee/ranged/cast, missile_anim, cast_anim, heals_allies, raises_dead, explodes, drains_life, deceiver, rests_after_moving, animal, silences_witnesses; log_name is how Deluxe's combat log names it. Pictures: sprites/creatures/<id>.png.",
+"creatures": [
+{
+"atk": 120,
+"att": -3,
+"def": 40,
+"id": -102,
+"life": 20,
+"log_name": "summoned scorpion",
+"marm": 20,
+"name": "Summoned Scorpion",
+"poison_melee": 2,
+"power": 40,
+"range": 1,
+"warm": 0
+},
+{
+"atk": 125,
+"att": -3,
+"bleeds": false,
+"corpse": "bones",
+"def": 40,
+"id": -101,
+"life": 150,
+"log_name": "summoned stone knight",
+"marm": 0,
+"name": "Summoned Stone Knight",
+"power": 7,
+"range": 1,
+"warm": 10
+},
+{
+"atk": 100,
+"att": -3,
+"bleeds": false,
+"corpse": "bones",
+"def": 30,
+"id": -100,
+"life": 10,
+"log_name": "summoned skeleton",
+"marm": 0,
+"name": "Summoned Skeleton",
+"power": 12,
+"range": 1,
+"warm": 2
+},
+{
+"atk": 65,
+"att": -2,
+"def": 0,
+"exp": 15,
+"id": -15,
+"life": 6,
+"loot": [],
+"marm": 0,
+"name": "Priestess",
+"power": 2,
+"range": 1,
+"warm": 0
+},
+{
+"atk": 150,
+"att": -2,
+"def": 40,
+"exp": 60,
+"id": -14,
+"life": 45,
+"loot": [
+[
+20,
+100,
+"gold",
+20,
+1
+],
+[
+18,
+20,
+"item",
+407
+],
+[
+16,
+18,
+"item",
+507
+]
+],
+"marm": 5,
+"name": "Holy Guard",
+"power": 30,
+"range": 1,
+"warm": 10
+},
+{
+"atk": 1,
+"att": -2,
+"def": 0,
+"exp": 0,
+"id": -13,
+"life": 1,
+"loot": [],
+"marm": 0,
+"name": "Lost Monster",
+"power": 0,
+"range": 1,
+"warm": 0
+},
+{
+"atk": 85,
+"att": -2,
+"def": 0,
+"exp": 15,
+"id": -12,
+"life": 8,
+"log_name": "aristocrat",
+"loot": [
+[
+0,
+100,
+"gold",
+60,
+1
+]
+],
+"marm": 0,
+"name": "Aristrocrate Woman",
+"power": 2,
+"range": 1,
+"warm": 0
+},
+{
+"atk": 0,
+"att": -2,
+"cast_anim": [
+"aflame",
+1
+],
+"def": 0,
+"exp": 50,
+"id": -11,
+"life": 15,
+"log_name": "aristocrat",
+"loot": [
+[
+0,
+100,
+"gold",
+60,
+1
+]
+],
+"marm": 5,
+"name": "Aristocrat Male",
+"power": 11,
+"range": 2,
+"warm": 0
+},
+{
+"atk": 120,
+"att": -2,
+"def": 30,
+"exp": 40,
+"id": -10,
+"life": 30,
+"loot": [
+[
+10,
+20,
+"item",
+203
+]
+],
+"marm": 0,
+"name": "Monk",
+"power": 8,
+"range": 1,
+"warm": 3
+},
+{
+"atk": 80,
+"att": -2,
+"def": 10,
+"exp": 20,
+"id": -9,
+"life": 12,
+"loot": [
+[
+20,
+100,
+"gold",
+3,
+1
+],
+[
+10,
+20,
+"item",
+111
+]
+],
+"marm": 1,
+"name": "Fisherman",
+"power": 5,
+"range": 1,
+"warm": 0
+},
+{
+"atk": 130,
+"att": -2,
+"def": 35,
+"exp": 75,
+"id": -8,
+"life": 30,
+"loot": [
+[
+20,
+100,
+"gold",
+12,
+1
+],
+[
+10,
+20,
+"item",
+208
+]
+],
+"marm": 0,
+"name": "Guard",
+"power": 30,
+"range": 1,
+"warm": 5
+},
+{
+"atk": 65,
+"att": -2,
+"def": 0,
+"exp": 15,
+"id": -7,
+"life": 6,
+"loot": [
+[
+20,
+100,
+"gold",
+15,
+1
+]
+],
+"marm": 0,
+"name": "Woman",
+"power": 2,
+"range": 1,
+"warm": 0
+},
+{
+"atk": 85,
+"att": -2,
+"def": 10,
+"exp": 15,
+"id": -6,
+"life": 10,
+"loot": [
+[
+20,
+100,
+"gold",
+10,
+1
+]
+],
+"marm": 0,
+"name": "Farmer",
+"power": 6,
+"range": 1,
+"warm": 0
+},
+{
+"atk": 55,
+"att": -2,
+"def": 0,
+"exp": 15,
+"id": -5,
+"life": 7,
+"loot": [
+[
+20,
+100,
+"gold",
+40,
+1
+]
+],
+"marm": 0,
+"name": "Shopkeeper",
+"power": 4,
+"range": 1,
+"warm": 0
+},
+{
+"atk": 85,
+"att": 9,
+"def": 20,
+"exp": 10,
+"id": 1,
+"life": 3,
+"loot": [
+[
+20,
+100,
+"gold",
+3,
+1
+]
+],
+"marm": 0,
+"name": "Imp",
+"power": 2,
+"range": 1,
+"warm": 0
+},
+{
+"atk": 65,
+"att": 9,
+"def": 10,
+"exp": 15,
+"id": 2,
+"life": 8,
+"loot": [
+[
+20,
+100,
+"gold",
+3,
+1
+]
+],
+"marm": 0,
+"name": "Orc",
+"power": 4,
+"range": 1,
+"warm": 1
+},
+{
+"atk": 30,
+"att": 9,
+"def": 10,
+"exp": 10,
+"id": 3,
+"life": 7,
+"loot": [
+[
+20,
+100,
+"gold",
+3,
+1
+],
+[
+10,
+20,
+"item",
+620
+]
+],
+"marm": 0,
+"missile_anim": "sthit",
+"name": "Slinger",
+"power": 1,
+"range": 9,
+"warm": 0
+},
+{
+"animal": true,
+"atk": 90,
+"att": -1,
+"def": 20,
+"exp": 15,
+"id": 4,
+"life": 7,
+"loot": [
+[
+0,
+100,
+"item",
+11
+]
+],
+"marm": 0,
+"name": "Moose",
+"power": 4,
+"range": 1,
+"warm": 0
+},
+{
+"atk": 0,
+"att": 9,
+"cast_anim": [
+"afireball",
+1
+],
+"def": 0,
+"exp": 15,
+"id": 5,
+"life": 5,
+"loot": [
+[
+20,
+100,
+"gold",
+5,
+1
+]
+],
+"marm": 1,
+"name": "Witch",
+"power": 2,
+"range": 2,
+"warm": 0
+},
+{
+"atk": 90,
+"att": 9,
+"bleeds": false,
+"corpse": "bones",
+"def": 30,
+"exp": 20,
+"id": 6,
+"life": 10,
+"loot": [
+[
+20,
+100,
+"gold",
+3,
+1
+],
+[
+17,
+20,
+"item",
+301
+],
+[
+15,
+17,
+"item",
+204
+]
+],
+"marm": 0,
+"name": "Skeleton",
+"power": 7,
+"range": 1,
+"warm": 2
+},
+{
+"atk": 85,
+"att": 9,
+"bleeds": false,
+"corpse": "bones",
+"def": 10,
+"exp": 25,
+"id": 7,
+"life": 12,
+"loot": [
+[
+20,
+100,
+"gold",
+4,
+1
+]
+],
+"marm": 5,
+"name": "Reaper",
+"power": 12,
+"range": 1,
+"warm": 0
+},
+{
+"atk": 0,
+"att": 9,
+"cast_anim": [
+"aflame",
+1
+],
+"def": 30,
+"exp": 50,
+"id": 8,
+"life": 8,
+"loot": [
+[
+20,
+100,
+"gold",
+20,
+1
+]
+],
+"marm": 10,
+"name": "Mage",
+"power": 11,
+"range": 3,
+"warm": 0
+},
+{
+"atk": 90,
+"att": 9,
+"def": 10,
+"exp": 30,
+"id": 9,
+"life": 20,
+"loot": [
+[
+20,
+100,
+"gold",
+11,
+1
+],
+[
+10,
+20,
+"item",
+201
+]
+],
+"marm": 0,
+"name": "Tribal Clubman",
+"power": 8,
+"range": 1,
+"warm": 3
+},
+{
+"atk": 100,
+"att": 9,
+"def": 25,
+"exp": 30,
+"id": 10,
+"life": 15,
+"loot": [
+[
+20,
+100,
+"gold",
+11,
+1
+],
+[
+15,
+20,
+"item",
+206
+],
+[
+10,
+15,
+"item",
+302
+]
+],
+"marm": 0,
+"name": "Tribal Spearman",
+"power": 12,
+"range": 1,
+"warm": 2
+},
+{
+"atk": 0,
+"att": 9,
+"cast_anim": [
+"alightning",
+1
+],
+"def": 15,
+"exp": 35,
+"id": 11,
+"life": 10,
+"loot": [
+[
+20,
+100,
+"gold",
+9,
+1
+]
+],
+"marm": 6,
+"name": "Lightning Spellcaster",
+"power": 5,
+"range": 4,
+"warm": 0
+},
+{
+"animal": true,
+"atk": 150,
+"att": -1,
+"def": 25,
+"exp": 50,
+"id": 12,
+"life": 20,
+"loot": [
+[
+10,
+70,
+"item",
+9
+]
+],
+"marm": 20,
+"name": "Scorpion",
+"poison_melee": 2,
+"power": 40,
+"range": 1,
+"warm": 0
+},
+{
+"atk": 125,
+"att": 9,
+"def": 30,
+"exp": 45,
+"id": 13,
+"life": 18,
+"log_name": "tribal elite",
+"loot": [
+[
+20,
+100,
+"gold",
+11,
+1
+],
+[
+10,
+20,
+"item",
+206
+]
+],
+"marm": 0,
+"name": "Tribal Elite Spearman",
+"power": 20,
+"range": 1,
+"warm": 3
+},
+{
+"atk": 120,
+"att": 9,
+"def": 40,
+"exp": 40,
+"id": 14,
+"life": 30,
+"loot": [
+[
+10,
+20,
+"item",
+203
+]
+],
+"marm": 5,
+"name": "Corrupt Monk",
+"power": 15,
+"range": 1,
+"warm": 5
+},
+{
+"atk": 110,
+"att": 8,
+"def": 20,
+"drop_on_level": {
+"3": 12
+},
+"exp": 200,
+"id": 15,
+"life": 130,
+"loot": [
+[
+0,
+100,
+"gold",
+30,
+30
+]
+],
+"marm": 0,
+"name": "Tribal Leader",
+"power": 25,
+"range": 1,
+"warm": 6
+},
+{
+"atk": 135,
+"att": 9,
+"def": 30,
+"exp": 55,
+"id": 16,
+"life": 32,
+"log_name": "pirate",
+"loot": [
+[
+20,
+100,
+"gold",
+18,
+1
+],
+[
+15,
+20,
+"item",
+209
+]
+],
+"marm": 0,
+"name": "Pirate Buccaneer",
+"power": 18,
+"range": 1,
+"warm": 5
+},
+{
+"atk": 55,
+"att": 9,
+"def": 20,
+"exp": 60,
+"id": 17,
+"life": 25,
+"loot": [
+[
+20,
+100,
+"gold",
+12,
+1
+],
+[
+14,
+20,
+"item",
+640
+],
+[
+10,
+14,
+"item",
+231
+]
+],
+"marm": 0,
+"missile_anim": "arhit",
+"name": "Archer",
+"power": 4,
+"range": 9,
+"warm": 3
+},
+{
+"atk": 130,
+"att": 9,
+"def": 35,
+"exp": 75,
+"id": 18,
+"life": 30,
+"log_name": "knight",
+"loot": [
+[
+20,
+100,
+"gold",
+14,
+1
+],
+[
+10,
+20,
+"item",
+208
+]
+],
+"marm": 0,
+"name": "Knight Swordsman",
+"power": 30,
+"range": 1,
+"warm": 5
+},
+{
+"atk": 120,
+"att": 9,
+"def": 30,
+"exp": 70,
+"id": 19,
+"life": 30,
+"log_name": "knight",
+"loot": [
+[
+20,
+100,
+"gold",
+14,
+1
+],
+[
+10,
+20,
+"item",
+305
+]
+],
+"marm": 0,
+"name": "Knight Mace",
+"power": 25,
+"range": 1,
+"warm": 5
+},
+{
+"atk": 110,
+"att": 9,
+"def": 25,
+"exp": 65,
+"id": 20,
+"life": 30,
+"log_name": "knight",
+"loot": [
+[
+20,
+100,
+"gold",
+14,
+1
+],
+[
+10,
+20,
+"item",
+207
+]
+],
+"marm": 0,
+"name": "Knight Morningstar",
+"power": 20,
+"range": 1,
+"warm": 5
+},
+{
+"atk": 140,
+"att": 9,
+"def": 45,
+"exp": 80,
+"id": 21,
+"life": 35,
+"log_name": "knight",
+"loot": [
+[
+20,
+100,
+"gold",
+14,
+1
+],
+[
+10,
+20,
+"item",
+210
+]
+],
+"marm": 0,
+"name": "Knight Pike",
+"power": 35,
+"range": 1,
+"warm": 8
+},
+{
+"atk": 140,
+"att": 4,
+"corpse": "none",
+"def": 30,
+"exp": 70,
+"id": 22,
+"invisible": true,
+"life": 20,
+"log_name": "wraith",
+"loot": [
+[
+20,
+100,
+"gold",
+30,
+1
+]
+],
+"magic_attack": true,
+"marm": 15,
+"name": "Wraith Invisible",
+"power": 15,
+"range": 1,
+"reveals_as": 23,
+"warm": 0
+},
+{
+"atk": 140,
+"att": 4,
+"corpse": "none",
+"def": 30,
+"exp": 70,
+"hides_as": 22,
+"id": 23,
+"life": 20,
+"log_name": "wraith",
+"loot": [
+[
+20,
+100,
+"gold",
+30,
+1
+]
+],
+"magic_attack": true,
+"marm": 15,
+"name": "Wraith Revealed",
+"power": 15,
+"range": 1,
+"warm": 0
+},
+{
+"atk": 130,
+"att": 8,
+"def": 40,
+"exp": 300,
+"id": 24,
+"life": 80,
+"log_name": "Oculus Overlord",
+"loot": [
+[
+0,
+100,
+"gold",
+50,
+50
+]
+],
+"magic_attack": true,
+"marm": 20,
+"name": "Oculus Overlord",
+"power": 45,
+"range": 1,
+"warm": 0
+},
+{
+"atk": 130,
+"att": 5,
+"def": 40,
+"exp": 75,
+"id": 25,
+"life": 25,
+"log_name": "oculus",
+"loot": [
+[
+20,
+100,
+"gold",
+30,
+1
+]
+],
+"magic_attack": true,
+"marm": 20,
+"name": "Oculus Minion",
+"power": 25,
+"range": 1,
+"warm": 0
+},
+{
+"atk": 60,
+"att": 9,
+"def": 25,
+"exp": 70,
+"id": 26,
+"life": 25,
+"log_name": "elite archer",
+"loot": [
+[
+20,
+100,
+"gold",
+14,
+1
+],
+[
+15,
+20,
+"item",
+640
+],
+[
+10,
+15,
+"item",
+231
+]
+],
+"marm": 0,
+"missile_anim": "arhit",
+"name": "Archer Elite",
+"power": 5,
+"range": 9,
+"warm": 4
+},
+{
+"atk": 85,
+"att": 9,
+"def": 25,
+"exp": 150,
+"id": 27,
+"life": 30,
+"log_name": "archer",
+"loot": [
+[
+20,
+100,
+"gold",
+30,
+1
+],
+[
+10,
+20,
+"item",
+660
+]
+],
+"marm": 0,
+"missile_anim": "arhit",
+"name": "Archer Poison Longbow",
+"poison_ranged": 2,
+"power": 12,
+"range": 9,
+"warm": 4
+},
+{
+"atk": 150,
+"att": 9,
+"bleeds": false,
+"corpse": "bones",
+"def": 40,
+"exp": 70,
+"id": 28,
+"life": 35,
+"loot": [
+[
+20,
+100,
+"gold",
+20,
+1
+],
+[
+15,
+20,
+"item",
+212
+],
+[
+10,
+15,
+"item",
+304
+]
+],
+"marm": 3,
+"name": "Skeleton Barbarian",
+"power": 20,
+"range": 1,
+"warm": 5
+},
+{
+"atk": 160,
+"att": 9,
+"bleeds": false,
+"corpse": "bones",
+"def": 50,
+"exp": 75,
+"id": 29,
+"life": 40,
+"loot": [
+[
+20,
+100,
+"gold",
+20,
+1
+],
+[
+10,
+20,
+"item",
+303
+]
+],
+"marm": 3,
+"name": "Skeleton Warrior",
+"power": 25,
+"range": 1,
+"warm": 5
+},
+{
+"atk": 70,
+"att": 9,
+"bleeds": false,
+"corpse": "bones",
+"def": 30,
+"exp": 75,
+"id": 30,
+"life": 30,
+"loot": [
+[
+20,
+100,
+"gold",
+20,
+1
+],
+[
+15,
+20,
+"item",
+640
+],
+[
+10,
+15,
+"item",
+232
+]
+],
+"marm": 3,
+"missile_anim": "arhit",
+"name": "Skeleton Archer",
+"power": 8,
+"range": 9,
+"warm": 3
+},
+{
+"atk": 0,
+"att": 9,
+"bleeds": false,
+"cast_anim": [
+"adrain",
+3
+],
+"corpse": "bones",
+"def": 30,
+"drains_life": true,
+"exp": 80,
+"id": 31,
+"life": 30,
+"loot": [
+[
+20,
+100,
+"gold",
+25,
+1
+],
+[
+15,
+20,
+"item",
+113
+]
+],
+"marm": 12,
+"name": "Skeleton Vampire",
+"power": 20,
+"range": 2,
+"warm": 3
+},
+{
+"atk": 0,
+"att": -4,
+"bleeds": false,
+"corpse": "bones",
+"def": 30,
+"exp": 80,
+"id": 32,
+"life": 30,
+"loot": [
+[
+20,
+100,
+"gold",
+25,
+1
+],
+[
+15,
+20,
+"item",
+113
+]
+],
+"marm": 12,
+"name": "Skeleton Necromancer",
+"power": 0,
+"raises_dead": 33,
+"range": 9,
+"warm": 3
+},
+{
+"atk": 0,
+"att": 9,
+"bleeds": false,
+"cast_anim": [
+"agflame",
+1
+],
+"corpse": "bones",
+"def": 20,
+"exp": 20,
+"id": 33,
+"life": 20,
+"loot": [],
+"marm": 3,
+"name": "Skeleton Poison Spitter",
+"poison_cast": 20,
+"power": 8,
+"range": 2,
+"warm": 3
+},
+{
+"atk": 200,
+"att": 8,
+"bleeds": false,
+"corpse": "bones",
+"def": 80,
+"exp": 200,
+"id": 34,
+"life": 200,
+"loot": [
+[
+0,
+100,
+"item",
+221
+]
+],
+"marm": 30,
+"name": "Skeleton Overlord",
+"power": 40,
+"range": 1,
+"warm": 5
+},
+{
+"atk": 180,
+"att": 8,
+"def": 80,
+"exp": 250,
+"id": 35,
+"life": 300,
+"loot": [
+[
+0,
+100,
+"item",
+220
+]
+],
+"marm": 30,
+"name": "Fate Bringer",
+"power": 50,
+"range": 1,
+"silences_witnesses": true,
+"warm": 15
+},
+{
+"atk": 140,
+"att": 9,
+"def": 45,
+"exp": 50,
+"id": 36,
+"life": 80,
+"loot": [
+[
+20,
+100,
+"gold",
+20,
+1
+],
+[
+15,
+20,
+"item",
+405
+]
+],
+"marm": 10,
+"name": "Stone Knight",
+"power": 24,
+"range": 1,
+"warm": 18
+},
+{
+"atk": 160,
+"att": 9,
+"def": 40,
+"exp": 60,
+"id": 37,
+"life": 45,
+"loot": [
+[
+20,
+100,
+"gold",
+20,
+1
+],
+[
+18,
+20,
+"item",
+407
+],
+[
+16,
+18,
+"item",
+507
+]
+],
+"marm": 6,
+"name": "Holy Knight",
+"power": 30,
+"range": 1,
+"warm": 10
+},
+{
+"atk": 0,
+"att": -4,
+"def": 40,
+"exp": 100,
+"heals_allies": true,
+"id": 38,
+"life": 30,
+"log_name": "cleric",
+"loot": [
+[
+20,
+100,
+"gold",
+20,
+1
+],
+[
+15,
+20,
+"item",
+502
+],
+[
+10,
+15,
+"item",
+112
+]
+],
+"marm": 12,
+"name": "Clearic",
+"power": 12,
+"range": 9,
+"warm": 0
+},
+{
+"atk": 75,
+"att": 9,
+"def": 30,
+"exp": 60,
+"id": 39,
+"life": 45,
+"log_name": "holy knight",
+"loot": [
+[
+20,
+100,
+"gold",
+20,
+1
+],
+[
+15,
+20,
+"item",
+680
+],
+[
+10,
+15,
+"item",
+233
+]
+],
+"marm": 6,
+"missile_anim": "bolthit",
+"name": "Holy Knight Crossbow",
+"power": 8,
+"range": 9,
+"warm": 7
+},
+{
+"atk": 150,
+"att": 9,
+"def": 45,
+"exp": 60,
+"id": 40,
+"life": 80,
+"log_name": "stone knight",
+"loot": [
+[
+20,
+100,
+"gold",
+20,
+1
+],
+[
+15,
+20,
+"item",
+405
+],
+[
+10,
+15,
+"item",
+16
+]
+],
+"marm": 10,
+"name": "Stone Knight Battleaxe",
+"power": 40,
+"range": 1,
+"warm": 18
+},
+{
+"atk": 160,
+"att": 8,
+"def": 70,
+"exp": 1000,
+"id": 41,
+"life": 300,
+"loot": [
+[
+0,
+100,
+"item",
+107
+]
+],
+"marm": 20,
+"name": "Light Bringer",
+"power": 50,
+"range": 1,
+"warm": 20
+},
+{
+"atk": 0,
+"att": 9,
+"cast_anim": [
+"ainferno",
+1
+],
+"def": 50,
+"exp": 70,
+"id": 42,
+"life": 40,
+"loot": [
+[
+20,
+100,
+"gold",
+25,
+1
+],
+[
+15,
+20,
+"item",
+510
+]
+],
+"marm": 15,
+"name": "Spider Demon",
+"power": 20,
+"range": 3,
+"warm": 5
+},
+{
+"atk": 0,
+"att": 8,
+"cast_anim": [
+"ainferno",
+1
+],
+"def": 60,
+"exp": 1000,
+"id": 43,
+"life": 250,
+"log_name": "Spider Demon Ruler",
+"loot": [
+[
+0,
+100,
+"item",
+6
+]
+],
+"marm": 45,
+"name": "Spider Demon Ruler",
+"power": 30,
+"range": 9,
+"warm": 5
+},
+{
+"atk": 0,
+"att": 9,
+"def": 50,
+"exp": 70,
+"explodes": 6,
+"id": 44,
+"life": 40,
+"log_name": "kamikaze spider demon",
+"loot": [
+[
+30,
+100,
+"gold",
+25,
+1
+],
+[
+0,
+30,
+"item",
+217
+]
+],
+"marm": 15,
+"name": "Spider Demon Kamikaze",
+"power": 30,
+"range": 1,
+"warm": 5
+},
+{
+"atk": 150,
+"att": 8,
+"deceiver": {
+"atk": 0,
+"att": 9,
+"becomes": 44,
+"life": 40,
+"marm": 15,
+"power": 25
+},
+"def": 70,
+"exp": 0,
+"id": 45,
+"life": 200,
+"log_name": "Death Bringer",
+"loot": [],
+"marm": 30,
+"name": "Death Bringer-Magic form",
+"power": 60,
+"range": 1,
+"rests_after_moving": true,
+"warm": 15
+},
+{
+"atk": 150,
+"att": 8,
+"corpse": "none",
+"def": 70,
+"exp": 1000,
+"id": 46,
+"life": 50,
+"log_name": "Death Bringer",
+"loot": [],
+"marm": 30,
+"name": "Death Bringer-Melee form",
+"power": 60,
+"range": 1,
+"warm": 15
+},
+{
+"atk": 125,
+"att": 9,
+"def": 30,
+"exp": 55,
+"id": 47,
+"life": 32,
+"log_name": "pirate",
+"loot": [
+[
+20,
+100,
+"gold",
+18,
+1
+],
+[
+15,
+20,
+"item",
+205
+]
+],
+"marm": 0,
+"name": "Pirate Rapier",
+"power": 11,
+"range": 1,
+"warm": 5
+}
+]
+},
+"items.json": {
+"_comment": "Items: id, name, price (prices.dat) and the Items.dat columns: requirements, attack, defence, weapon/magic armour, stat bonuses, power, weapon kind (0 normal, 1 double strike, 2 parry, 3 magic, 4 ranged, 5 two-handed, 6 two-handed parry), type, and the fields in docs/QUEST_PACKS.md (ammo, count, fires, quest, bag_name, ...). Pictures: sprites/items/<id>.png on the map, sprites/bag/<id>.png in the bag and shops.",
+"items": [
+{
+"acc": 0,
+"atk": 0,
+"def": 0,
+"dex": 0,
+"id": 0,
+"int": 0,
+"kind": 0,
+"marm": 0,
+"name": "",
+"power": 0,
+"req_int": 0,
+"req_str": 0,
+"str": 0,
+"warm": 0
+},
+{
+"id": -5,
+"name": "",
+"type": "treasure"
+},
+{
+"bag_name": "Potion",
+"id": 1,
+"name": "Minor Health Potion",
+"potion": 1,
+"price": 15,
+"type": "potion"
+},
+{
+"bag_name": "Potion",
+"id": 2,
+"name": "Full Health Potion",
+"potion": 2,
+"price": 25,
+"type": "potion"
+},
+{
+"bag_name": "Potion",
+"id": 3,
+"name": "Minor Mana Potion",
+"potion": 3,
+"price": 15,
+"type": "potion"
+},
+{
+"bag_name": "Potion",
+"id": 4,
+"name": "Full Mana Potion",
+"potion": 4,
+"price": 25,
+"type": "potion"
+},
+{
+"bag_name": "Potion",
+"id": 5,
+"name": "Minor Restoration Potion",
+"potion": 5,
+"price": 20,
+"type": "potion"
+},
+{
+"bag_name": "Potion",
+"id": 6,
+"name": "Full Restoration Potion",
+"potion": 6,
+"price": 35,
+"type": "potion"
+},
+{
+"bag_name": "Potion",
+"id": 7,
+"name": "Cure Poison Potion",
+"potion": 7,
+"price": 10,
+"type": "potion"
+},
+{
+"bag_name": "Potion",
+"id": 8,
+"name": "Beserker Potion",
+"potion": 8,
+"price": 30,
+"type": "potion"
+},
+{
+"bag_name": "Emerald",
+"id": 9,
+"name": "Emerald",
+"price": 60,
+"type": "treasure"
+},
+{
+"id": 10,
+"name": "Level Up",
+"type": "treasure"
+},
+{
+"bag_name": "Meat",
+"id": 11,
+"name": "Meat",
+"price": 10,
+"type": "treasure"
+},
+{
+"id": 12,
+"key": "yellow",
+"name": "Gold Key",
+"type": "key"
+},
+{
+"id": 13,
+"key": "red",
+"name": "Red Key",
+"type": "key"
+},
+{
+"id": 14,
+"key": "blue",
+"name": "Blue Key",
+"type": "key"
+},
+{
+"id": 15,
+"name": "Closed Chest",
+"type": "chest"
+},
+{
+"bag_name": "Ruby",
+"id": 16,
+"name": "Ruby",
+"price": 400,
+"type": "treasure"
+},
+{
+"bag_name": "Seaweed",
+"id": 17,
+"name": "Seaweed",
+"price": 0,
+"type": "treasure"
+},
+{
+"acc": 0,
+"atk": 0,
+"bag_name": "Leather Armor",
+"def": 0,
+"dex": 0,
+"id": 101,
+"int": 0,
+"kind": 0,
+"marm": 0,
+"name": "Leather Armor",
+"power": 0,
+"price": 80,
+"req_int": 0,
+"req_str": 20,
+"str": 0,
+"type": "armour",
+"warm": 1
+},
+{
+"acc": 0,
+"atk": 0,
+"bag_name": "Tin Armor",
+"def": 0,
+"dex": 0,
+"id": 102,
+"int": 0,
+"kind": 0,
+"marm": 0,
+"name": "Tin Armor",
+"power": 0,
+"price": 160,
+"req_int": 0,
+"req_str": 25,
+"str": 0,
+"type": "armour",
+"warm": 2
+},
+{
+"acc": 0,
+"atk": 0,
+"bag_name": "Copper Armor",
+"def": 0,
+"dex": 0,
+"id": 103,
+"int": 0,
+"kind": 0,
+"marm": 0,
+"name": "Copper Armor",
+"power": 0,
+"price": 320,
+"req_int": 0,
+"req_str": 30,
+"str": 0,
+"type": "armour",
+"warm": 3
+},
+{
+"acc": 0,
+"atk": 0,
+"bag_name": "Chain Mail Armor",
+"def": 0,
+"dex": 0,
+"id": 104,
+"int": 0,
+"kind": 0,
+"marm": 0,
+"name": "Chain Mail",
+"power": 0,
+"price": 500,
+"req_int": 0,
+"req_str": 35,
+"str": 0,
+"type": "armour",
+"warm": 5
+},
+{
+"acc": 0,
+"atk": 0,
+"bag_name": "Silver Armor",
+"def": 0,
+"dex": 0,
+"id": 105,
+"int": 0,
+"kind": 0,
+"marm": 2,
+"name": "Ring Mail Armor",
+"power": 0,
+"price": 480,
+"req_int": 20,
+"req_str": 30,
+"str": 0,
+"type": "armour",
+"warm": 4
+},
+{
+"acc": 0,
+"atk": 0,
+"bag_name": "Ring Mail Armor",
+"def": 0,
+"dex": 0,
+"id": 106,
+"int": 0,
+"kind": 0,
+"marm": 0,
+"name": "Silver Armor",
+"power": 0,
+"price": 600,
+"req_int": 0,
+"req_str": 45,
+"str": 0,
+"type": "armour",
+"warm": 10
+},
+{
+"acc": 0,
+"atk": 0,
+"bag_name": "Golden Armor",
+"def": 0,
+"dex": 0,
+"id": 107,
+"int": 0,
+"kind": 0,
+"marm": 4,
+"name": "Gold Armor",
+"power": 0,
+"price": 700,
+"req_int": 40,
+"req_str": 50,
+"str": 0,
+"type": "armour",
+"warm": 12
+},
+{
+"acc": 0,
+"atk": 0,
+"bag_name": "Red Iron Armor",
+"def": 0,
+"dex": 0,
+"id": 108,
+"int": 0,
+"kind": 0,
+"marm": 0,
+"name": "Red Iron Armor",
+"power": 0,
+"price": 800,
+"req_int": 0,
+"req_str": 60,
+"str": 0,
+"type": "armour",
+"warm": 15
+},
+{
+"acc": 0,
+"atk": 0,
+"bag_name": "Cloak",
+"def": 0,
+"dex": 0,
+"id": 111,
+"int": 0,
+"kind": 0,
+"marm": 1,
+"name": "Cloak",
+"power": 0,
+"price": 40,
+"req_int": 0,
+"req_str": 0,
+"str": 0,
+"type": "armour",
+"warm": 0
+},
+{
+"acc": 0,
+"atk": 0,
+"bag_name": "Shawl",
+"def": 0,
+"dex": 0,
+"id": 112,
+"int": 0,
+"kind": 0,
+"marm": 3,
+"name": "Shawl",
+"power": 0,
+"price": 80,
+"req_int": 30,
+"req_str": 0,
+"str": 0,
+"type": "armour",
+"warm": 0
+},
+{
+"acc": 0,
+"atk": 0,
+"bag_name": "Cape",
+"def": 0,
+"dex": 0,
+"id": 113,
+"int": 0,
+"kind": 0,
+"marm": 6,
+"name": "Cape",
+"power": 0,
+"price": 160,
+"req_int": 40,
+"req_str": 0,
+"str": 0,
+"type": "armour",
+"warm": 0
+},
+{
+"acc": 0,
+"atk": 0,
+"bag_name": "Scarlet Robe",
+"def": 0,
+"dex": 0,
+"id": 114,
+"int": 0,
+"kind": 0,
+"marm": 12,
+"name": "Scarlet Robe",
+"power": 0,
+"price": 560,
+"req_int": 55,
+"req_str": 0,
+"str": 0,
+"type": "armour",
+"warm": 6
+},
+{
+"acc": 0,
+"atk": 10,
+"bag_name": "Wooden Club",
+"def": 0,
+"dex": 0,
+"id": 201,
+"int": 0,
+"kind": 0,
+"marm": 0,
+"name": "Club",
+"power": 3,
+"price": 4,
+"req_int": 0,
+"req_str": 10,
+"str": 0,
+"type": "weapon",
+"warm": 0
+},
+{
+"acc": 0,
+"atk": 15,
+"bag_name": "Knife",
+"def": 0,
+"dex": 0,
+"id": 202,
+"int": 0,
+"kind": 0,
+"marm": 0,
+"name": "Knife",
+"power": 4,
+"price": 20,
+"req_int": 0,
+"req_str": 10,
+"str": 0,
+"type": "weapon",
+"warm": 0
+},
+{
+"acc": 0,
+"atk": 28,
+"bag_name": "Staff",
+"def": 0,
+"dex": 0,
+"id": 203,
+"int": 0,
+"kind": 2,
+"marm": 0,
+"name": "Quarter Staff",
+"power": 5,
+"price": 60,
+"req_int": 0,
+"req_str": 20,
+"str": 0,
+"type": "weapon",
+"warm": 0
+},
+{
+"acc": 0,
+"atk": 17,
+"bag_name": "Dagger",
+"def": 0,
+"dex": 0,
+"id": 204,
+"int": 0,
+"kind": 0,
+"marm": 0,
+"name": "Dagger",
+"power": 5,
+"price": 40,
+"req_int": 0,
+"req_str": 15,
+"str": 0,
+"type": "weapon",
+"warm": 0
+},
+{
+"acc": 0,
+"atk": 25,
+"bag_name": "Rapier",
+"def": 0,
+"dex": 0,
+"id": 205,
+"int": 0,
+"kind": 1,
+"marm": 0,
+"name": "Rapier",
+"power": 7,
+"price": 80,
+"req_int": 0,
+"req_str": 25,
+"str": 0,
+"type": "weapon",
+"warm": 0
+},
+{
+"acc": 0,
+"atk": 30,
+"bag_name": "Spear",
+"def": 0,
+"dex": 0,
+"id": 206,
+"int": 0,
+"kind": 3,
+"marm": 0,
+"name": "Spear",
+"power": 6,
+"price": 100,
+"req_int": 0,
+"req_str": 25,
+"str": 0,
+"type": "weapon",
+"warm": 0
+},
+{
+"acc": 0,
+"atk": 14,
+"bag_name": "Morning Star",
+"def": 0,
+"dex": 0,
+"id": 207,
+"int": 0,
+"kind": 1,
+"marm": 0,
+"name": "Morning Star",
+"power": 13,
+"price": 270,
+"req_int": 0,
+"req_str": 30,
+"str": 0,
+"type": "weapon",
+"warm": 0
+},
+{
+"acc": 0,
+"atk": 20,
+"bag_name": "Short Sword",
+"def": 0,
+"dex": 0,
+"id": 208,
+"int": 0,
+"kind": 0,
+"marm": 0,
+"name": "Short Sword",
+"power": 9,
+"price": 130,
+"req_int": 0,
+"req_str": 25,
+"str": 0,
+"type": "weapon",
+"warm": 0
+},
+{
+"acc": 0,
+"atk": 24,
+"bag_name": "Cutlass",
+"def": 0,
+"dex": 0,
+"id": 209,
+"int": 0,
+"kind": 0,
+"marm": 0,
+"name": "Cutlass",
+"power": 12,
+"price": 200,
+"req_int": 0,
+"req_str": 30,
+"str": 0,
+"type": "weapon",
+"warm": 0
+},
+{
+"acc": 0,
+"atk": 32,
+"bag_name": "Pike",
+"def": 0,
+"dex": 0,
+"id": 210,
+"int": 0,
+"kind": 3,
+"marm": 0,
+"name": "Pike",
+"power": 10,
+"price": 220,
+"req_int": 0,
+"req_str": 30,
+"str": 0,
+"type": "weapon",
+"warm": 0
+},
+{
+"acc": 0,
+"atk": 100,
+"bag_name": "Sword of Swiftness",
+"def": 0,
+"dex": 0,
+"id": 211,
+"int": 0,
+"kind": 0,
+"marm": 0,
+"name": "Long Sword",
+"power": 9,
+"price": 300,
+"req_int": 0,
+"req_str": 30,
+"str": 0,
+"type": "weapon",
+"warm": 0
+},
+{
+"acc": 0,
+"atk": 13,
+"bag_name": "Axe",
+"def": 0,
+"dex": 0,
+"id": 212,
+"int": 0,
+"kind": 0,
+"marm": 0,
+"name": "Axe",
+"power": 22,
+"price": 450,
+"req_int": 0,
+"req_str": 35,
+"str": 0,
+"type": "weapon",
+"warm": 0
+},
+{
+"acc": 0,
+"atk": 18,
+"bag_name": "Mace",
+"def": 0,
+"dex": 0,
+"id": 213,
+"int": 0,
+"kind": 0,
+"marm": 0,
+"name": "Mace",
+"power": 17,
+"price": 480,
+"req_int": 0,
+"req_str": 35,
+"str": 0,
+"type": "weapon",
+"warm": 0
+},
+{
+"acc": 0,
+"atk": 36,
+"bag_name": "Great Staff",
+"def": 0,
+"dex": 0,
+"id": 214,
+"int": 0,
+"kind": 2,
+"marm": 0,
+"name": "Great Staff",
+"power": 14,
+"price": 400,
+"req_int": 0,
+"req_str": 35,
+"str": 0,
+"type": "weapon",
+"warm": 0
+},
+{
+"acc": 0,
+"atk": 15,
+"bag_name": "Machete",
+"def": 0,
+"dex": 0,
+"id": 215,
+"int": 0,
+"kind": 0,
+"marm": 0,
+"name": "Machette",
+"power": 26,
+"price": 520,
+"req_int": 0,
+"req_str": 40,
+"str": 0,
+"type": "weapon",
+"warm": 0
+},
+{
+"acc": 0,
+"atk": 28,
+"bag_name": "Long Sword",
+"def": 0,
+"dex": 0,
+"id": 216,
+"int": 0,
+"kind": 1,
+"marm": 0,
+"name": "Long Sword",
+"power": 18,
+"price": 560,
+"req_int": 0,
+"req_str": 40,
+"str": 0,
+"type": "weapon",
+"warm": 0
+},
+{
+"acc": 0,
+"atk": 17,
+"bag_name": "Sacrificial Dagger",
+"def": 0,
+"dex": 0,
+"id": 217,
+"int": 0,
+"kind": 0,
+"marm": 0,
+"name": "Sacrificial Dagger",
+"power": 10,
+"price": 0,
+"req_int": 0,
+"req_str": 15,
+"str": 0,
+"type": "weapon",
+"warm": 0
+},
+{
+"acc": 0,
+"atk": 35,
+"bag_name": "Lance",
+"def": 0,
+"dex": 0,
+"id": 218,
+"int": 0,
+"kind": 3,
+"marm": 0,
+"name": "Lance",
+"power": 22,
+"price": 620,
+"req_int": 0,
+"req_str": 45,
+"str": 0,
+"type": "weapon",
+"warm": 0
+},
+{
+"acc": 0,
+"atk": 12,
+"bag_name": "Battle-Axe",
+"def": 0,
+"dex": 0,
+"id": 219,
+"int": 0,
+"kind": 5,
+"marm": 0,
+"name": "Battleaxe",
+"power": 45,
+"price": 700,
+"req_int": 0,
+"req_str": 50,
+"str": 0,
+"type": "weapon",
+"warm": 0
+},
+{
+"acc": 0,
+"atk": 30,
+"bag_name": "Sword of Darkness",
+"def": 0,
+"dex": 0,
+"id": 220,
+"int": 0,
+"kind": 1,
+"marm": 0,
+"name": "Sword of Darkness",
+"power": 32,
+"price": 1000,
+"req_int": 0,
+"req_str": 55,
+"str": 0,
+"type": "weapon",
+"warm": 2
+},
+{
+"acc": 0,
+"atk": 38,
+"bag_name": "Staff of Doom",
+"def": 0,
+"dex": 0,
+"id": 221,
+"int": 0,
+"kind": 2,
+"marm": 0,
+"name": "Staff of Doom",
+"power": 21,
+"price": 800,
+"req_int": 55,
+"req_str": 30,
+"str": 0,
+"type": "weapon",
+"warm": 4
+},
+{
+"acc": 0,
+"atk": 34,
+"bag_name": "Broadsword",
+"def": 0,
+"dex": 0,
+"id": 222,
+"int": 0,
+"kind": 6,
+"marm": 0,
+"name": "Broad Sword",
+"power": 38,
+"price": 750,
+"req_int": 0,
+"req_str": 60,
+"str": 0,
+"type": "weapon",
+"warm": 0
+},
+{
+"acc": 0,
+"atk": 0,
+"bag_name": "Sling",
+"def": 0,
+"dex": 0,
+"fires": [
+"pebbles",
+"arrows"
+],
+"id": 230,
+"int": 0,
+"kind": 4,
+"marm": 0,
+"missile_anim": "sthit",
+"name": "Sling",
+"no_ammo_bonus": true,
+"power": 2,
+"price": 20,
+"req_int": 0,
+"req_str": 0,
+"str": 0,
+"type": "launcher",
+"warm": 0
+},
+{
+"acc": 0,
+"atk": -20,
+"bag_name": "Short Bow",
+"def": 0,
+"dex": 0,
+"fires": [
+"arrows",
+"poison arrows"
+],
+"id": 231,
+"int": 0,
+"kind": 4,
+"marm": 0,
+"missile_anim": "arhit",
+"name": "Short Bow",
+"power": 6,
+"price": 140,
+"req_int": 0,
+"req_str": 20,
+"str": 0,
+"type": "launcher",
+"warm": 0
+},
+{
+"acc": 0,
+"atk": -50,
+"bag_name": "Long Bow",
+"def": 0,
+"dex": 0,
+"fires": [
+"arrows",
+"poison arrows",
+"bolts"
+],
+"id": 232,
+"int": 0,
+"kind": 4,
+"marm": 0,
+"missile_anim": "arhit",
+"name": "Long Bow",
+"power": 10,
+"price": 400,
+"req_int": 0,
+"req_str": 30,
+"str": 0,
+"type": "launcher",
+"warm": 0
+},
+{
+"acc": 0,
+"atk": -30,
+"bag_name": "Crossbow",
+"def": 0,
+"dex": 0,
+"fires": [
+"bolts"
+],
+"fps_turn": 90,
+"id": 233,
+"int": 0,
+"kind": 4,
+"marm": 0,
+"missile_anim": "bolthit",
+"name": "Crossbow",
+"no_ammo_bonus": true,
+"power": 14,
+"price": 650,
+"req_int": 0,
+"req_str": 40,
+"str": 0,
+"type": "launcher",
+"warm": 0
+},
+{
+"acc": 0,
+"atk": 0,
+"bag_name": "Buckler",
+"def": 5,
+"dex": 0,
+"id": 301,
+"int": 0,
+"kind": 0,
+"marm": 0,
+"name": "Buckler",
+"power": 0,
+"price": 25,
+"req_int": 0,
+"req_str": 0,
+"str": 0,
+"type": "shield",
+"warm": 0
+},
+{
+"acc": 0,
+"atk": 0,
+"bag_name": "Small Shield",
+"def": 10,
+"dex": 0,
+"id": 302,
+"int": 0,
+"kind": 0,
+"marm": 0,
+"name": "Small Shield",
+"power": 0,
+"price": 70,
+"req_int": 0,
+"req_str": 20,
+"str": 0,
+"type": "shield",
+"warm": 0
+},
+{
+"acc": 0,
+"atk": 0,
+"bag_name": "Medium Shield",
+"def": 15,
+"dex": 0,
+"id": 303,
+"int": 0,
+"kind": 0,
+"marm": 0,
+"name": "Medium Shield",
+"power": 0,
+"price": 135,
+"req_int": 0,
+"req_str": 30,
+"str": 0,
+"type": "shield",
+"warm": 0
+},
+{
+"acc": 0,
+"atk": 10,
+"bag_name": "Bashing Shield",
+"def": 10,
+"dex": 0,
+"id": 304,
+"int": 0,
+"kind": 0,
+"marm": 0,
+"name": "Bashing Shield",
+"power": 0,
+"price": 220,
+"req_int": 0,
+"req_str": 35,
+"str": 0,
+"type": "shield",
+"warm": 0
+},
+{
+"acc": 0,
+"atk": 0,
+"bag_name": "Tower Shield",
+"def": 20,
+"dex": 0,
+"id": 305,
+"int": 0,
+"kind": 0,
+"marm": 0,
+"name": "Tower Shield",
+"power": 0,
+"price": 300,
+"req_int": 0,
+"req_str": 45,
+"str": 0,
+"type": "shield",
+"warm": 0
+},
+{
+"acc": 0,
+"atk": 0,
+"bag_name": "Kite Shield",
+"def": 30,
+"dex": 0,
+"id": 306,
+"int": 0,
+"kind": 0,
+"marm": 0,
+"name": "Kite Shield",
+"power": 0,
+"price": 400,
+"req_int": 0,
+"req_str": 55,
+"str": 0,
+"type": "shield",
+"warm": 0
+},
+{
+"id": 311,
+"name": "",
+"type": "shield"
+},
+{
+"acc": 0,
+"atk": 0,
+"bag_name": "Sheepskin Helmet",
+"def": 0,
+"dex": 0,
+"id": 401,
+"int": 0,
+"kind": 0,
+"marm": 0,
+"name": "Sheepskin Helmet",
+"power": 0,
+"price": 80,
+"req_int": 0,
+"req_str": 25,
+"str": 0,
+"type": "helmet",
+"warm": 1
+},
+{
+"acc": 0,
+"atk": 0,
+"bag_name": "Wooden Helmet",
+"def": 0,
+"dex": 0,
+"id": 402,
+"int": 0,
+"kind": 0,
+"marm": 0,
+"name": "Wooden Helmet",
+"power": 0,
+"price": 180,
+"req_int": 0,
+"req_str": 30,
+"str": 0,
+"type": "helmet",
+"warm": 2
+},
+{
+"acc": 0,
+"atk": 0,
+"bag_name": "Helmet of the Mind",
+"def": 0,
+"dex": 0,
+"id": 403,
+"int": 1,
+"kind": 0,
+"marm": 0,
+"name": "Helmet of the Mind",
+"power": 0,
+"price": 70,
+"req_int": 0,
+"req_str": 0,
+"str": 0,
+"type": "helmet",
+"warm": 0
+},
+{
+"acc": 0,
+"atk": 0,
+"bag_name": "Silver Helmet",
+"def": 0,
+"dex": 0,
+"id": 404,
+"int": 0,
+"kind": 0,
+"marm": 1,
+"name": "Silver Helmet",
+"power": 0,
+"price": 200,
+"req_int": 20,
+"req_str": 30,
+"str": 0,
+"type": "helmet",
+"warm": 2
+},
+{
+"acc": 0,
+"atk": 0,
+"bag_name": "Black Iron Helmet",
+"def": 0,
+"dex": 0,
+"id": 405,
+"int": 0,
+"kind": 0,
+"marm": 0,
+"name": "Black Iron Helmet",
+"power": 0,
+"price": 340,
+"req_int": 0,
+"req_str": 40,
+"str": 0,
+"type": "helmet",
+"warm": 4
+},
+{
+"acc": 0,
+"atk": 0,
+"bag_name": "Golden Halo",
+"def": 0,
+"dex": 10,
+"id": 406,
+"int": 0,
+"kind": 0,
+"marm": 0,
+"name": "Golden Halo",
+"power": 0,
+"price": 1500,
+"req_int": 0,
+"req_str": 0,
+"str": 0,
+"type": "helmet",
+"warm": 0
+},
+{
+"acc": 0,
+"atk": 0,
+"bag_name": "Golden Helmet",
+"def": 0,
+"dex": 0,
+"id": 407,
+"int": 0,
+"kind": 0,
+"marm": 2,
+"name": "Golden Helmet",
+"power": 0,
+"price": 400,
+"req_int": 40,
+"req_str": 50,
+"str": 0,
+"type": "helmet",
+"warm": 5
+},
+{
+"acc": 0,
+"atk": 0,
+"bag_name": "Red Iron Helmet",
+"def": 0,
+"dex": 0,
+"id": 408,
+"int": 0,
+"kind": 0,
+"marm": 0,
+"name": "Red Iron Helmet",
+"power": 0,
+"price": 480,
+"req_int": 0,
+"req_str": 60,
+"str": 0,
+"type": "helmet",
+"warm": 8
+},
+{
+"acc": 0,
+"atk": 0,
+"bag_name": "Cocoon Amulet",
+"def": 0,
+"dex": 3,
+"id": 501,
+"int": 0,
+"kind": 0,
+"marm": 0,
+"name": "Cocoon Amulet",
+"power": 0,
+"price": 65,
+"req_int": 0,
+"req_str": 0,
+"str": 0,
+"type": "amulet",
+"warm": 0
+},
+{
+"acc": 0,
+"atk": 0,
+"bag_name": "Stoic Amulet",
+"def": 0,
+"dex": 0,
+"id": 502,
+"int": 2,
+"kind": 0,
+"marm": 0,
+"name": "Stoic Necklace",
+"power": 0,
+"price": 80,
+"req_int": 0,
+"req_str": 0,
+"str": 0,
+"type": "amulet",
+"warm": 0
+},
+{
+"acc": 0,
+"atk": 0,
+"bag_name": "Amulet of Bravery     Melee",
+"def": 0,
+"dex": 0,
+"id": 503,
+"int": 0,
+"kind": 0,
+"marm": 0,
+"name": "Amulet of Bravery",
+"power": 1,
+"power_bonus": "melee",
+"price": 200,
+"req_int": 0,
+"req_str": 0,
+"str": 0,
+"type": "amulet",
+"warm": 0
+},
+{
+"acc": 0,
+"atk": 0,
+"bag_name": "Evergreen Amulet    Ranged",
+"def": 0,
+"dex": 0,
+"id": 504,
+"int": 0,
+"kind": 0,
+"marm": 0,
+"name": "Evergreen Amulet",
+"power": 1,
+"power_bonus": "ranged",
+"price": 200,
+"req_int": 0,
+"req_str": 0,
+"str": 0,
+"type": "amulet",
+"warm": 0
+},
+{
+"acc": 0,
+"atk": 0,
+"bag_name": "Amulet of Balance",
+"def": 0,
+"dex": 0,
+"id": 505,
+"int": 0,
+"kind": 0,
+"marm": 1,
+"name": "Amulet of Balance",
+"power": 0,
+"price": 250,
+"req_int": 0,
+"req_str": 0,
+"str": 0,
+"type": "amulet",
+"warm": 1
+},
+{
+"acc": 0,
+"atk": 10,
+"bag_name": "Medallion of Madness",
+"def": -10,
+"dex": 0,
+"id": 506,
+"int": 0,
+"kind": 0,
+"marm": 0,
+"name": "Medallion of Madness",
+"power": 0,
+"price": 0,
+"req_int": 0,
+"req_str": 0,
+"str": 0,
+"type": "amulet",
+"warm": 0
+},
+{
+"acc": 0,
+"atk": 0,
+"bag_name": "Amulet of Fury        Melee",
+"def": 0,
+"dex": 0,
+"id": 507,
+"int": 0,
+"kind": 0,
+"marm": 0,
+"name": "Amulet of Fury",
+"power": 3,
+"power_bonus": "melee",
+"price": 350,
+"req_int": 0,
+"req_str": 0,
+"str": 0,
+"type": "amulet",
+"warm": 0
+},
+{
+"acc": 0,
+"atk": 0,
+"bag_name": "Ruby Necklace",
+"def": 0,
+"dex": 0,
+"id": 508,
+"int": 0,
+"kind": 0,
+"marm": 3,
+"name": "Ruby Necklace",
+"power": 0,
+"price": 500,
+"req_int": 0,
+"req_str": 0,
+"str": 0,
+"type": "amulet",
+"warm": 3
+},
+{
+"acc": 0,
+"atk": 0,
+"bag_name": "Marianne's Necklace",
+"def": 0,
+"dex": 0,
+"id": 509,
+"int": 0,
+"kind": 0,
+"marm": 0,
+"name": "Mariannes Necklace",
+"power": 0,
+"price": 100,
+"req_int": 0,
+"req_str": 0,
+"str": 0,
+"type": "amulet",
+"warm": 0
+},
+{
+"acc": 4,
+"atk": 0,
+"bag_name": "Obsidian Amulet",
+"def": 0,
+"dex": 4,
+"id": 510,
+"int": 0,
+"kind": 0,
+"marm": 0,
+"name": "Obsidian Amulet",
+"power": 0,
+"price": 300,
+"req_int": 0,
+"req_str": 0,
+"str": 0,
+"type": "amulet",
+"warm": 0
+},
+{
+"acc": 0,
+"atk": 0,
+"bag_name": "Pearl Necklace         Melee",
+"def": 0,
+"dex": 0,
+"id": 511,
+"int": 0,
+"kind": 0,
+"marm": 5,
+"name": "Pearl Necklace",
+"power": 5,
+"power_bonus": "melee",
+"price": 1300,
+"req_int": 0,
+"req_str": 0,
+"str": 0,
+"type": "amulet",
+"warm": 5
+},
+{
+"ammo": "pebbles",
+"bag_name": "Sling Pebbles",
+"count": 1,
+"id": 601,
+"name": "Pebbles-01",
+"type": "ammo"
+},
+{
+"ammo": "pebbles",
+"bag_name": "Sling Pebbles",
+"count": 2,
+"id": 602,
+"name": "Pebbles-02",
+"type": "ammo"
+},
+{
+"ammo": "pebbles",
+"bag_name": "Sling Pebbles",
+"count": 3,
+"id": 603,
+"name": "Pebbles-03",
+"type": "ammo"
+},
+{
+"ammo": "pebbles",
+"bag_name": "Sling Pebbles",
+"count": 4,
+"id": 604,
+"name": "",
+"type": "ammo"
+},
+{
+"ammo": "pebbles",
+"bag_name": "Sling Pebbles",
+"count": 5,
+"id": 605,
+"name": "Pebbles-05",
+"type": "ammo"
+},
+{
+"ammo": "pebbles",
+"bag_name": "Sling Pebbles",
+"count": 6,
+"id": 606,
+"name": "Pebbles-06",
+"type": "ammo"
+},
+{
+"ammo": "pebbles",
+"bag_name": "Sling Pebbles",
+"count": 7,
+"id": 607,
+"name": "Pebbles-07",
+"type": "ammo"
+},
+{
+"ammo": "pebbles",
+"bag_name": "Sling Pebbles",
+"count": 8,
+"id": 608,
+"name": "Pebbles-08",
+"type": "ammo"
+},
+{
+"ammo": "pebbles",
+"bag_name": "Sling Pebbles",
+"count": 9,
+"id": 609,
+"name": "Pebbles-09",
+"type": "ammo"
+},
+{
+"ammo": "pebbles",
+"bag_name": "Sling Pebbles",
+"count": 10,
+"id": 610,
+"name": "Pebbles-10",
+"type": "ammo"
+},
+{
+"ammo": "pebbles",
+"bag_name": "Sling Pebbles",
+"count": 11,
+"id": 611,
+"name": "Pebbles-11",
+"type": "ammo"
+},
+{
+"ammo": "pebbles",
+"bag_name": "Sling Pebbles",
+"count": 12,
+"id": 612,
+"name": "Pebbles-12",
+"type": "ammo"
+},
+{
+"ammo": "pebbles",
+"bag_name": "Sling Pebbles",
+"count": 13,
+"id": 613,
+"name": "Pebbles-13",
+"type": "ammo"
+},
+{
+"ammo": "pebbles",
+"bag_name": "Sling Pebbles",
+"count": 14,
+"id": 614,
+"name": "Pebbles-14",
+"type": "ammo"
+},
+{
+"ammo": "pebbles",
+"bag_name": "Sling Pebbles",
+"count": 15,
+"id": 615,
+"name": "Pebbles-15",
+"type": "ammo"
+},
+{
+"ammo": "pebbles",
+"bag_name": "Sling Pebbles",
+"count": 16,
+"id": 616,
+"name": "Pebbles-16",
+"type": "ammo"
+},
+{
+"ammo": "pebbles",
+"bag_name": "Sling Pebbles",
+"count": 17,
+"id": 617,
+"name": "Pebbles-17",
+"type": "ammo"
+},
+{
+"ammo": "pebbles",
+"bag_name": "Sling Pebbles",
+"count": 18,
+"id": 618,
+"name": "Pebbles-18",
+"type": "ammo"
+},
+{
+"ammo": "pebbles",
+"bag_name": "Sling Pebbles",
+"count": 19,
+"id": 619,
+"name": "Pebbles-19",
+"type": "ammo"
+},
+{
+"ammo": "pebbles",
+"bag_name": "Sling Pebbles",
+"count": 20,
+"id": 620,
+"name": "Pebbles-20",
+"price": 5,
+"type": "ammo"
+},
+{
+"ammo": "arrows",
+"bag_name": "Arrows",
+"count": 1,
+"id": 621,
+"name": "Arrows-01",
+"type": "ammo"
+},
+{
+"ammo": "arrows",
+"bag_name": "Arrows",
+"count": 2,
+"id": 622,
+"name": "Arrows-02",
+"type": "ammo"
+},
+{
+"ammo": "arrows",
+"bag_name": "Arrows",
+"count": 3,
+"id": 623,
+"name": "Arrows-03",
+"type": "ammo"
+},
+{
+"ammo": "arrows",
+"bag_name": "Arrows",
+"count": 4,
+"id": 624,
+"name": "Arrows-04",
+"type": "ammo"
+},
+{
+"ammo": "arrows",
+"bag_name": "Arrows",
+"count": 5,
+"id": 625,
+"name": "Arrows-05",
+"type": "ammo"
+},
+{
+"ammo": "arrows",
+"bag_name": "Arrows",
+"count": 6,
+"id": 626,
+"name": "Arrows-06",
+"type": "ammo"
+},
+{
+"ammo": "arrows",
+"bag_name": "Arrows",
+"count": 7,
+"id": 627,
+"name": "Arrows-07",
+"type": "ammo"
+},
+{
+"ammo": "arrows",
+"bag_name": "Arrows",
+"count": 8,
+"id": 628,
+"name": "Arrows-08",
+"type": "ammo"
+},
+{
+"ammo": "arrows",
+"bag_name": "Arrows",
+"count": 9,
+"id": 629,
+"name": "Arrows-09",
+"type": "ammo"
+},
+{
+"ammo": "arrows",
+"bag_name": "Arrows",
+"count": 10,
+"id": 630,
+"name": "Arrows-10",
+"type": "ammo"
+},
+{
+"ammo": "arrows",
+"bag_name": "Arrows",
+"count": 11,
+"id": 631,
+"name": "Arrows-11",
+"type": "ammo"
+},
+{
+"ammo": "arrows",
+"bag_name": "Arrows",
+"count": 12,
+"id": 632,
+"name": "Arrows-12",
+"type": "ammo"
+},
+{
+"ammo": "arrows",
+"bag_name": "Arrows",
+"count": 13,
+"id": 633,
+"name": "Arrows-13",
+"type": "ammo"
+},
+{
+"ammo": "arrows",
+"bag_name": "Arrows",
+"count": 14,
+"id": 634,
+"name": "Arrows-14",
+"type": "ammo"
+},
+{
+"ammo": "arrows",
+"bag_name": "Arrows",
+"count": 15,
+"id": 635,
+"name": "Arrows-15",
+"type": "ammo"
+},
+{
+"ammo": "arrows",
+"bag_name": "Arrows",
+"count": 16,
+"id": 636,
+"name": "Arrows-16",
+"type": "ammo"
+},
+{
+"ammo": "arrows",
+"bag_name": "Arrows",
+"count": 17,
+"id": 637,
+"name": "Arrows-17",
+"type": "ammo"
+},
+{
+"ammo": "arrows",
+"bag_name": "Arrows",
+"count": 18,
+"id": 638,
+"name": "Arrows-18",
+"type": "ammo"
+},
+{
+"ammo": "arrows",
+"bag_name": "Arrows",
+"count": 19,
+"id": 639,
+"name": "Arrows-19",
+"type": "ammo"
+},
+{
+"ammo": "arrows",
+"bag_name": "Arrows",
+"count": 20,
+"id": 640,
+"name": "Arrows-20",
+"price": 20,
+"type": "ammo"
+},
+{
+"ammo": "poison arrows",
+"bag_name": "Poisoned Arrows",
+"count": 1,
+"id": 641,
+"name": "Poison Arrows-01",
+"power_x2": true,
+"type": "ammo"
+},
+{
+"ammo": "poison arrows",
+"bag_name": "Poisoned Arrows",
+"count": 2,
+"id": 642,
+"name": "Poison Arrows-02",
+"power_x2": true,
+"type": "ammo"
+},
+{
+"ammo": "poison arrows",
+"bag_name": "Poisoned Arrows",
+"count": 3,
+"id": 643,
+"name": "Poison Arrows-03",
+"power_x2": true,
+"type": "ammo"
+},
+{
+"ammo": "poison arrows",
+"bag_name": "Poisoned Arrows",
+"count": 4,
+"id": 644,
+"name": "Poison Arrows-04",
+"power_x2": true,
+"type": "ammo"
+},
+{
+"ammo": "poison arrows",
+"bag_name": "Poisoned Arrows",
+"count": 5,
+"id": 645,
+"name": "Poison Arrows-05",
+"power_x2": true,
+"type": "ammo"
+},
+{
+"ammo": "poison arrows",
+"bag_name": "Poisoned Arrows",
+"count": 6,
+"id": 646,
+"name": "Poison Arrows-06",
+"power_x2": true,
+"type": "ammo"
+},
+{
+"ammo": "poison arrows",
+"bag_name": "Poisoned Arrows",
+"count": 7,
+"id": 647,
+"name": "Poison Arrows-07",
+"power_x2": true,
+"type": "ammo"
+},
+{
+"ammo": "poison arrows",
+"bag_name": "Poisoned Arrows",
+"count": 8,
+"id": 648,
+"name": "Poison Arrows-08",
+"power_x2": true,
+"type": "ammo"
+},
+{
+"ammo": "poison arrows",
+"bag_name": "Poisoned Arrows",
+"count": 9,
+"id": 649,
+"name": "Poison Arrows-09",
+"power_x2": true,
+"type": "ammo"
+},
+{
+"ammo": "poison arrows",
+"bag_name": "Poisoned Arrows",
+"count": 10,
+"id": 650,
+"name": "Poison Arrows-10",
+"power_x2": true,
+"type": "ammo"
+},
+{
+"ammo": "poison arrows",
+"bag_name": "Poisoned Arrows",
+"count": 11,
+"id": 651,
+"name": "Poison Arrows-11",
+"power_x2": true,
+"type": "ammo"
+},
+{
+"ammo": "poison arrows",
+"bag_name": "Poisoned Arrows",
+"count": 12,
+"id": 652,
+"name": "Poison Arrows-12",
+"power_x2": true,
+"type": "ammo"
+},
+{
+"ammo": "poison arrows",
+"bag_name": "Poisoned Arrows",
+"count": 13,
+"id": 653,
+"name": "Poison Arrows-13",
+"power_x2": true,
+"type": "ammo"
+},
+{
+"ammo": "poison arrows",
+"bag_name": "Poisoned Arrows",
+"count": 14,
+"id": 654,
+"name": "Poison Arrows-14",
+"power_x2": true,
+"type": "ammo"
+},
+{
+"ammo": "poison arrows",
+"bag_name": "Poisoned Arrows",
+"count": 15,
+"id": 655,
+"name": "Poison Arrows-15",
+"power_x2": true,
+"type": "ammo"
+},
+{
+"ammo": "poison arrows",
+"bag_name": "Poisoned Arrows",
+"count": 16,
+"id": 656,
+"name": "Poison Arrows-16",
+"power_x2": true,
+"type": "ammo"
+},
+{
+"ammo": "poison arrows",
+"bag_name": "Poisoned Arrows",
+"count": 17,
+"id": 657,
+"name": "Poison Arrows-17",
+"power_x2": true,
+"type": "ammo"
+},
+{
+"ammo": "poison arrows",
+"bag_name": "Poisoned Arrows",
+"count": 18,
+"id": 658,
+"name": "Poison Arrows-18",
+"power_x2": true,
+"type": "ammo"
+},
+{
+"ammo": "poison arrows",
+"bag_name": "Poisoned Arrows",
+"count": 19,
+"id": 659,
+"name": "Poison Arrows-19",
+"power_x2": true,
+"type": "ammo"
+},
+{
+"ammo": "poison arrows",
+"bag_name": "Poisoned Arrows",
+"count": 20,
+"id": 660,
+"name": "Poison Arrows-20",
+"power_x2": true,
+"price": 80,
+"type": "ammo"
+},
+{
+"ammo": "bolts",
+"bag_name": "Bolts",
+"count": 1,
+"id": 661,
+"name": "Bolts-01",
+"type": "ammo"
+},
+{
+"ammo": "bolts",
+"bag_name": "Bolts",
+"count": 2,
+"id": 662,
+"name": "Bolts-02",
+"type": "ammo"
+},
+{
+"ammo": "bolts",
+"bag_name": "Bolts",
+"count": 3,
+"id": 663,
+"name": "Bolts-03",
+"type": "ammo"
+},
+{
+"ammo": "bolts",
+"bag_name": "Bolts",
+"count": 4,
+"id": 664,
+"name": "Bolts-04",
+"type": "ammo"
+},
+{
+"ammo": "bolts",
+"bag_name": "Bolts",
+"count": 5,
+"id": 665,
+"name": "Bolts-05",
+"type": "ammo"
+},
+{
+"ammo": "bolts",
+"bag_name": "Bolts",
+"count": 6,
+"id": 666,
+"name": "Bolts-06",
+"type": "ammo"
+},
+{
+"ammo": "bolts",
+"bag_name": "Bolts",
+"count": 7,
+"id": 667,
+"name": "Bolts-07",
+"type": "ammo"
+},
+{
+"ammo": "bolts",
+"bag_name": "Bolts",
+"count": 8,
+"id": 668,
+"name": "Bolts-08",
+"type": "ammo"
+},
+{
+"ammo": "bolts",
+"bag_name": "Bolts",
+"count": 9,
+"id": 669,
+"name": "Bolts-09",
+"type": "ammo"
+},
+{
+"ammo": "bolts",
+"bag_name": "Bolts",
+"count": 10,
+"id": 670,
+"name": "Bolts-10",
+"type": "ammo"
+},
+{
+"ammo": "bolts",
+"bag_name": "Bolts",
+"count": 11,
+"id": 671,
+"name": "Bolts-11",
+"type": "ammo"
+},
+{
+"ammo": "bolts",
+"bag_name": "Bolts",
+"count": 12,
+"id": 672,
+"name": "Bolts-12",
+"type": "ammo"
+},
+{
+"ammo": "bolts",
+"bag_name": "Bolts",
+"count": 13,
+"id": 673,
+"name": "Bolts-13",
+"type": "ammo"
+},
+{
+"ammo": "bolts",
+"bag_name": "Bolts",
+"count": 14,
+"id": 674,
+"name": "Bolts-14",
+"type": "ammo"
+},
+{
+"ammo": "bolts",
+"bag_name": "Bolts",
+"count": 15,
+"id": 675,
+"name": "Bolts-15",
+"type": "ammo"
+},
+{
+"ammo": "bolts",
+"bag_name": "Bolts",
+"count": 16,
+"id": 676,
+"name": "Bolts-16",
+"type": "ammo"
+},
+{
+"ammo": "bolts",
+"bag_name": "Bolts",
+"count": 17,
+"id": 677,
+"name": "Bolts-17",
+"type": "ammo"
+},
+{
+"ammo": "bolts",
+"bag_name": "Bolts",
+"count": 18,
+"id": 678,
+"name": "Bolts-18",
+"type": "ammo"
+},
+{
+"ammo": "bolts",
+"bag_name": "Bolts",
+"count": 19,
+"id": 679,
+"name": "Bolts-19",
+"type": "ammo"
+},
+{
+"ammo": "bolts",
+"bag_name": "Bolts",
+"count": 20,
+"id": 680,
+"name": "Bolts-20",
+"price": 50,
+"type": "ammo"
+},
+{
+"acc": 0,
+"atk": 0,
+"def": 0,
+"dex": 0,
+"id": 901,
+"int": 0,
+"kind": 0,
+"marm": 0,
+"name": "",
+"power": 0,
+"quest": true,
+"req_int": 0,
+"req_str": 0,
+"str": 0,
+"type": "treasure",
+"warm": 0
+},
+{
+"id": 907,
+"name": "",
+"quest": true,
+"type": "treasure"
+},
+{
+"id": 999,
+"name": "Lvl5 Teleporter",
+"type": "teleporter"
+},
+{
+"id": 1000,
+"name": "Level Exit",
+"type": "exit"
+},
+{
+"id": 1101,
+"name": "Ladder",
+"type": "ladder"
+},
+{
+"id": 1102,
+"name": "Rope",
+"type": "rope"
+},
+{
+"id": 1103,
+"name": "Stairs",
+"type": "stairs"
+},
+{
+"id": 1104,
+"name": "Hole",
+"type": "hole"
+},
+{
+"id": 1105,
+"name": "Jump Pad",
+"type": "jump_pad"
+}
+]
+},
+"quest.json": {
+"author": "Alex Kutsenok",
+"engine": "deluxe",
+"first_level": 1,
+"format": 1,
+"levels": 7,
+"map_fixes": [
+{
+"item": 0,
+"level": 6,
+"why": "a decayed tree holding item -5, which is not an item",
+"x": 24,
+"y": 82
+},
+{
+"item": 0,
+"level": 7,
+"why": "item 311, a shield with no stats, picture or price",
+"x": 45,
+"y": 65
+}
+],
+"reclass": true,
+"start_potions": {
+"6": 1
+},
+"story_order": [
+"amb",
+"sch",
+"mar",
+"mem",
+"bar",
+"ras",
+"cow",
+"hon"
+],
+"title": "The Quest",
+"year": 2001
+},
+"skills.json": {
+"_comment": "Skills and faults, in creation()'s order. What each does is part of the engine (docs/QUEST_PACKS.md); story = the line story 1 prints about it. only_free: it can only come free with a class, and is only listed for that class.",
+"skills": [
+{
+"id": "bar",
+"kind": "skill",
+"name": "Bargaining",
+"story": "You are good at bargaining."
+},
+{
+"id": "amb",
+"kind": "skill",
+"name": "Ambidexterity",
+"story": "You are ambidextrous."
+},
+{
+"id": "mem",
+"kind": "skill",
+"name": "Memorization",
+"story": "You excel at spell memorization."
+},
+{
+"id": "mar",
+"kind": "skill",
+"name": "Marksmanship",
+"only_free": true,
+"story": "You excel at marksmanship."
+},
+{
+"id": "sch",
+"kind": "skill",
+"name": "Scholar",
+"story": "You are a scholar."
+},
+{
+"id": "cow",
+"kind": "fault",
+"name": "Cowardice",
+"story": "You are a coward."
+},
+{
+"id": "ras",
+"kind": "fault",
+"name": "Rashness",
+"story": "You are often very rash."
+},
+{
+"id": "hon",
+"kind": "fault",
+"name": "Honor",
+"story": "You are extremely honorable."
+}
+]
+},
+"spells.json": {
+"_comment": "Spells (Spells.dat): required intelligence, mana, range (0 = on the caster), power, duration; effect (heal, bolt, teleport, shield, fire_shield, freeze, ward, dark_hour, invisibility, summon, drain, earthquake) and its settings: anim = [animation, arguments...], repeat, creature, fizzle (% chance), empties_mana, needs_target. Icons: sprites/spells/<id>.png.",
+"spells": [
+{
+"anim": [
+"aheal"
+],
+"duration": 0,
+"effect": "heal",
+"id": 1,
+"mana": 10,
+"name": "Heal",
+"power": 30,
+"range": 0,
+"req_int": 10
+},
+{
+"anim": [
+"aflame",
+0
+],
+"duration": 0,
+"effect": "bolt",
+"id": 2,
+"mana": 5,
+"name": "Flame",
+"power": 11,
+"range": 3,
+"req_int": 15
+},
+{
+"duration": 0,
+"effect": "teleport",
+"id": 3,
+"mana": 10,
+"name": "Teleport",
+"power": 0,
+"range": 3,
+"req_int": 15
+},
+{
+"absorb_power_of": 5,
+"anim": [
+"ashield",
+1
+],
+"duration": 10,
+"effect": "shield",
+"id": 4,
+"mana": 8,
+"name": "Shield",
+"power": 10,
+"range": 0,
+"req_int": 20
+},
+{
+"anim": [
+"aicering"
+],
+"duration": 10,
+"effect": "freeze",
+"freeze_power_of": 4,
+"id": 5,
+"mana": 5,
+"name": "Ring of Ice",
+"power": 10,
+"range": 3,
+"req_int": 20
+},
+{
+"anim": [
+"ablackward"
+],
+"duration": 0,
+"effect": "ward",
+"id": 6,
+"mana": 9,
+"name": "Black Ward",
+"power": 12,
+"range": 0,
+"req_int": 25
+},
+{
+"anim": [
+"ainvisibility"
+],
+"duration": 30,
+"effect": "invisibility",
+"fizzle": 50,
+"id": 7,
+"mana": 7,
+"name": "Invisibility",
+"power": 0,
+"range": 0,
+"req_int": 25
+},
+{
+"anim": [
+"asskeleton",
+1
+],
+"creature": -100,
+"duration": 0,
+"effect": "summon",
+"id": 8,
+"mana": 8,
+"name": "Summon Skeleton",
+"power": 0,
+"range": 4,
+"req_int": 30
+},
+{
+"anim": [
+"ainferno",
+0
+],
+"duration": 0,
+"effect": "bolt",
+"id": 9,
+"mana": 10,
+"name": "Inferno",
+"power": 25,
+"range": 3,
+"req_int": 30
+},
+{
+"anim": [
+"arestore"
+],
+"duration": 0,
+"effect": "heal",
+"id": 10,
+"mana": 20,
+"name": "Restore",
+"power": 70,
+"range": 0,
+"req_int": 30
+},
+{
+"duration": 0,
+"effect": "drain",
+"id": 11,
+"mana": 13,
+"name": "Life Drain",
+"needs_target": true,
+"power": 20,
+"range": 1,
+"req_int": 35
+},
+{
+"anim": [
+"athunder"
+],
+"duration": 0,
+"effect": "bolt",
+"id": 12,
+"mana": 25,
+"name": "Thunder Bolt",
+"power": 40,
+"range": 4,
+"repeat": 5,
+"req_int": 35
+},
+{
+"anim": [
+"ashield",
+2
+],
+"duration": 10,
+"effect": "fire_shield",
+"id": 13,
+"mana": 15,
+"name": "Shield of Fire",
+"power": 8,
+"range": 0,
+"req_int": 35
+},
+{
+"anim": [
+"adeteriorate",
+40
+],
+"duration": 0,
+"effect": "bolt",
+"empties_mana": true,
+"id": 14,
+"mana": 1,
+"name": "Deteriorate",
+"needs_target": true,
+"power": 100,
+"range": 1,
+"req_int": 40
+},
+{
+"anim": [
+"astoneknight"
+],
+"creature": -101,
+"duration": 0,
+"effect": "summon",
+"id": 15,
+"mana": 18,
+"name": "Summon Stone Knight",
+"power": 0,
+"range": 4,
+"req_int": 40
+},
+{
+"duration": 0,
+"effect": "earthquake",
+"id": 16,
+"mana": 20,
+"name": "Earthquake",
+"power": 25,
+"range": 5,
+"req_int": 45
+},
+{
+"anim": [
+"acure"
+],
+"duration": 0,
+"effect": "heal",
+"id": 17,
+"mana": 30,
+"name": "Cure",
+"power": 120,
+"range": 0,
+"req_int": 50
+},
+{
+"anim": [
+"asscorpion"
+],
+"creature": -102,
+"duration": 0,
+"effect": "summon",
+"id": 18,
+"mana": 25,
+"name": "Summon Scorpion",
+"power": 0,
+"range": 4,
+"req_int": 55
+},
+{
+"anim": [
+"adeaths"
+],
+"duration": 0,
+"effect": "bolt",
+"id": 19,
+"mana": 35,
+"name": "Meteor",
+"power": 60,
+"range": 9,
+"req_int": 60
+},
+{
+"anim": [
+"adarkhour"
+],
+"duration": 0,
+"effect": "dark_hour",
+"id": 20,
+"mana": 1,
+"name": "Dark Hour",
+"power": 25,
+"range": 0,
+"repeat": 6,
+"req_int": 60
+}
+]
+},
+"tiles.json": {
+"_comment": "Walls: solid (blocks the way), or door: plain (opens when walked into), fake (a secret wall that opens the same way) or locked (needs the key of that colour). map_colour: [EGA colour, priority] on the automap (the higher priority of the floor and the wall wins; grass-green 2 at priority 0 otherwise); map_colour_on_level overrides it on one level. Decorations: role is what the engine uses them for (open_door, open_chest, remains, remains2, blood, bones). FPS mode: view3d is how a wall or decoration shows in 3D (block, billboard or flat; left out, opaque wall pictures are blocks and the rest billboards); roof is the wall picture drawn overhead on a floor (indoors).",
+"decos": [
+{
+"id": 1,
+"name": "Opened Door",
+"role": "open_door"
+},
+{
+"id": 2,
+"name": "Opened Chest",
+"role": "open_chest"
+},
+{
+"id": 3,
+"name": "Blood with Limb",
+"role": "remains",
+"view3d": "flat"
+},
+{
+"id": 4,
+"name": "Bloody Footprints",
+"role": "blood",
+"view3d": "flat"
+},
+{
+"id": 5,
+"name": "Blood Puddle",
+"role": "remains2",
+"view3d": "flat"
+},
+{
+"id": 6,
+"name": "Dark Blood Puddle",
+"role": "bones",
+"view3d": "flat"
+}
+],
+"floors": [
+{
+"id": 1,
+"name": "Grass"
+},
+{
+"id": 2,
+"map_colour": [
+8,
+2
+],
+"name": "Pebbled Footpath"
+},
+{
+"id": 3,
+"name": "Small Shrubs"
+},
+{
+"id": 4,
+"map_colour": [
+0,
+5
+],
+"name": "Red Carpet",
+"roof": 10
+},
+{
+"id": 6,
+"map_colour": [
+0,
+5
+],
+"name": "Grey Carpet",
+"roof": 10
+},
+{
+"id": 7,
+"map_colour": [
+6,
+3
+],
+"name": "Water Bridge"
+},
+{
+"id": 8,
+"map_colour": [
+6,
+3
+],
+"name": "Desert Sand"
+}
+],
+"walls": [
+{
+"door": "fake",
+"id": -6,
+"name": "Fake Diamond Mesh Gray"
+},
+{
+"door": "fake",
+"id": -5,
+"name": "Fake Stippled Dark Gray"
+},
+{
+"door": "locked",
+"id": -4,
+"key": "blue",
+"name": "Locked Blue Key Door"
+},
+{
+"door": "locked",
+"id": -3,
+"key": "red",
+"name": "Locked Red Key Door"
+},
+{
+"door": "locked",
+"id": -2,
+"key": "yellow",
+"name": "Locked Gold Key Door"
+},
+{
+"door": "plain",
+"id": -1,
+"map_colour": [
+0,
+5
+],
+"name": "Door"
+},
+{
+"id": 1,
+"name": "Pine Trees",
+"solid": true
+},
+{
+"id": 2,
+"map_colour": [
+1,
+1
+],
+"name": "Water",
+"solid": true,
+"view3d": "flat",
+"water": true
+},
+{
+"id": 3,
+"map_colour": [
+10,
+4
+],
+"name": "Pine Trees",
+"solid": true
+},
+{
+"id": 4,
+"map_colour": [
+0,
+5
+],
+"name": "Diagonal Pinstripe White",
+"solid": true
+},
+{
+"id": 5,
+"map_colour_on_level": {
+"5": [
+8,
+2
+]
+},
+"name": "Boulder",
+"solid": true
+},
+{
+"id": 6,
+"name": "Apple Tree",
+"solid": true
+},
+{
+"id": 7,
+"name": "Wishing Well",
+"solid": true
+},
+{
+"id": 8,
+"name": "Decayed Tree",
+"solid": true
+},
+{
+"id": 9,
+"name": "Table",
+"solid": true
+},
+{
+"id": 10,
+"map_colour": [
+0,
+5
+],
+"name": "Stippled Dark Gray",
+"solid": true
+},
+{
+"id": 11,
+"map_colour": [
+0,
+5
+],
+"name": "Diamond Mesh Gray",
+"solid": true
+},
+{
+"id": 12,
+"map_colour": [
+0,
+5
+],
+"name": "Diagonal Pinstripe Amber",
+"solid": true
+},
+{
+"id": 13,
+"map_colour": [
+0,
+5
+],
+"name": "Diamond Mesh Amber",
+"solid": true
+},
+{
+"id": 14,
+"map_colour": [
+0,
+5
+],
+"name": "Diagonal Pinstripe Red",
+"solid": true
+}
+]
+}
+}
 }

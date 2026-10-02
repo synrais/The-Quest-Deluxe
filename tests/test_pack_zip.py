@@ -15,6 +15,18 @@ sys.path.insert(0, os.path.join(ROOT, 'tools'))
 import pack_edits_zip as pz  # noqa: E402
 
 
+def png(w: int, h: int) -> bytes:
+    """A blank PNG of that size, made by hand (no picture library needed)."""
+    import struct
+    import zlib
+
+    def chunk(kind, body):
+        return struct.pack('>I', len(body)) + kind + body + struct.pack('>I', zlib.crc32(kind + body))
+    raw = b''.join(b'\x00' + b'\x00\x00\x00' * w for _ in range(h))
+    return b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', struct.pack('>IIBBBBB', w, h, 8, 2, 0, 0, 0)) + \
+        chunk(b'IDAT', zlib.compress(raw)) + chunk(b'IEND', b'')
+
+
 def fresh_copy() -> str:
     """A main folder with just the packs, as a player has them."""
     tmp = tempfile.mkdtemp()
@@ -62,6 +74,32 @@ def main():
     assert f'TheQuestDeluxe/packs/mypack/quest.json' in names and f'TheQuestDeluxe/packs/mypack/items.json' in names
     assert 'new: sprites/items/2500.png' in said and 'changed: items.json' in said and 'removed: sprites/items/1105.png' in said
     assert 'packs/mypack: a pack of its own' in said
+    # the report says what is in the tables and the pictures
+    import json
+    data = json.load(open(items, encoding='utf-8'))
+    data['items'].append({'id': 2600, 'name': 'Test Mushroom', 'type': 'treasure'})
+    json.dump(data, open(items, 'w', encoding='utf-8'))
+    tiles = os.path.join(packs, pz.SHIPPED, 'tiles.json')
+    t = json.load(open(tiles, encoding='utf-8'))
+    for w in t['walls']:
+        if w['id'] == 2:
+            w['freezes_to'] = -7
+    json.dump(t, open(tiles, 'w', encoding='utf-8'))
+    os.makedirs(os.path.join(packs, pz.SHIPPED, 'sprites', 'items', 'new items'))
+    open(os.path.join(packs, pz.SHIPPED, 'sprites', 'items', 'new items', '9.png'), 'wb').write(png(40, 40))
+    open(os.path.join(packs, pz.SHIPPED, 'sprites', 'creatures', '777.png'), 'wb').write(png(80, 80))
+    open(os.path.join(packs, pz.SHIPPED, 'sprites', 'creatures', 'big.png'), 'wb').write(png(40, 40))
+    path3, report3 = pz.build(tmp, when=1760000120, note='I could not freeze the water.')
+    assert "NEW items 2600 'Test Mushroom'" in report3 and "CHANGED walls 2 'Water': freezes_to: null -> -7" in report3
+    assert 'sprites/creatures/777.png: 80 x 80   WARNING: 80 x 80, not 40 x 40: it is scaled' in report3
+    assert 'sprites/items/new items/9.png: 40 x 40   WARNING: not where the editor looks' in report3
+    assert 'sprites/creatures/big.png: 40 x 40   WARNING: the name is not a number' in report3
+    assert 'NOTE FROM WHOEVER MADE THIS:\nI could not freeze the water.' in report3
+    with zipfile.ZipFile(path3) as z:
+        assert z.read('NOTES.txt').decode().strip() == 'I could not freeze the water.'
+    # a game folder without the recorded baseline says so, and sends all of the pack
+    nobase, said = pz.build(tmp, when=1760000180, baseline=os.path.join(tmp, 'missing.json'))
+    assert 'pack_baseline.json is missing' in said and nobase
     # --all: everything
     path_all, _ = pz.build(tmp, include_all=True, when=1760000060)
     with zipfile.ZipFile(path_all) as z:

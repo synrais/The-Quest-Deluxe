@@ -2,6 +2,7 @@
 rem Make Edits Zip - double-click to pack what was added in the editor into a dated zip beside this file.
 rem   Makes QuestEdits_<date>_<time>.zip in this folder: every new or changed file of packs/TheQuest (new pictures,
 rem   items, creatures, spells, tiles, maps ...) and every pack made new in the editor. Send that zip on.
+rem   It asks for a short note (what was tried, what the editor could not do): that goes in the zip too.
 rem   Needs only Python 3.10+ (the same Python the game uses). Nothing in the game folders is changed.
 setlocal EnableExtensions
 cd /d "%~dp0"
@@ -25,6 +26,11 @@ if not defined PY (
     exit /b 1
 )
 
+echo Anything to tell me? What you tried to make, or what the editor could not do.
+echo (One line; press Enter to skip.)
+set "QUEST_NOTE="
+set /p "QUEST_NOTE=> "
+echo.
 echo Packing what was added in the editor...
 echo.
 %PY% "%~dp0tools\pack_edits_zip.py"
