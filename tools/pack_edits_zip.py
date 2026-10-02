@@ -6,7 +6,7 @@ QuestEdits_<date>_<time>.zip beside it, holding:
   - every file of packs/TheQuest that is new or different from the shipped pack (new pictures, the changed
     items.json, creatures.json, tiles.json, spells.json, maps, scripts ...),
   - every file of any other pack in TheQuestDeluxe/packs (a pack made new in the editor),
-  - WHAT_CHANGED.txt, which lists them and says what is in them: the new and changed items, creatures, spells,
+  - WHAT_CHANGED.txt, which lists them, starts with what was written in the editor's Wishes window, and says what is in them: the new and changed items, creatures, spells,
     classes and tiles (their fields), every new picture with its size (and a warning if it is not 40 x 40, or
     is somewhere the editor does not look), and a note typed in the window when it ran (NOTES.txt too).
 
@@ -135,6 +135,15 @@ def diff_tables(base: dict, now: dict) -> list:
     return lines
 
 
+def read_wishes(folder: str) -> str:
+    """What was written in the editor's Wishes window (WISHES.txt in the pack), without its # lines."""
+    try:
+        with open(os.path.join(folder, 'WISHES.txt'), encoding='utf-8') as fh:
+            return '\n'.join(ln.rstrip() for ln in fh if not ln.lstrip().startswith('#')).strip()
+    except OSError:
+        return ''
+
+
 def png_size(path: str):
     """(width, height) of a PNG from its header, or None."""
     try:
@@ -186,6 +195,10 @@ def build(root: str = ROOT, include_all: bool = False, when: float | None = None
     lines = [f'Quest edits, made {time.strftime("%Y-%m-%d %H:%M", stamp)}', '']
     if note.strip():
         lines += ['NOTE FROM WHOEVER MADE THIS:', note.strip(), '']
+    for name in sorted(os.listdir(packs)):                      # what was written in the editor's Wishes window
+        wished = read_wishes(os.path.join(packs, name))
+        if wished:
+            lines += [f'WISHES (packs/{name}/WISHES.txt):', wished, '']
     files = []                                                  # (path on disk, path in the zip)
     base = read_baseline(baseline) if os.path.exists(baseline) else None
     if base is None and not include_all:

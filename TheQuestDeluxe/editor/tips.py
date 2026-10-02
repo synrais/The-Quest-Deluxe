@@ -169,6 +169,8 @@ FIELDS = {
 BUTTONS = {
     # the window
     'Save': 'Write everything to the pack folder (Ctrl+S).',
+    'Wishes...': 'A place to write what you wish the editor or the game could do. It is kept with the pack, and '
+                 'Make Edits Zip.bat sends it on with your edits.',
     'Play from here (F5)': 'Test play: starts the game on the level with a new hero of the chosen class, on the '
                            'square you clicked last on the map (or the level start).',
     # the map tab

@@ -204,6 +204,7 @@ class App:
         bar.pack(fill='x')
         ttk.Button(bar, text='Save', command=self.save).pack(side='left')
         ttk.Button(bar, text='Play from here (F5)', command=self.play).pack(side='left', padx=6)
+        ttk.Button(bar, text='Wishes...', command=self.wishes).pack(side='right')
         ttk.Label(bar, text='as').pack(side='left')
         self.play_class = ttk.Combobox(bar, state='readonly', width=12)
         self.play_class.pack(side='left', padx=4)
@@ -243,6 +244,14 @@ class App:
         self.open(pack or last or DEFAULT_PACK)
         self.fit_window()
 
+    def wishes(self):
+        """The Wishes window: what the editor or the game can't do yet, kept with the pack (WISHES.txt)."""
+        from .wishes import WishesWindow
+        if getattr(self, '_wishes', None) is not None and self._wishes.winfo_exists():
+            self._wishes.lift()
+            return
+        self._wishes = WishesWindow(self)
+
     def fit_window(self):
         """Size the window to what it holds, as far as the screen allows, and put it in the middle: wide enough for
         every tab's panels side by side and tall enough for the map and the longest forms."""
@@ -272,6 +281,7 @@ class App:
         e.add_command(label='Redo map change', accelerator='Ctrl+Y', command=lambda: self._undo(True))
         m.add_cascade(label='Edit', menu=e)
         h = tk.Menu(m, tearoff=False)
+        h.add_command(label='Wishes: what do you wish it could do?', command=lambda: self.wishes())
         h.add_command(label='Map tools', command=lambda: self._help('map'))
         h.add_command(label='About', command=lambda: self._help('about'))
         m.add_cascade(label='Help', menu=h)

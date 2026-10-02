@@ -100,6 +100,14 @@ def main():
     # a game folder without the recorded baseline says so, and sends all of the pack
     nobase, said = pz.build(tmp, when=1760000180, baseline=os.path.join(tmp, 'missing.json'))
     assert 'pack_baseline.json is missing' in said and nobase
+    # what was written in the editor's Wishes window leads the report, and goes in the zip
+    open(os.path.join(packs, pz.SHIPPED, 'WISHES.txt'), 'w', encoding='utf-8').write(
+        '# Things I wish\n- 2026-10-02: a spell that makes it rain\n')
+    path4, report4 = pz.build(tmp, when=1760000240)
+    assert 'WISHES (packs/TheQuest/WISHES.txt):\n- 2026-10-02: a spell that makes it rain' in report4
+    assert '# Things I wish' not in report4
+    with zipfile.ZipFile(path4) as z:
+        assert f'TheQuestDeluxe/packs/{pz.SHIPPED}/WISHES.txt' in z.namelist()
     # --all: everything
     path_all, _ = pz.build(tmp, include_all=True, when=1760000060)
     with zipfile.ZipFile(path_all) as z:
