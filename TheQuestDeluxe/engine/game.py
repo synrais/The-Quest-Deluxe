@@ -476,6 +476,8 @@ class Game:
             self.quit_prompt()
         elif k == pygame.K_f:
             self.view3d = not self.view3d            # FPS mode (Deluxe)
+            if not self.fast and (getattr(self, 'settings', None) or {}).get('fps_transition') != 'off':
+                self.view_fx = (pygame.time.get_ticks(), self.view3d)     # the zoom down and in (Renderer.transition)
         elif k == pygame.K_m and self.view3d:
             self.minimap = not self.minimap          # the Map box: this screen from above, or the level map
         elif k == pygame.K_d:

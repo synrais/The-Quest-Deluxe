@@ -19,6 +19,9 @@ TILE = 40
 MAP_PX = ROOM * TILE          # 400
 MAP_BOX = (480, 276)          # the inside of the panel's Map box (hud.dmap), 100 x 100
 STEP_MS = 140                 # FPS mode: how long a step or a turn takes to glide
+FX_MS = 800                   # FPS mode: how long the zoom down and in (or back out) takes
+ZOOM = 3.2                    # ... how far the map zooms in on the hero before the eye drops into the view
+EYE_HIGH = 1.5                # ... and how high the eye starts
 
 # the EGA palette as the game shows it (see bgi.EGA)
 from .bgi import EGA  # noqa: E402
@@ -343,14 +346,20 @@ class Renderer:
                 self.present()
             return
         three_d = self.in_3d(game) and not flat
-        if three_d:
+        q = None if flat else self.transition(game)
+        if q is not None:
+            three_d = q > 0.5
+            self.draw_transition(game, scr, q)
+            if three_d:
+                self.hand(game, scr)
+        elif three_d:
             self.draw_3d(game, scr)
             self.hand(game, scr)
         else:
             self.draw_map(game, scr)
         self.draw_combat_log(game, scr, three_d)
         self.hud.draw(game)
-        if self.in_3d(game):
+        if three_d and self.in_3d(game):
             if getattr(game, 'minimap', True):
                 self.map_box(game, scr)
             if not hasattr(self, 'face'):
@@ -361,6 +370,42 @@ class Renderer:
             game.overlay.draw(self, scr)
         if present:
             self.present()
+
+    def transition(self, game):
+        """While F is switching FPS mode: how far into the FPS view the picture is, 0 (the map) to 1 (the view),
+        else None. Going in it runs 0 -> 1, going out 1 -> 0."""
+        fx = getattr(game, 'view_fx', None)
+        if fx is None:
+            return None
+        t = (pygame.time.get_ticks() - fx[0]) / FX_MS
+        if t >= 1 or game.fast or game.cursor is not None or not game.world.grid:
+            game.view_fx = None
+            return None
+        t = t * t * (3 - 2 * t)                                    # eased
+        return t if fx[1] else 1 - t
+
+    def draw_transition(self, game, scr, q):
+        """The zoom down and in: the map from above grows around the hero (q 0 - 0.5), then the eye drops from high
+        above into the view while the zoomed map fades out (0.5 - 1)."""
+        p = game.player
+        ox, oy = game.world.origin
+        flat = pygame.Surface((MAP_PX, MAP_PX))
+        self.draw_map(game, flat)
+        zoom = 1 + (ZOOM - 1) * min(1, q / 0.5)
+        side = MAP_PX / zoom
+        cx, cy = (p.X - ox + 0.5) * TILE, (p.Y - oy + 0.5) * TILE
+        x0 = min(max(cx - side / 2, 0), MAP_PX - side)
+        y0 = min(max(cy - side / 2, 0), MAP_PX - side)
+        big = pygame.transform.scale(flat.subsurface((int(x0), int(y0), int(side), int(side))), (MAP_PX, MAP_PX))
+        if q <= 0.5:
+            scr.blit(big, (0, 0))
+            return
+        k = (q - 0.5) / 0.5
+        self.draw_3d(game, scr, snap=True, lift=(1 - k) * (EYE_HIGH - self.EYES[game.size_state()]))
+        fade = max(0.0, 1 - k / 0.6)
+        if fade > 0:
+            big.set_alpha(int(255 * fade))
+            scr.blit(big, (0, 0))
 
     def draw_map(self, game, scr):
         """The screen from above, as the original shows it."""
@@ -462,7 +507,7 @@ class Renderer:
         """Is the eye still on its way to where the hero now is?"""
         return self.camera(game) != self._cam['goal']
 
-    def draw_3d(self, game, scr, snap=False):
+    def draw_3d(self, game, scr, snap=False, lift=0.0):
         if not hasattr(self, 'v3d'):
             self.v3d = view3d.View3D()
         scene = self.scene3d(game)
@@ -476,7 +521,7 @@ class Renderer:
         self.v3d.filter = (getattr(game, 'settings', None) or {}).get('fps_texture_filter') == 'on'
         start = (getattr(game, 'settings', None) or {}).get('fps_fog_start')
         self.v3d.fog_start = (45 if start is None else start) / 100
-        self.v3d.eye = self.eye_height(game)
+        self.v3d.eye = self.eye_height(game) + lift
         frame = self.v3d.render(scene, self.camera(game, snap))
         k = MAP_PX / view3d.RES
         smooth = (getattr(game, 'settings', None) or {}).get('smooth_scaling') == 'on'

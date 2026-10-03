@@ -1028,6 +1028,45 @@ def loot_stays_only_when_cleared():
     print('loot: with enemies left it is lost, picked-up things stay picked up, a cleared screen keeps it: ok')
 
 
+def fps_transition():
+    """F zooms the map down and in (and back out) instead of switching; settings.ini fps_transition = off, and tests (fast), don't."""
+    import engine.render as R
+    g = with_changes(lambda folder, json: None)
+    assert g.view_fx is None if hasattr(g, 'view_fx') else True
+    g.fast = False
+    g.settings = {'fps_transition': 'on'}
+    g.handle(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_f, unicode='f', mod=0))
+    assert g.view3d and g.view_fx and g.view_fx[1] is True
+    t0 = g.view_fx[0]
+    real = pygame.time.get_ticks
+    try:
+        seen = []
+        for ms in (0, R.FX_MS // 4, R.FX_MS // 2, R.FX_MS * 3 // 4):
+            pygame.time.get_ticks = lambda ms=ms: t0 + ms
+            seen.append(g.renderer.transition(g))
+            g.renderer.draw(g, present=False)                  # every stage draws
+        assert seen[0] < seen[1] < seen[2] < seen[3] <= 1 and abs(seen[2] - 0.5) < 1e-6, seen
+        pygame.time.get_ticks = lambda: t0 + R.FX_MS + 1
+        assert g.renderer.transition(g) is None and g.view_fx is None       # over
+        g.handle(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_f, unicode='f', mod=0))
+        assert not g.view3d and g.view_fx[1] is False
+        t1 = g.view_fx[0]
+        pygame.time.get_ticks = lambda: t1 + R.FX_MS // 4
+        assert g.renderer.transition(g) > 0.5 and g.renderer.transition(g) < 1       # going out starts from the view
+        g.renderer.draw(g, present=False)
+    finally:
+        pygame.time.get_ticks = real
+    g.view_fx = None
+    g.settings = {'fps_transition': 'off'}
+    g.handle(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_f, unicode='f', mod=0))
+    assert g.view3d and g.view_fx is None                     # off: it just switches
+    g.fast = True
+    g.settings = {}
+    g.handle(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_f, unicode='f', mod=0))
+    assert g.view_fx is None
+    print('fps transition: the map zooms in and the eye drops (and back out), off and fast just switch: ok')
+
+
 def hands_react():
     from engine.game import Game
     from engine.state import SLOT_WEAPON, SLOT_OFFHAND
@@ -1112,6 +1151,7 @@ if __name__ == '__main__':
     clones()
     water_walking()
     loot_stays_only_when_cleared()
+    fps_transition()
     hands_react()
     usable_items()
     behaviour()

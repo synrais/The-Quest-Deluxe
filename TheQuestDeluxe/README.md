@@ -67,6 +67,7 @@ The player's settings, in this folder:
 | `fps_fog_start` | `45` (shipped): where the fog fade begins in FPS mode, in percent of the view distance. `100`: everything stays crisp to the edge of the view. |
 | `fps_quality` | `normal` (shipped): how finely FPS mode is drawn: `low`, `normal`, `high`, `ultra` or `max`. Higher is sharper, and slower. |
 | `fps_view_distance` | `level` (shipped): FPS mode sees as far as each level says. A number, 2 to 30, makes the eye see at least that many squares. |
+| `fps_transition` | `on` (shipped): pressing F zooms the map in on the hero, then the eye drops down into the FPS view (and rises and zooms back out when you leave it). `off`: it just switches. |
 | `fps_texture_filter` | `off` (shipped): in FPS mode, pixels far away are skipped, as a plain scaler does: crisp, and a distant path of pebbles can break into dashes. `on`: the ground, walls and things far away are averaged down, so they fade smoothly. |
 | `fps_dither` | `ordered` (shipped): the fog in FPS mode is a 4 x 4 dither. `fine`: an 8 x 8 one. `smooth`: a plain blend. `off`: no fading with distance. |
 
