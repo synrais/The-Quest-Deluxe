@@ -1117,10 +1117,75 @@ class Game:
         else:
             p.more.pop('frozen', None)
 
+    STAND_EFFECTS = ('berserk', 'heal', 'hurt', 'mana', 'drain_mana', 'poison', 'cure_poison')
+
+    def blood_deco(self, deco: int) -> bool:
+        return deco != 0 and deco in {self.pack.deco(r) for r in ('blood', 'remains', 'remains2')}
+
+    def stand_effects(self):
+        """What the square under the hero does to him, each turn (before the turn's other upkeep): a floor or a
+        decoration with `hurts` or `heals` (lava, a healing spring), and what he wears with `stand_on` (blood, a
+        decoration, a floor or an item lying here, by `stand_id`) does its `stand_effect` for `stand_amount` while he
+        stands on it. A pack that uses neither plays exactly as before."""
+        p, h, st, pack = self.player, self.player.hero, self.status, self.pack
+        q = self.world.sq(p.X, p.Y)
+        for kind, tile in (('floor', pack.floors.get(q.floor)), ('deco', pack.decos.get(q.deco))):
+            for key, sign in (('hurts', -1), ('heals', 1)):
+                n = int((tile or {}).get(key) or 0)
+                if n > 0:
+                    h.life = min(h.mlife, h.life + n) if sign > 0 else h.life - n
+                    what = (tile.get('name') or kind).lower()
+                    self.report(f'The {what} {"heals" if sign > 0 else "hurts"} you for {n}.', 10 if sign > 0 else 12,
+                                (p.X, p.Y), None if sign > 0 else n)
+        on = set()
+        for r in self.worn_rows():
+            how, effect = r.get('stand_on'), r.get('stand_effect')
+            if not how or effect not in self.STAND_EFFECTS:
+                continue
+            which = int(r.get('stand_id') or 0)
+            if how == 'blood':
+                here = self.blood_deco(q.deco)
+            elif how == 'deco':
+                here = q.deco == which and which != 0
+            elif how == 'floor':
+                here = q.floor == which and which != 0
+            elif how == 'item':
+                here = q.item != 0 and (not which or q.item == which)
+            else:
+                continue
+            if not here:
+                continue
+            n = int(r.get('stand_amount') or 0)
+            on.add(f"{r.get('name')}|{effect}")
+            if effect == 'berserk':
+                turns = max(n, 2)                                   # (1 would end at once: upkeep switches it off)
+                if max(st.powboost, st.armboost) < turns:
+                    st.powboost = st.armboost = turns
+                if f"{r.get('name')}|{effect}" not in p.more.get('standing', ()):
+                    self.report(f'The {(r.get("name") or "item").lower()} stirs your rage.', 12)
+            elif effect == 'heal':
+                h.life = min(h.mlife, h.life + n)
+            elif effect == 'hurt':
+                h.life -= n
+                self.report(f'The {(r.get("name") or "item").lower()} hurts you for {n}.', 12, (p.X, p.Y), n)
+            elif effect == 'mana':
+                h.mana = min(h.mmana, h.mana + n)
+            elif effect == 'drain_mana':
+                h.mana = max(0, h.mana - n)
+            elif effect == 'poison' and not self.worn_any('poison_immune'):
+                h.poisoned = 1
+            elif effect == 'cure_poison':
+                h.poisoned = 0
+        if on or p.more.get('standing'):
+            p.more['standing'] = sorted(on)
+            if not on:
+                p.more.pop('standing')
+
     def upkeep(self):
         """Top of the main2() loop after a turn: faults, poison, spell timers, boosts."""
         p, h, st, sk = self.player, self.player.hero, self.status, self.player.skill
         self.thaw()
+        self.stand_effects()
         for key, back in (('shrunk', 'You grow back to your size.'), ('grown', 'You shrink back to your size.')):
             if p.more.get(key):
                 p.more[key] -= 1

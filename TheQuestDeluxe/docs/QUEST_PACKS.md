@@ -81,6 +81,7 @@ with two conventions the engine and saves rely on:
 | `thorns`, `lifesteal` | Worn items: damage to a creature that hits the hero in melee; percent of his melee damage he heals. |
 | `sight` | Worn items: squares further the eye sees in FPS mode. |
 | `poison_immune`, `see_invisible`, `water_walk` | Worn items: poison cannot touch him; invisible creatures show (like foresight); walls with `freezes_to` (water) do not stop him. |
+| `stand_on`, `stand_id`, `stand_effect`, `stand_amount` | Worn items: while worn, each turn the hero stands on `stand_on` (`blood`: any pile of blood, footprints or remains; `deco`, `floor`: the decoration or floor numbered `stand_id`; `item`: an item lying there, `stand_id` or any if 0), the item does `stand_effect` (`berserk`: the Berserker potion's doubled power and armour for `stand_amount` turns (at least 2); `heal`, `hurt`, `mana`, `drain_mana`: that much a turn; `poison`, `cure_poison`). |
 | `makes_small`, `makes_giant` | Worn items: while worn the hero is small, or a giant (both: his own size). |
 | `use` | Any item: `{"life": 20, "mana": 5, "cure_poison": true, "message": "..."}`. In the inventory (i), Enter on it in the backpack uses it up (food, a bandage, a mana root): `life` and `mana` are an amount, or `"half"` or `"full"`; the other effects of `pickup` work too (`grow`, `shrink`, `foresight`, `berserk`, `poison`). It cannot be worn. |
 | `pickup` | Any item: `{"grow": 40, "life": 10, "message": "..."}`. Picked up with Enter it is used at once and gone (a mushroom): `grow` or `shrink` (turns), `life`, `mana`, `foresight` (turns), `poison` (true), `message`. |
@@ -191,6 +192,7 @@ Scholar; Cowardice, Rashness, Honor).
 | `giant_breaks` | Walls (with `solid`): a giant walks into it and it is smashed: it becomes `becomes` (nothing if left out), with `message`. For a thin wall or a barricade. |
 | `small_only` | Walls (with `solid`): a hero under a potion of shrinking (`shrink`) walks through it; everyone else is stopped. For a crack in a rock or a mouse hole; the `billboard` look suits it in FPS mode. |
 | `freezes_to` | Walls: the wall a freezing spell (`freezes_water`) turns this one into, e.g. water into a wall called Ice that isn't `solid`. The ice melts back when its turns are up (later if somebody stands on it). |
+| `hurts`, `heals` | Floors and decorations: life the hero loses or gains each turn he stands on it (lava, a healing spring). |
 | `role` | Decorations the engine puts down: `open_door`, `open_chest`, `remains`, `remains2`, `blood`, `bones`. |
 
 Pictures: `sprites/floors/<id>.png`, `sprites/walls/<id>.png`, `sprites/decos/<id>.png`.

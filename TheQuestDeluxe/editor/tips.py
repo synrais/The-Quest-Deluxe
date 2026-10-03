@@ -155,6 +155,14 @@ FIELDS = {
     'door': 'Opens when walked into: a plain door, a secret one, or one that needs a key.',
     'map_colour': 'Its colour on the level map: EGA colour, priority.',
     'role': 'What the engine puts this decoration down for (blood, bones, an open door ...). One decoration each.',
+    'hurts': 'Life the hero loses every turn he stands on it (lava, thorns, a poisoned swamp).',
+    'heals': 'Life the hero gains every turn he stands on it (a healing spring).',
+    'stand_on': 'Something this item does while it is worn and the hero stands on blood, a decoration, a floor or an '
+                'item lying there.',
+    'stand_id': 'Which decoration, floor or item number (empty or 0 for an item: any item).',
+    'stand_effect': 'What it does every turn he stands there: Berserker rage (like the potion), heal, hurt, mana, '
+                    'drain mana, poison, or cure poison.',
+    'stand_amount': 'Life or mana each turn; for Berserker rage, how many turns it lasts after he steps off.',
     'roof': 'Indoors: the wall picture FPS mode draws overhead.',
     'water': 'Water: a hero wearing something that lets him walk on water crosses it. (A wall that freezes counts '
              'as water too.)',

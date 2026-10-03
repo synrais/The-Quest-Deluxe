@@ -23,6 +23,11 @@ MISSILES = [(None, '(none)'), ('sthit', 'a stone (sthit)'), ('arhit', 'an arrow 
 STATS = ['req_str', 'req_int', 'atk', 'def', 'warm', 'marm', 'str', 'int', 'dex', 'acc', 'power', 'kind']
 
 
+STAND_ON = [(None, '(nothing)'), ('blood', 'a pile of blood'), ('deco', 'a decoration (number)'),
+            ('floor', 'a floor (number)'), ('item', 'an item lying there')]
+STAND_EFFECTS = [(None, '(nothing)'), ('berserk', 'Berserker rage'), ('heal', 'Heals him'), ('hurt', 'Hurts him'),
+                 ('mana', 'Gives mana'), ('drain_mana', 'Drains mana'), ('poison', 'Poisons him'),
+                 ('cure_poison', 'Cures poison')]
 ELEMENTS = [(None, '(none)'), ('fire', 'Fire (burns it)'), ('ice', 'Ice (freezes it)'),
             ('poison', 'Poison'), ('drain', 'Drain (heals the hero)')]
 
@@ -119,6 +124,13 @@ class ItemsTab(TableTab):
             Field('see_invisible', 'Sees the invisible', 'bool', when=is_(*WORN)),
             Field('water_walk', 'Walks on water', 'bool', when=is_(*WORN),
                   hint='needs the water wall ticked "Is water" on the Tiles tab'),
+            Field('stand_on', 'Does something on', 'choice', STAND_ON, when=is_(*WORN),
+                  hint='while worn and he stands on it: blood, a decoration or floor, or an item lying there'),
+            Field('stand_id', 'Which one (number)', 'int', when=lambda r: r.get('stand_on') in ('deco', 'floor', 'item'),
+                  hint='the decoration, floor or item number (empty or 0: any item)'),
+            Field('stand_effect', 'It does', 'choice', STAND_EFFECTS, when=has('stand_on')),
+            Field('stand_amount', 'Amount (or turns)', 'int', when=has('stand_on'),
+                  hint='life or mana a turn; for berserk, how many turns it lasts'),
             Field('makes_small', 'Makes him small', 'bool', when=is_(*WORN), hint='while worn (a ring of shrinking)'),
             Field('makes_giant', 'Makes him a giant', 'bool', when=is_(*WORN), hint='while worn (a belt of giants)'),
             Field('use.life', 'Used: restores life', 'int', when=lambda r: r.get('type') in EATEN,

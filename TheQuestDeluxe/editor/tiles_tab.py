@@ -129,6 +129,9 @@ class TilesTab(TableTab):
                           parse=parse_colour, hint='colour, priority (e.g. 8, 2); empty: none'),
                     Field('map_colour_on_level', 'On a level', 'custom', fmt=fmt_on_level, parse=parse_on_level,
                           hint='other colours on some levels: "5: 8, 2; 7: 1, 1"')]
+        if self.kind in ('floors', 'decos'):
+            out += [Field('hurts', 'Hurts each turn', 'int', hint='life lost every turn he stands on it (lava, thorns)'),
+                    Field('heals', 'Heals each turn', 'int', hint='life gained every turn he stands on it (a spring)')]
         if self.kind == 'decos':
             out.append(Field('role', 'Role', 'choice', ROLES, hint='what the engine puts it down for (one of each)'))
         if self.kind == 'walls':

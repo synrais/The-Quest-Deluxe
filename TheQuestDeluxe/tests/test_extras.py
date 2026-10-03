@@ -1067,6 +1067,57 @@ def fps_transition():
     print('fps transition: the map zooms in and the eye drops (and back out), off and fast just switch: ok')
 
 
+def standing_effects():
+    """Tiles that hurt or heal, and worn items that do something on blood (or any floor, decoration or item)."""
+    def ring(folder, json):
+        path = os.path.join(folder, 'items.json')
+        data = json.load(open(path))
+        amulet = dict(next(r for r in data['items'] if r.get('type') == 'amulet'))
+        amulet.update({'id': 2700, 'name': 'Ring of Rage', 'stand_on': 'blood', 'stand_effect': 'berserk', 'stand_amount': 4})
+        data['items'].append(amulet)
+        json.dump(data, open(path, 'w'))
+        path = os.path.join(folder, 'tiles.json')
+        t = json.load(open(path))
+        t['floors'].append({'id': 60, 'name': 'Lava', 'hurts': 3})
+        t['floors'].append({'id': 61, 'name': 'Spring', 'heals': 2})
+        json.dump(t, open(path, 'w'))
+    g = with_changes(ring)
+    p, h, w = g.player, g.player.hero, g.world
+    q = w.sq(p.X, p.Y)
+    q.deco = q.item = 0
+    g.upkeep()
+    assert g.status.powboost <= 0                                 # nothing here, nothing happens
+    from engine.game import SLOT_AMULET
+    p.bag[SLOT_AMULET] = 2700
+    q.deco = g.pack.deco('blood')
+    g.upkeep()
+    assert g.status.powboost == 3 and g.status.armboost == 3, (g.status.powboost, g.status.armboost)   # 4, less this turn's
+    for _ in range(5):
+        g.upkeep()
+    assert g.status.powboost == 3                                 # stays on while he stands in the blood
+    q.deco = 0
+    for _ in range(6):
+        g.upkeep()
+    assert g.status.powboost <= 0                                 # and fades after he steps off
+    # tiles
+    h.life = h.mlife = 50
+    q.floor = 60
+    g.upkeep()
+    assert h.life == 47, h.life
+    q.floor = 61
+    g.upkeep()
+    assert h.life == 49, h.life
+    q.floor = 1
+    g.upkeep()
+    assert h.life == 49
+    # a plain amulet or no tile fields: nothing changes
+    p.bag.pop(SLOT_AMULET)
+    q.deco = g.pack.deco('blood')
+    g.upkeep()
+    assert g.status.powboost <= 0
+    print('standing: blood wakes the ring\'s rage, lava hurts, a spring heals, nothing else changes: ok')
+
+
 def hands_react():
     from engine.game import Game
     from engine.state import SLOT_WEAPON, SLOT_OFFHAND
@@ -1152,6 +1203,7 @@ if __name__ == '__main__':
     water_walking()
     loot_stays_only_when_cleared()
     fps_transition()
+    standing_effects()
     hands_react()
     usable_items()
     behaviour()
