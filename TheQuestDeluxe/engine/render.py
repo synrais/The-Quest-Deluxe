@@ -359,7 +359,7 @@ class Renderer:
             self.draw_map(game, scr)
         self.draw_combat_log(game, scr, three_d)
         self.hud.draw(game)
-        if three_d and self.in_3d(game):
+        if self.in_3d(game) and (q is None or q > 0.5):      # (a frame drawn flat for an animation keeps the panel)
             if getattr(game, 'minimap', True):
                 self.map_box(game, scr)
             if not hasattr(self, 'face'):

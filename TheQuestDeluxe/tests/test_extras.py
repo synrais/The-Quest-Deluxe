@@ -1057,6 +1057,15 @@ def fps_transition():
     finally:
         pygame.time.get_ticks = real
     g.view_fx = None
+    g.view3d = True
+    seen = []
+    real_box = g.renderer.map_box
+    g.renderer.map_box = lambda game, scr: seen.append('map')
+    g.renderer.draw(g, present=False)
+    g.renderer.draw(g, present=False, flat=True)             # the frames an animation draws: the panel stays (no grey box)
+    g.renderer.map_box = real_box
+    assert seen == ['map', 'map'], seen
+    g.view3d = False
     g.settings = {'fps_transition': 'off'}
     g.handle(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_f, unicode='f', mod=0))
     assert g.view3d and g.view_fx is None                     # off: it just switches
