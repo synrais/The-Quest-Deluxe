@@ -384,19 +384,29 @@ class Renderer:
         t = t * t * (3 - 2 * t)                                    # eased
         return t if fx[1] else 1 - t
 
-    def draw_transition(self, game, scr, q):
-        """The zoom down and in: the map from above grows around the hero (q 0 - 0.5), then the eye drops from high
-        above into the view while the zoomed map fades out (0.5 - 1)."""
+    def zoomed_map(self, game, q):
+        """The map from above, grown around the hero and turned (q 0 - 0.5): turned until the way he faces
+        is up the screen, as the eye will see it, by at least a quarter turn so it can be seen to come round."""
         p = game.player
         ox, oy = game.world.origin
         flat = pygame.Surface((MAP_PX, MAP_PX))
         self.draw_map(game, flat)
-        zoom = 1 + (ZOOM - 1) * min(1, q / 0.5)
-        side = MAP_PX / zoom
+        s = min(1.0, q / 0.5)
+        zoom = 1 + (ZOOM - 1) * s
+        angle = 90 * ((game.facing - 1) % 4 + 1) * s            # facing north 360, east 90, south 180, west 270
         cx, cy = (p.X - ox + 0.5) * TILE, (p.Y - oy + 0.5) * TILE
-        x0 = min(max(cx - side / 2, 0), MAP_PX - side)
-        y0 = min(max(cy - side / 2, 0), MAP_PX - side)
-        big = pygame.transform.scale(flat.subsurface((int(x0), int(y0), int(side), int(side))), (MAP_PX, MAP_PX))
+        canvas = pygame.Surface((2 * MAP_PX, 2 * MAP_PX))
+        canvas.blit(flat, (MAP_PX - cx, MAP_PX - cy))             # the hero at the middle
+        turned = pygame.transform.rotate(canvas, angle)
+        side = int(MAP_PX / zoom)
+        mid = turned.get_width() // 2
+        crop = turned.subsurface((mid - side // 2, mid - side // 2, side, side))
+        return pygame.transform.scale(crop, (MAP_PX, MAP_PX))
+
+    def draw_transition(self, game, scr, q):
+        """The zoom down and in: the map from above grows around the hero and turns to the way he faces (q 0 - 0.5),
+        then the eye drops from high above into the view while the turned map fades out (0.5 - 1)."""
+        big = self.zoomed_map(game, q)
         if q <= 0.5:
             scr.blit(big, (0, 0))
             return
