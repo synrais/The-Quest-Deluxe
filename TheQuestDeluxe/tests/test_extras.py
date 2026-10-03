@@ -996,6 +996,38 @@ def usable_items():
     print('items: Enter on food in the inventory restores life, mana, cures poison, and is used up: ok')
 
 
+def loot_stays_only_when_cleared():
+    """goroom2(): leaving a screen with hostile creatures alive loses the loot lying on it (gold goes back to
+    what the screen had on arrival, an item that is not what it had is wiped); picked-up things stay picked up;
+    with the screen cleared everything stays."""
+    def leave(hostile, setup):
+        g = with_changes(lambda folder, json: None)
+        w = g.world
+        w.enemies = []
+        for x, y in w.room_tiles():
+            w.grid[x][y].mon = 0
+        ox, oy = w.origin
+        far = [(ox + 1 + i, oy + 1) for i in range(4)]
+        for x, y in far:
+            w.grid[x][y].item = w.grid[x][y].gold = 0
+        w.grid[far[0][0]][far[0][1]].item = 2                     # lay there on arrival
+        w.grid[far[1][0]][far[1][1]].gold = 7
+        g.events.snapshot()
+        setup(w, far)
+        w.leave_room(1 if hostile else 0, g.events.shadow)
+        return [(w.grid[x][y].item, w.grid[x][y].gold) for x, y in far]
+
+    def play(w, far):
+        w.grid[far[0][0]][far[0][1]].item = 0                      # picked up
+        w.grid[far[1][0]][far[1][1]].gold = 0                      # picked up
+        w.grid[far[2][0]][far[2][1]].item = 5                      # dropped or fallen
+        w.grid[far[3][0]][far[3][1]].gold = 30                     # fallen
+    assert leave(True, play) == [(0, 0), (0, 0), (0, 0), (0, 0)]
+    assert leave(False, play) == [(0, 0), (0, 0), (5, 0), (0, 30)]
+    assert leave(True, lambda w, far: None) == [(2, 0), (0, 7), (0, 0), (0, 0)]   # untouched loot is kept
+    print('loot: with enemies left it is lost, picked-up things stay picked up, a cleared screen keeps it: ok')
+
+
 def hands_react():
     from engine.game import Game
     from engine.state import SLOT_WEAPON, SLOT_OFFHAND
@@ -1079,6 +1111,7 @@ if __name__ == '__main__':
     foresight()
     clones()
     water_walking()
+    loot_stays_only_when_cleared()
     hands_react()
     usable_items()
     behaviour()

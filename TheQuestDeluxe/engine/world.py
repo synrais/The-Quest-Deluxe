@@ -185,8 +185,19 @@ class World:
             self.enemies.append(e)
         st.mons = len(self.enemies)
 
-    def leave_room(self) -> None:
-        """goroom2 (first half): write-back rules applied to the screen being left."""
+    def leave_room(self, ems: int = 0, arrival: dict | None = None) -> None:
+        """goroom2 (first half): write-back rules applied to the screen being left. With hostile creatures
+        still alive (ems > 0) the loot lying about is lost: gold on the floor goes back to what the screen
+        had on arrival, and an item that is not what the screen had on arrival is wiped (what the hero picked
+        up is in his bag; what he dropped, or a creature dropped, is gone). arrival is map[] as it was."""
+        if ems > 0 and arrival is not None:
+            for x, y in self.room_tiles():
+                q, a = self.grid[x][y], arrival.get((x, y))
+                if a is not None:
+                    if q.item != a['item']:
+                        q.item = 0
+                    if q.gold != 0:
+                        q.gold = a['gold']
         pack = self.data.src.pack
         self.carry = []
         for e in self.enemies:

@@ -551,7 +551,7 @@ class Game:
             if p.skill.hon == 2 and st.ems > 0:
                 self.play('honor')
                 return False
-            w.leave_room()
+            w.leave_room(self.status.ems, self.events.shadow)
             p.X, p.Y = nx, ny
             w.enter_room(p, st)
             self.target = None
@@ -575,7 +575,7 @@ class Game:
             self.play_at('teleporter1', p.X, p.Y)
             ddx, ddy = self.events.meta(w.level, 'TELEPORT', (0, 0))
             if (ddx, ddy) != (0, 0) and w.in_map(p.X + ddx, p.Y + ddy):
-                w.leave_room()
+                w.leave_room(self.status.ems, self.events.shadow)
                 p.X += ddx
                 p.Y += ddy
                 w.enter_room(p, st)
@@ -994,7 +994,7 @@ class Game:
                                                or self.pack.wall(w.sq(cx, cy).wall).get('door')))
                    for cx, cy in cells):
                 if (ax, ay) != (p.X, p.Y):
-                    w.leave_room()
+                    w.leave_room(self.status.ems, self.events.shadow)
                     p.X, p.Y = ax, ay
                     w.enter_room(p, self.status)
                     self.count_hostiles()
