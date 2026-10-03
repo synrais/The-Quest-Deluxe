@@ -19,9 +19,10 @@ TILE = 40
 MAP_PX = ROOM * TILE          # 400
 MAP_BOX = (480, 276)          # the inside of the panel's Map box (hud.dmap), 100 x 100
 STEP_MS = 140                 # FPS mode: how long a step or a turn takes to glide
-FX_MS = 800                   # FPS mode: how long the zoom down and in (or back out) takes
-ZOOM = 3.2                    # ... how far the map zooms in on the hero before the eye drops into the view
-EYE_HIGH = 1.5                # ... and how high the eye starts
+FX_MS = 1200                  # FPS mode: how long the dive down and in (or back out) takes
+ZOOM = 3.6                    # ... how far the map zooms in on the hero (done by 30% of the way, so its edges are never seen)
+EYE_HIGH = 1.5                # ... and how high the eye starts when the view takes over (60% of the way)
+SHOW3D = 0.6                  # ... when the view takes over from the tilted map
 
 # the EGA palette as the game shows it (see bgi.EGA)
 from .bgi import EGA  # noqa: E402
@@ -348,7 +349,7 @@ class Renderer:
         three_d = self.in_3d(game) and not flat
         q = None if flat else self.transition(game)
         if q is not None:
-            three_d = q > 0.5
+            three_d = q > SHOW3D
             self.draw_transition(game, scr, q)
             if three_d:
                 self.hand(game, scr)
@@ -372,8 +373,8 @@ class Renderer:
             self.present()
 
     def transition(self, game):
-        """While F is switching FPS mode: how far into the FPS view the picture is, 0 (the map) to 1 (the view),
-        else None. Going in it runs 0 -> 1, going out 1 -> 0."""
+        """While F is switching FPS mode: how far into the dive the picture is, 0 (the map) to 1 (the view), else
+        None. Going in it runs 0 -> 1, going out 1 -> 0."""
         fx = getattr(game, 'view_fx', None)
         if fx is None:
             return None
@@ -381,38 +382,74 @@ class Renderer:
         if t >= 1 or game.fast or game.cursor is not None or not game.world.grid:
             game.view_fx = None
             return None
-        t = t * t * (3 - 2 * t)                                    # eased
         return t if fx[1] else 1 - t
 
-    def zoomed_map(self, game, q):
-        """The map from above, grown around the hero and turned (q 0 - 0.5): turned until the way he faces
-        is up the screen, as the eye will see it, by at least a quarter turn so it can be seen to come round."""
+    @staticmethod
+    def ease(x):
+        x = min(1.0, max(0.0, x))
+        return x * x * (3 - 2 * x)
+
+    def fx_canvas(self, game):
+        """The map around the hero, the neighbouring screens too (so no edge shows when it grows), the hero in the
+        middle of a surface twice as wide as a screen. Made once for a dive."""
+        p, w = game.player, game.world
+        key = (game.view_fx[0] if getattr(game, 'view_fx', None) else None, p.X, p.Y, w.level)
+        if getattr(self, '_fx_key', None) == key:
+            return self._fx_surf
+        canvas = pygame.Surface((2 * MAP_PX, 2 * MAP_PX))
+        mid = MAP_PX - TILE // 2
+        top = self.on_top(game)
+        for x in range(p.X - 10, p.X + 11):
+            for y in range(p.Y - 10, p.Y + 11):
+                if w.in_map(x, y):
+                    self.draw_tile(canvas, mid + (x - p.X) * TILE, mid + (y - p.Y) * TILE, w.grid[x][y], on_top=top)
+        self.draw_hero(canvas, game, mid, mid)
+        self._fx_key, self._fx_surf = key, canvas
+        return canvas
+
+    def dive_map(self, game, t):
+        """The map for the dive at t (0 - 1): it grows around the hero (done by 0.3), turns the way he faces by the
+        shortest way (never more than half a turn), and tips over from above towards the horizon (0.25 - 0.8), the sky
+        showing above it."""
         p = game.player
         ox, oy = game.world.origin
-        flat = pygame.Surface((MAP_PX, MAP_PX))
-        self.draw_map(game, flat)
-        s = min(1.0, q / 0.5)
-        zoom = 1 + (ZOOM - 1) * s
-        angle = 90 * ((game.facing - 1) % 4 + 1) * s            # facing north 360, east 90, south 180, west 270
-        cx, cy = (p.X - ox + 0.5) * TILE, (p.Y - oy + 0.5) * TILE
-        canvas = pygame.Surface((2 * MAP_PX, 2 * MAP_PX))
-        canvas.blit(flat, (MAP_PX - cx, MAP_PX - cy))             # the hero at the middle
-        turned = pygame.transform.rotate(canvas, angle)
+        sz, sr, st = self.ease(t / 0.3), self.ease(t / 0.6), self.ease((t - 0.25) / 0.55)
+        angle = (0, 90, 180, -90)[game.facing % 4] * sr
+        zoom = 1 + (ZOOM - 1) * sz
+        # the middle of what shows: the middle of the screen at first, the hero's square at the end
+        rx, ry = (ox + 5 - p.X - 0.5) * TILE, (oy + 5 - p.Y - 0.5) * TILE       # screen's middle, from the hero, in pixels
+        dx, dy = rx * (1 - sz), ry * (1 - sz)
+        turned = pygame.transform.rotate(self.fx_canvas(game), angle)
+        th = math.radians(angle)
+        cx = turned.get_width() / 2 + dx * math.cos(th) + dy * math.sin(th)
+        cy = turned.get_height() / 2 - dx * math.sin(th) + dy * math.cos(th)
         side = int(MAP_PX / zoom)
-        mid = turned.get_width() // 2
-        crop = turned.subsurface((mid - side // 2, mid - side // 2, side, side))
-        return pygame.transform.scale(crop, (MAP_PX, MAP_PX))
+        crop = turned.subsurface((int(cx) - side // 2, int(cy) - side // 2, side, side))
+        flat = pygame.transform.scale(crop, (MAP_PX, MAP_PX))
+        if st <= 0:
+            return flat
+        out = pygame.Surface((MAP_PX, MAP_PX))
+        out.fill(EGA[self.scene3d(game).sky])
+        horizon = int(st * 0.28 * MAP_PX)
+        span = MAP_PX - horizon
+        for y in range(horizon, MAP_PX, 3):                         # far rows are narrower and squeezed together
+            u = (y - horizon) / span
+            sy = int(MAP_PX * (u ** (1 + 0.9 * st)))
+            wid = max(2, int(MAP_PX * (1 - 0.7 * st * (1 - u))))
+            strip = flat.subsurface((0, min(sy, MAP_PX - 3), MAP_PX, 3))
+            out.blit(pygame.transform.scale(strip, (wid, 3)), ((MAP_PX - wid) // 2, y))
+        return out
 
-    def draw_transition(self, game, scr, q):
-        """The zoom down and in: the map from above grows around the hero and turns to the way he faces (q 0 - 0.5),
-        then the eye drops from high above into the view while the turned map fades out (0.5 - 1)."""
-        big = self.zoomed_map(game, q)
-        if q <= 0.5:
+    def draw_transition(self, game, scr, t):
+        """The dive: the map from above grows around the hero, turns the way he faces and tips towards the horizon,
+        then the eye comes down from high above into the view while the map fades out (SHOW3D on)."""
+        big = self.dive_map(game, t)
+        if t <= SHOW3D:
             scr.blit(big, (0, 0))
             return
-        k = (q - 0.5) / 0.5
+        k = self.ease((t - SHOW3D) / (1 - SHOW3D))
         self.draw_3d(game, scr, snap=True, lift=(1 - k) * (EYE_HIGH - self.EYES[game.size_state()]))
-        fade = max(0.0, 1 - k / 0.6)
+        fade = max(0.0, 1 - (t - SHOW3D) / 0.25)
         if fade > 0:
             big.set_alpha(int(255 * fade))
             scr.blit(big, (0, 0))
