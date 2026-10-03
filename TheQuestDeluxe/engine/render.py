@@ -7,6 +7,7 @@ import os
 import pygame
 
 from .world import ROOM
+from .formats import Square, MAP_SIZE
 from .bgi import BGI
 from .hud import Hud
 from . import anim, view3d
@@ -390,22 +391,32 @@ class Renderer:
         return x * x * (3 - 2 * x)
 
     def fx_canvas(self, game):
-        """The map around the hero, the neighbouring screens too (so no edge shows when it grows), the hero in the
-        middle of a surface twice as wide as a screen. Made once for a dive."""
+        """The map around the hero, the neighbouring screens too (so no edge shows when it grows; past the level's own
+        edge its outermost squares go on), his square in the middle of a surface twice as wide as a screen, without
+        him (he is drawn upright over it). Made once for a dive."""
         p, w = game.player, game.world
         key = (game.view_fx[0] if getattr(game, 'view_fx', None) else None, p.X, p.Y, w.level)
         if getattr(self, '_fx_key', None) == key:
             return self._fx_surf
-        canvas = pygame.Surface((2 * MAP_PX, 2 * MAP_PX))
-        mid = MAP_PX - TILE // 2
+        canvas = pygame.Surface((2 * MAP_PX + TILE, 2 * MAP_PX + TILE))
         top = self.on_top(game)
         for x in range(p.X - 10, p.X + 11):
             for y in range(p.Y - 10, p.Y + 11):
-                if w.in_map(x, y):
-                    self.draw_tile(canvas, mid + (x - p.X) * TILE, mid + (y - p.Y) * TILE, w.grid[x][y], on_top=top)
-        self.draw_hero(canvas, game, mid, mid)
+                gx, gy = min(max(x, 1), MAP_SIZE), min(max(y, 1), MAP_SIZE)
+                q = w.grid[gx][gy]
+                if (gx, gy) != (x, y):
+                    q = Square(q.floor, q.wall, 0, 0, 0, q.deco)          # beyond the edge: the ground and walls go on
+                self.draw_tile(canvas, MAP_PX + (x - p.X) * TILE, MAP_PX + (y - p.Y) * TILE, q, on_top=top)
         self._fx_key, self._fx_surf = key, canvas
         return canvas
+
+    def fx_hero(self, game):
+        """The hero as he stands on the map, on his own (a colour key around him), to be set upright over the dive."""
+        pic = pygame.Surface((TILE, TILE))
+        pic.fill((255, 0, 255))
+        pic.set_colorkey((255, 0, 255))
+        self.draw_hero(pic, game, 0, 0)
+        return pic
 
     def dive_map(self, game, t):
         """The map for the dive at t (0 - 1): it grows around the hero (done by 0.3), turns the way he faces by the
@@ -426,6 +437,10 @@ class Renderer:
         side = int(MAP_PX / zoom)
         crop = turned.subsurface((int(cx) - side // 2, int(cy) - side // 2, side, side))
         flat = pygame.transform.scale(crop, (MAP_PX, MAP_PX))
+        hero = pygame.transform.scale(self.fx_hero(game), (int(TILE * zoom), int(TILE * zoom)))   # upright: not turned
+        hx = (turned.get_width() / 2 - (int(cx) - side // 2)) * zoom      # where his square's middle is in the crop
+        hy = (turned.get_height() / 2 - (int(cy) - side // 2)) * zoom
+        flat.blit(hero, (hx - hero.get_width() // 2, hy - hero.get_height() // 2))
         if st <= 0:
             return flat
         out = pygame.Surface((MAP_PX, MAP_PX))
