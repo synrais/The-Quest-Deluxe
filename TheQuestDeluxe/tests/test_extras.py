@@ -1238,6 +1238,44 @@ def underworld():
     print('underworld: death sends him to the Underworld level, clearing it or its exit sends him back to his body: ok')
 
 
+def respawn_and_kits():
+    """A level's RESPAWN: he wakes there with part of his life, some gold gone and a kit; the Underworld can strip him."""
+    def script(level, extra):
+        def change(folder, json):
+            path = os.path.join(folder, 'levels', str(level), 'script.qs')
+            text = open(path, encoding='utf-8').read()
+            open(path, 'w', encoding='utf-8', newline='').write(text.rstrip('\n') + '\n' + extra)
+        return change
+    from engine.state import SLOT_WEAPON, POTION_FIELDS
+    g = with_changes(script(1, 'RESPAWN = (6, 6)\nRESPAWN_LIFE = 30\nRESPAWN_GOLD_LOSS = 50\nRESPAWN_LIMIT = 1\n'
+                               'RESPAWN_KIT = [201, 1]\n'))
+    p, h, w = g.player, g.player.hero, g.world
+    p.bag[SLOT_WEAPON] = 0
+    p.inv.coins = 100
+    potions = getattr(p.inv, POTION_FIELDS[1])
+    here, level = (p.X, p.Y), w.level
+    h.life = -9
+    g.death()
+    assert w.level == level and abs(p.X - 6) <= 1 and abs(p.Y - 6) <= 1, (p.X, p.Y)
+    assert h.life == max(1, h.mlife * 30 // 100) and p.inv.coins == 50, (h.life, p.inv.coins)
+    assert p.bag[SLOT_WEAPON] == 201 and getattr(p.inv, POTION_FIELDS[1]) == potions + 1, 'the kit is handed over'
+    assert w.sq(*here).deco == g.pack.deco('remains2'), 'his body lies where he fell'
+    assert not g.respawn(), 'RESPAWN_LIMIT = 1: no second time'
+    # the Underworld takes his things and gives a kit; they all come back with him
+    g = with_changes(script(3, 'UNDERWORLD = True\nUNDERWORLD_STRIP = True\nUNDERWORLD_KIT = [201]\n'))
+    p, h, w = g.player, g.player.hero, g.world
+    p.bag[SLOT_WEAPON] = 0
+    p.bag[(12, 8)] = 11
+    setattr(p.inv, POTION_FIELDS[2], 3)
+    h.life = -9
+    g.death()
+    assert w.level == 3 and p.bag.get(SLOT_WEAPON) == 201 and not p.bag.get((12, 8)), 'only the kit'
+    assert getattr(p.inv, POTION_FIELDS[2]) == 0
+    assert g.revive()
+    assert p.bag.get((12, 8)) == 11 and not p.bag.get(SLOT_WEAPON) and getattr(p.inv, POTION_FIELDS[2]) == 3, 'his things'
+    print('respawn: wakes at the square with life, gold lost and a kit; the Underworld strips and returns his things: ok')
+
+
 def hands_react():
     from engine.game import Game
     from engine.state import SLOT_WEAPON, SLOT_OFFHAND
@@ -1326,6 +1364,7 @@ if __name__ == '__main__':
     standing_effects()
     thieves_and_light()
     underworld()
+    respawn_and_kits()
     hands_react()
     usable_items()
     behaviour()

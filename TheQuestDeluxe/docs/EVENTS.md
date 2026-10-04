@@ -39,6 +39,13 @@ UNDERWORLD = True              # Deluxe: when the hero dies he wakes on this lev
 UNDERWORLD_RETURN = 'exit'     # ... back by: 'exit' (the level exit item), 'clear' (every monster dead), 'script' (revive())
 UNDERWORLD_LIFE = 50           # ... percent of his life when he wakes (default 50); REVIVE_LIFE: the least when back (50)
 UNDERWORLD_STORY = 12          # ... a story shown when he wakes (optional)
+UNDERWORLD_KIT = [201, 1]      # ... item numbers he is handed there (worn if nothing is worn there, potions on the belt)
+UNDERWORLD_STRIP = True        # ... his bag and potions are set aside there and come back with him
+RESPAWN = (6, 6)               # Deluxe: dying on this level wakes him here instead (map tool Respawn); the body stays
+RESPAWN_LIFE = 30              # ... percent of his life (default 50)
+RESPAWN_GOLD_LOSS = 50         # ... percent of his gold lost each time (default 0)
+RESPAWN_LIMIT = 3              # ... times a level (default: no limit; after that the Underworld or the real death)
+RESPAWN_KIT = [201]            # ... items handed to him each time
 DARK_SCREENS = [(2, 3)]        # Deluxe: screens where only the hero shows, and what an item's `light` reaches (map tool Dark)
 LINKS = {(24, 55): (2, 10, 12)}  # Deluxe: where a ladder, rope, stairs, hole or jump pad (item types) leads:
                                # (level, x, y), or (level, x, y, "words shown"). The Map tab's Link tool sets it

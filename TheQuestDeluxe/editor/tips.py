@@ -206,6 +206,8 @@ BUTTONS = {
     'Pick': 'Click a square to take what is on it into the palette (the right button does this with any tool).',
     'Start': 'Click the square where the hero arrives on this level.',
     'Shop': 'Click a screen to say which shop its shopkeeper runs. Shops are stocked on the Shops tab.',
+    'Respawn': 'Click the square where the hero wakes again after dying on this level (set the rest with Death and respawn...).',
+    'Death and respawn...': 'What happens on this level when the hero dies: wake again here (life, gold lost, items he starts with), and making this level the Underworld he fights back from.',
     'Dark': 'Click a screen to make it dark: nothing shows but the hero, and what his light reaches (an item\'s Light). Click again to make it light.',
     'Peaceful': "Click a screen to make it one where people and allies leave monsters alone.",
     'Link': 'Click a ladder, rope, stairs, hole or jump pad (put it on the map first) to say where it leads: a '

@@ -311,24 +311,38 @@ assert 'mar' in (cl.row['no_skill'] if isinstance(cl.row['no_skill'], list) else
 print('classes: Marksmanship shows as not offered to all but the Rogue: ok')
 print('painting: a click paints, Alt picks, a picture starts from another, a hero can be painted: ok')
 
-# the Underworld: marked in the Map tab's level settings
+# death and respawn: a level can respawn him, or be the Underworld
 mt = app.map_tab
 app.tabs.select(mt)
 pump()
-mt.underworld.set(True)
-mt.uw_return.set('when every monster is dead')
-mt.uw_life.delete(0, 'end')
-mt.uw_life.insert(0, '40')
-mt._apply_settings()
+mt.open_death()
+pump()
+from editor.death_dialog import DeathWindow
+dw = [w for w in mt.winfo_children() if isinstance(w, DeathWindow)][0]
 lv = mt.level
-assert app.project.constant(lv, 'UNDERWORLD') is True and app.project.constant(lv, 'UNDERWORLD_RETURN') == 'clear'
-assert app.project.constant(lv, 'UNDERWORLD_LIFE') == 40
-mt.underworld.set(False)
-mt.uw_return.set('at the level exit')
-mt.uw_life.delete(0, 'end')
-mt._apply_settings()
-assert app.project.constant(lv, 'UNDERWORLD') is None and app.project.constant(lv, 'UNDERWORLD_RETURN') is None
-print('map: a level can be made the Underworld and how he returns set: ok')
+dw.respawn.set(True)
+dw.life.insert(0, '40')
+kit_ids = [r['id'] for r in app.project.tables['items']][:2]
+dw.kit.insert(0, ', '.join(map(str, kit_ids)))
+dw.underworld.set(True)
+dw.way.set('when every monster is dead')
+dw.strip.set(True)
+dw.apply()
+pj = app.project
+assert pj.constant(lv, 'RESPAWN') is not None and pj.constant(lv, 'RESPAWN_LIFE') == 40
+assert pj.constant(lv, 'RESPAWN_KIT') == kit_ids and pj.constant(lv, 'UNDERWORLD') is True
+assert pj.constant(lv, 'UNDERWORLD_RETURN') == 'clear' and pj.constant(lv, 'UNDERWORLD_STRIP') is True
+dw.respawn.set(False)
+dw.underworld.set(False)
+dw.way.set('at the level exit')
+dw.strip.set(False)
+dw.kit.delete(0, 'end')
+dw.life.delete(0, 'end')
+dw.apply()
+assert all(pj.constant(lv, k) is None for k in ('RESPAWN', 'RESPAWN_LIFE', 'RESPAWN_KIT', 'UNDERWORLD', 'UNDERWORLD_RETURN',
+                                              'UNDERWORLD_STRIP')), 'cleared'
+dw.destroy()
+print('map: Death and respawn... sets the respawn and the Underworld of a level: ok')
 # the Classes tab: a new class with a starting kit
 cl = app.classes_tab
 app.tabs.select(cl)

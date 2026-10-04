@@ -951,6 +951,9 @@ class Game:
         fresh = w.travel(uw, *tuple(self.events.meta(uw, 'START', (5, 5))), p, st)
         self.count_hostiles()
         p.more['uw_foes'] = self.foes_left()
+        if self.events.meta(uw, 'UNDERWORLD_STRIP', False):
+            self.strip_hero()
+        self.give_kit(self.events.meta(uw, 'UNDERWORLD_KIT', []))
         self.events.on_level_start()
         if fresh:
             self.events.run('level_start')
@@ -958,6 +961,84 @@ class Game:
         story = self.events.meta(uw, 'UNDERWORLD_STORY', 0)
         if story:
             self.show_story(int(story), lambda: None)
+        return True
+
+    KIT_SLOTS = {'weapon': SLOT_WEAPON, 'launcher': SLOT_WEAPON, 'shield': SLOT_OFFHAND, 'helmet': SLOT_HELMET,
+                 'armour': SLOT_ARMOR, 'amulet': SLOT_AMULET}
+
+    def give_kit(self, items):
+        """Hand the hero a list of items (a respawn or Underworld kit): wearable ones go on where nothing is worn,
+        potions on the belt, the rest in the backpack while there is room."""
+        p = self.player
+        for it in items or []:
+            row = self.pack.item(int(it))
+            kind = row.get('type')
+            if kind == 'potion' and row.get('potion'):
+                add_potions(p, int(row['potion']), 1)
+                continue
+            slot = self.KIT_SLOTS.get(kind)
+            if slot and not p.bag.get(slot):
+                p.bag[slot] = int(it)
+            elif p.free_backpack_slot() is not None:
+                p.bag[p.free_backpack_slot()] = int(it)
+        rules.status_update(p, self.status, self.items)
+
+    def strip_hero(self):
+        """The Underworld takes his things (UNDERWORLD_STRIP): the bag and the belt are set aside, to come back with him."""
+        p = self.player
+        p.more['kept'] = {'bag': {f'{x},{y}': v for (x, y), v in p.bag.items() if v},
+                          'belt': {f: getattr(p.inv, f) for f in POTION_FIELDS.values()},
+                          'potions': dict(p.more.get('potions') or {})}
+        p.bag.clear()
+        for f in POTION_FIELDS.values():
+            setattr(p.inv, f, 0)
+        p.more.pop('potions', None)
+
+    def unstrip_hero(self):
+        p = self.player
+        kept = p.more.pop('kept', None)
+        if not kept:
+            return
+        p.bag.clear()
+        p.bag.update({tuple(int(c) for c in k.split(',')): v for k, v in kept['bag'].items()})
+        for f, n in kept['belt'].items():
+            setattr(p.inv, f, n)
+        if kept['potions']:
+            p.more['potions'] = kept['potions']
+        rules.status_update(p, self.status, self.items)
+
+    def respawn(self) -> bool:
+        """The hero has died on a level with a RESPAWN square: he wakes there, with RESPAWN_LIFE percent of his life
+        (50), RESPAWN_GOLD_LOSS percent of his gold gone (0), and RESPAWN_KIT handed to him. His body stays where it fell.
+        RESPAWN_LIMIT (0: no limit) deaths a level; after that, the Underworld or the real death."""
+        p, h, w, st = self.player, self.player.hero, self.world, self.status
+        spot = self.events.meta(w.level, 'RESPAWN')
+        if not spot:
+            return False
+        used = p.more.setdefault('respawns', {})
+        limit = int(self.events.meta(w.level, 'RESPAWN_LIMIT', 0) or 0)
+        if limit and used.get(str(w.level), 0) >= limit:
+            return False
+        used[str(w.level)] = used.get(str(w.level), 0) + 1
+        w.sq(p.X, p.Y).deco = self.pack.deco('remains2')
+        self.messages = []
+        self.play('death2')
+        pct = int(self.events.meta(w.level, 'RESPAWN_LIFE', 50))
+        h.life = max(1, h.mlife * pct // 100)
+        h.mana = max(h.mana, h.mmana * pct // 100)
+        h.poisoned = 0
+        st.powboost = st.armboost = 0
+        lost = int(self.events.meta(w.level, 'RESPAWN_GOLD_LOSS', 0) or 0)
+        p.inv.coins -= p.inv.coins * lost // 100
+        w.leave_room(st.ems, self.events.shadow)
+        x, y = tuple(spot)
+        p.X, p.Y = self.free_near(x, y) if w.in_map(x, y) else (p.X, p.Y)
+        w.enter_room(p, st)
+        self.target = None
+        self.count_hostiles()
+        self.events.on_enter_room()
+        self.give_kit(self.events.meta(w.level, 'RESPAWN_KIT', []))
+        self.report('You wake again at your starting place.', 10)
         return True
 
     def foes_left(self) -> int:
@@ -997,6 +1078,7 @@ class Game:
         w.enter_room(p, st)
         h.life = max(h.life, max(1, h.mlife * pct // 100))
         h.poisoned = 0
+        self.unstrip_hero()
         p.more.pop('body', None)
         p.more.pop('uw_foes', None)
         self.count_hostiles()
@@ -1014,7 +1096,7 @@ class Game:
         """death(): the hero's body, death2()'s last words, then 'Want to load?'; No closes the
         screen in a black box and goes back to the title (mastermind())."""
         p = self.player
-        if self.enter_underworld():
+        if self.respawn() or self.enter_underworld():
             return
         self.world.sq(p.X, p.Y).deco = self.pack.deco('remains2')
         self.messages = []
