@@ -109,7 +109,7 @@ class CreaturesTab(TableTab):
           'drain_mana.max']),
         ('Poison and special attacks', False, 'poison, exploding, healing friends, raising the dead',
          ['poison_melee', 'poison_ranged', 'poison_cast', 'drains_life', 'heals_allies', 'raises_dead', 'explodes']),
-        ('Body', False, 'what it looks like when it is hurt or dead',
+        ('Body', True, 'how many squares big it is, and what it leaves when it dies',
          ['size', 'log_name', 'corpse', 'bleeds', 'silences_witnesses']),
         ('Behaviour', False, 'hiding, chasing, running away',
          ['invisible', 'reveals_as', 'hides_as', 'chase_range', 'flees_within', 'animal']),
