@@ -33,9 +33,9 @@ or hand it to Claude to build the features he asked for.
 The editor saves his work inside the game folder (`TheQuestDeluxe/packs/TheQuest/`), so a new version of the game dragged
 over it replaces his tables (`creatures.json`, `items.json`, ...). To stop that costing him anything:
 
-- **Every Save** in the editor also writes or updates `QuestEdits_latest.zip` in `QuestDeluxeEdits` in his home folder
-  (outside the game folder): the same additions Send my edits sends, plus the changed table rows by number. Dated copies
-  of the last 10 different states are kept beside it.
+- **Every Save** in the editor makes another zip, `QuestEdits_<date>_<time>.zip`, in `QuestDeluxeEdits` in his home folder
+  (outside the game folder): a copy of the same additions Send my edits sends, plus the changed table rows by number.
+  Nothing in the game is moved, and no earlier zip is replaced or deleted (a Save with nothing new makes no new zip).
 - **After an update** the editor offers, on start, to put the additions back, merging his rows by number into the new
   game's tables. **File > Restore my saved edits...** does it by hand, from any of those zips (or an old Make Edits Zip zip:
   then only rows that are missing come back).

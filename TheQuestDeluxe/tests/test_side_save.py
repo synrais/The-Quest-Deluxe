@@ -46,16 +46,21 @@ def main():
     first_id = it['items'][0]['id']
 
     path, report = side_save.save_zip(deluxe, saved, when=1760000000)
-    assert path and os.path.basename(path) == 'QuestEdits_latest.zip'
+    assert path and os.path.basename(path).startswith('QuestEdits_2025-10-09_')
     meta = side_save.read_meta(path)
     assert meta['complete'] and [r['id'] for r in meta['delta']['creatures.json']['creatures']['rows']] == [150]
     assert [r['id'] for r in meta['delta']['items.json']['items']['rows']] == [first_id]
     with zipfile.ZipFile(path) as z:
         names = set(z.namelist())
     assert 'TheQuestDeluxe/packs/TheQuest/sprites/creatures/150.png' in names and 'tables_full/creatures.json' in names
-    assert len(side_save.saved_zips(saved)) == 2                       # the latest, and a dated copy
-    side_save.save_zip(deluxe, saved, when=1760000100)                 # nothing new: the latest is updated, no new copy
-    assert len(side_save.saved_zips(saved)) == 2
+    assert len(side_save.saved_zips(saved)) == 1
+    again, _ = side_save.save_zip(deluxe, saved, when=1760000100)       # nothing new: no second copy of the same
+    assert len(side_save.saved_zips(saved)) == 1 and again == path
+    cr['creatures'][-1]['life'] = 100                                   # an edit: another zip, the first one left as it was
+    json.dump(cr, open(os.path.join(shipped, 'creatures.json'), 'w'))
+    second, _ = side_save.save_zip(deluxe, saved, when=1760000200)
+    assert second != path and os.path.exists(path) and len(side_save.saved_zips(saved)) == 2
+    assert side_save.saved_zips(saved)[0] == second
 
     # a new game is dragged over his: the shipped tables and baseline come back, his pictures are not touched
     tmp2, fresh = game()

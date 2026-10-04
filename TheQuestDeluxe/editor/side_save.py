@@ -1,5 +1,5 @@
-"""Your additions, kept off to the side: every Save in the editor writes (or updates) a zip of what was added or changed
-since the game came, in QuestDeluxeEdits in your home folder, outside the game folder. A new version of the game can be
+"""Your additions, kept off to the side: every Save in the editor makes another zip of what was added or changed
+since the game came (a copy; nothing is moved or replaced), in QuestDeluxeEdits in your home folder, outside the game folder. A new version of the game can be
 dragged over the old one without losing anything: the editor offers to put the zip's edits back (restore).
 
 The zip is the same content "Send my edits..." sends: the new and changed files of the packs, WHAT_CHANGED.txt, and
@@ -24,8 +24,6 @@ def home_dir() -> str:
     return os.path.join(os.path.expanduser('~'), 'QuestDeluxeEdits')
 
 
-LATEST = 'QuestEdits_latest.zip'
-KEEP = 10                                               # dated copies kept
 
 
 def is_rows(value) -> bool:
@@ -63,8 +61,9 @@ def digest(delta: dict, files) -> str:
 
 def save_zip(deluxe: str = DELUXE, root: str | None = None, baseline: str = pack_edits.BASELINE, when: float | None = None,
              note: str = ''):
-    """Write or update the zip of the edits. Returns (path of the latest zip or None, the report). A dated copy is
-    kept too, when the edits are not what the last one held (the newest KEEP stay)."""
+    """Make a new zip of the edits, QuestEdits_<date>_<time>.zip, in the folder (a copy: nothing in the game is moved,
+    and no zip is ever replaced or deleted). When the edits are just what the newest zip already holds, no new one is
+    made. Returns (path of the newest zip or None, the report)."""
     root = root or home_dir()
     files, report = pack_edits.gather(deluxe, False, when, baseline, note)
     if not files:
@@ -76,9 +75,16 @@ def save_zip(deluxe: str = DELUXE, root: str | None = None, baseline: str = pack
     meta = {'made': time.strftime('%Y-%m-%d %H:%M', time.localtime(when)), 'complete': complete, 'delta': delta,
             'digest': digest(delta, files)}
     os.makedirs(root, exist_ok=True)
-    out = os.path.join(root, LATEST)
-    tmp = out + '.part'
-    with zipfile.ZipFile(tmp, 'w', zipfile.ZIP_DEFLATED) as z:
+    zips = saved_zips(root)
+    old = read_meta(zips[0]) if zips else None
+    if old and old.get('digest') == meta['digest']:
+        return zips[0], report
+    out = os.path.join(root, time.strftime('QuestEdits_%Y-%m-%d_%H%M%S.zip', time.localtime(when)))
+    n = 1
+    while os.path.exists(out):                                          # two saves in one second: never overwrite
+        n += 1
+        out = out[:-4].split('~')[0] + f'~{n}.zip'
+    with zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED) as z:
         z.writestr('WHAT_CHANGED.txt', report)
         z.writestr('side_save.json', json.dumps(meta, indent=1, sort_keys=True))
         if note.strip():
@@ -87,14 +93,6 @@ def save_zip(deluxe: str = DELUXE, root: str | None = None, baseline: str = pack
             z.write(disk, arc)
         for name in now:                                                   # the whole tables too, to read by hand
             z.write(os.path.join(shipped, name), f'tables_full/{name}')
-    old = read_meta(out)
-    os.replace(tmp, out)
-    if not old or old.get('digest') != meta['digest']:
-        stamp = time.strftime('QuestEdits_%Y-%m-%d_%H%M%S.zip', time.localtime(when))
-        shutil.copyfile(out, os.path.join(root, stamp))
-        dated = sorted(f for f in os.listdir(root) if f.startswith('QuestEdits_2') and f.endswith('.zip'))
-        for f in dated[:-KEEP]:
-            os.remove(os.path.join(root, f))
     return out, report
 
 
@@ -107,13 +105,12 @@ def read_meta(path: str):
 
 
 def saved_zips(root: str | None = None) -> list:
-    """The saved zips, newest first (the latest one first of all)."""
+    """The saved zips, the newest first."""
     root = root or home_dir()
     if not os.path.isdir(root):
         return []
-    names = sorted((f for f in os.listdir(root) if f.startswith('QuestEdits_2') and f.endswith('.zip')), reverse=True)
-    first = [LATEST] if os.path.exists(os.path.join(root, LATEST)) else []
-    return [os.path.join(root, f) for f in first + names]
+    return [os.path.join(root, f) for f in sorted((f for f in os.listdir(root)
+                                                    if f.startswith('QuestEdits_2') and f.endswith('.zip')), reverse=True)]
 
 
 def table_writer(name: str, data: dict, path: str):
