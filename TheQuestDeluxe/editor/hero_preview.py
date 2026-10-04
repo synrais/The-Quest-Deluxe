@@ -52,7 +52,7 @@ def dressed(project, colour: int, parts: dict, replace=None, cls=None) -> pygame
 def place_of(row: dict):
     """Which place of the hero an item goes in ('armour', 'helmet', 'amulet', 'weapon', 'shield'), or None."""
     slot = worn.slot_of(row)
-    return {'cape': 'armour', 'offhand': 'shield'}.get(slot, slot)
+    return {'offhand': 'shield'}.get(slot, slot)
 
 
 class HeroPreview(ttk.LabelFrame):
@@ -62,6 +62,17 @@ class HeroPreview(ttk.LabelFrame):
         super().__init__(master, text='On a hero', padding=4)
         self.project, self.dress, self.row, self.place = project, dress, None, place
         self.classes = [(c['id'], c.get('name', str(c['id']))) for c in sorted(project.tables['classes'], key=lambda c: c['id'])]
+        self.source = tk.StringVar(value='')
+        if place:                                   # which picture he wears or holds, right beside the item's pictures
+            pick = ttk.Frame(self)
+            pick.pack(anchor='w', pady=(0, 4))
+            ttk.Label(pick, text='He wears or holds its:').pack(side='left')
+            for value, text, hint in (('', 'Automatic', 'A cape its picture in the bag, anything else its picture on the map.'),
+                                      ('ground', 'Map picture', 'The picture it has lying on the map, laid on the hero pixel for pixel.'),
+                                      ('bag', 'Bag picture', 'The picture it has in the bag (inventory), laid on the hero pixel for pixel.')):
+                b = ttk.Radiobutton(pick, text=text, value=value, variable=self.source, command=self.chose_source)
+                b.pack(side='left', padx=4)
+                tip(b, hint)
         top = ttk.Frame(self)
         top.pack(anchor='w')
         self.image = ttk.Label(top)
@@ -86,7 +97,7 @@ class HeroPreview(ttk.LabelFrame):
             chosen = [r for r in items if r.get('type') in types]
             ids = [0] + [r['id'] for r in chosen]
             names = ['(nothing)'] + [f'{r["id"]} {r.get("name", "")}' for r in chosen]
-            cb = ttk.Combobox(box, state='readonly', width=28, values=names)
+            cb = ttk.Combobox(box, state='readonly', width=22, values=names)
             cb.set(names[ids.index(dress[place])] if dress.get(place) in ids else names[0])
             cb.grid(row=k, column=1, sticky='w')
             cb.bind('<<ComboboxSelected>>', lambda e, p=place, cb=cb, ids=ids: self.dress_with(p, ids[cb.current()]))
@@ -102,6 +113,16 @@ class HeroPreview(ttk.LabelFrame):
                 b = ttk.Button(bar, text=text, width=8, command=cmd)
                 b.pack(side='left', padx=2)
                 tip(b, hint)
+            pad = ttk.Frame(box)
+            pad.grid(row=len(PLACES) + 2, column=0, columnspan=2, sticky='w', pady=(4, 0))
+            ttk.Label(pad, text='Position').grid(row=0, column=0, rowspan=2, padx=(0, 6))
+            for text, (dx, dy), col, rw_, hint in (('\u25b2', (0, -1), 2, 0, 'Up one pixel.'), ('\u25c0', (-1, 0), 1, 1, 'Left one pixel.'),
+                                                 ('\u25bc', (0, 1), 2, 1, 'Down one pixel.'), ('\u25b6', (1, 0), 3, 1, 'Right one pixel.')):
+                b = ttk.Button(pad, text=text, width=3, command=lambda d=(dx, dy): self.nudge(*d))
+                b.grid(row=rw_, column=col)
+                tip(b, hint)
+            self.where = ttk.Label(pad, text='')
+            self.where.grid(row=0, column=4, rowspan=2, padx=8)
             self.image.bind('<Enter>', lambda e: self.image.focus_set())
             for key, (dx, dy) in (('Left', (-1, 0)), ('Right', (1, 0)), ('Up', (0, -1)), ('Down', (0, 1))):
                 self.image.bind(f'<{key}>', lambda e, d=(dx, dy): self.nudge(*d))
@@ -142,10 +163,14 @@ class HeroPreview(ttk.LabelFrame):
         if self.mine():
             self.place('worn_behind', behind)
 
+    def chose_source(self):
+        if self.mine():
+            self.place('worn_from', self.source.get() or None)
+
     def reset(self):
         if self.mine():
-            for key in ('worn_dx', 'worn_dy', 'worn_flip', 'worn_behind'):
-                self.place(key, 0, final=False)
+            for key in ('worn_dx', 'worn_dy', 'worn_flip', 'worn_behind', 'worn_from'):
+                self.place(key, None, final=False)
             self.place('worn_dx', 0)
 
     def chose_class(self):
@@ -158,6 +183,7 @@ class HeroPreview(ttk.LabelFrame):
 
     def show(self, row):
         self.row = row
+        self.source.set((row or {}).get('worn_from') or '')
         self.refresh()
 
     def parts(self) -> dict:
@@ -167,6 +193,8 @@ class HeroPreview(ttk.LabelFrame):
         return parts
 
     def refresh(self):
+        if self.place and getattr(self, 'where', None) is not None and self.row is not None:
+            self.where.config(text=f'{int(self.row.get("worn_dx") or 0):+d} across, {int(self.row.get("worn_dy") or 0):+d} down')
         colour = class_colour(self.project, self.dress.get('class', 1))
         hero = dressed(self.project, colour, self.parts(), cls=self.dress.get('class', 1))
         tile = pygame.Surface((40, 40))

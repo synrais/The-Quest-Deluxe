@@ -3,7 +3,7 @@
 The hero is a base picture (engine/assets/hero_base.png, or sprites/hero_base.png in a pack): a hooded figure wearing
 nothing, 40 x 40, its hood in the colour of his class. On top of it:
 
-  a CAPE (an item marked as one in the Items tab, or named cape, cloak, shawl or robe) is drawn BEHIND him, centred as the
+  a CAPE (armour named cape, cloak, shawl, robe or mantle; the Items tab's hero preview sets any item in front or behind) is drawn BEHIND him, centred as the
     normal cape is; the heroes wear a cape in their class's colour until they put one on. A pixel-perfect copy of the
     normal cape in the item's colour, unless the item has a drawing of its own (sprites/worn/<item number>.png)
   armour and helmets go directly on his body and head
@@ -64,12 +64,22 @@ def cape_layer(colour: int) -> pygame.Surface:
     return _base_cache[key]
 
 
-def is_cape(row: dict) -> bool:
-    """An armour-slot item that is a cape: marked `cape` in the Items tab, else by its name."""
-    if row.get('cape') is not None:
-        return bool(row['cape'])
+def cape_like(row: dict) -> bool:
+    """An armour item named like a cape (cape, cloak, shawl, robe, mantle): it starts out behind the hero, shown by its
+    bag picture. (Nothing is marked: where an item sits is chosen in the Items tab's hero preview.)"""
     name = f'{row.get("name", "")} {row.get("bag_name", "")}'.lower()
     return row.get('type') == 'armour' and has(name, 'cape', 'cloak', 'shawl', 'robe', 'mantle')
+
+
+def source_of(row: dict) -> str:
+    """Which of an item's pictures is put on the hero: `worn_from` 'bag' (its inventory picture) or 'ground' (its picture on
+    the map); not said: a cape by its bag picture, anything else by its picture on the ground."""
+    return row['worn_from'] if row.get('worn_from') in ('bag', 'ground') else ('bag' if cape_like(row) else 'ground')
+
+
+def behind_of(row: dict) -> bool:
+    """Is the item drawn behind his body? `worn_behind` true / false; not said: a cape is, anything else is in front."""
+    return bool(row['worn_behind']) if row.get('worn_behind') is not None else cape_like(row)
 
 
 def ega_index(rgb) -> int:
@@ -290,11 +300,6 @@ def draw_armour(layer, row: dict, c: int):
         rect(layer, dark, 20, 15, 1, 10)
 
 
-def cloak_colour(armour_row, bag_picture):
-    """The colour of a cape item (None if the item is not one)."""
-    return None if not armour_row or not is_cape(armour_row) else colour_of(armour_row, bag_picture)
-
-
 def keyed(bag_picture) -> pygame.Surface:
     """A bag picture (a 40 x 40 cell: a one pixel frame round a plain background) with the frame and the background
     see-through, the background being the colour just inside the frame."""
@@ -310,12 +315,14 @@ def keyed(bag_picture) -> pygame.Surface:
     return layer
 
 
-def picture_layer(slot: str, bag_picture, ground_picture) -> pygame.Surface | None:
-    """An item's own pictures laid on the hero pixel for pixel: a CAPE takes its inventory (bag) picture, anything else its
-    picture on the ground. None if it has none (or it is an amulet, which only colours the clasp)."""
-    if slot == 'cape':
+def picture_layer(slot: str, row: dict, bag_picture, ground_picture) -> pygame.Surface | None:
+    """An item's own picture laid on the hero pixel for pixel: the one the item says (source_of): its inventory (bag) picture
+    or its picture on the ground. None if it has none (or it is an amulet, which only colours the clasp)."""
+    if slot == 'amulet':
+        return None
+    if source_of(row) == 'bag':
         return keyed(bag_picture) if bag_picture is not None else None
-    if slot == 'amulet' or ground_picture is None:
+    if ground_picture is None:
         return None
     layer = pygame.Surface(ground_picture.get_size(), pygame.SRCALPHA)
     layer.blit(ground_picture, (0, 0))
@@ -323,17 +330,15 @@ def picture_layer(slot: str, bag_picture, ground_picture) -> pygame.Surface | No
 
 
 def overlay(slot: str, row: dict, bag_picture, ground_picture=None) -> pygame.Surface | None:
-    """The 40 x 40 layer for an item in a place ('cape', 'armour', 'helmet', 'amulet', 'weapon', 'offhand', 'shield'), or
+    """The 40 x 40 layer for an item in a place ('armour', 'helmet', 'amulet', 'weapon', 'offhand', 'shield'), or
     None: the item's own pictures laid on pixel for pixel (a cape its inventory picture, anything else its picture on the
     ground), or where it has none a drawing made here (the weapon and the shield where the Knight's sword and shield are,
     one row down: the original hero's drawing starts at row 1). The editor starts a Worn on the hero picture from this."""
-    own = picture_layer('shield' if slot == 'offhand' and row.get('type') == 'shield' else slot, bag_picture, ground_picture)
+    own = picture_layer(slot, row, bag_picture, ground_picture)
     if own is not None:
         return own
     layer = pygame.Surface((TILE, TILE), pygame.SRCALPHA)
     c = colour_of(row, bag_picture)
-    if slot == 'cape':
-        return cape_layer(c)
     if slot in ('weapon', 'offhand', 'shield'):
         hands = pygame.Surface((TILE, TILE), pygame.SRCALPHA)
         if slot == 'weapon' or (slot == 'offhand' and row.get('type') in ('weapon', 'launcher')):
@@ -343,6 +348,8 @@ def overlay(slot: str, row: dict, bag_picture, ground_picture=None) -> pygame.Su
         layer.blit(hands, (0, 1))
         return layer
     if slot == 'armour':
+        if cape_like(row):
+            return cape_layer(c)
         draw_armour(layer, row, c)
     elif slot == 'helmet':
         draw_helmet(layer, row, c)
@@ -354,11 +361,9 @@ def overlay(slot: str, row: dict, bag_picture, ground_picture=None) -> pygame.Su
 
 
 def slot_of(row: dict) -> str | None:
-    """The place an item is worn, by its type: 'cape', 'armour', 'helmet', 'amulet', 'weapon', 'shield' (or None)."""
+    """The place an item is worn, by its type: 'armour', 'helmet', 'amulet', 'weapon', 'shield' (or None)."""
     kind = row.get('type')
-    if kind == 'armour':
-        return 'cape' if is_cape(row) else 'armour'
-    return {'launcher': 'weapon'}.get(kind, kind) if kind in ('weapon', 'launcher', 'shield', 'helmet', 'amulet') else None
+    return {'launcher': 'weapon'}.get(kind, kind) if kind in ('armour', 'weapon', 'launcher', 'shield', 'helmet', 'amulet') else None
 
 
 PLACES = ('armour', 'helmet', 'amulet', 'weapon', 'shield')        # where an item can be worn (an offhand weapon: 'shield')
@@ -394,17 +399,13 @@ def layers(colour: int, parts: dict, picture_of, own_of=lambda item: None):
         return placed(own, row)
     behind, front = [], []
     item, row = parts.get('armour', (0, {}))
-    place = slot_of(row) if row else None
-    if place == 'cape':
-        behind.append(layer(item, row, 'cape'))
-    else:                                                          # nothing on: nothing shown
-        if place == 'armour':
-            (behind if row.get('worn_behind') else front).append(layer(item, row, 'armour'))
+    if row:                                                        # nothing on: nothing shown
+        (behind if behind_of(row) else front).append(layer(item, row, 'armour'))
     for name in ('helmet', 'amulet', 'weapon', 'shield'):
         item, row = parts.get(name, (0, {}))
         if row:
             one = layer(item, row, ('shield' if row.get('type') == 'shield' else 'offhand') if name == 'shield' else name)
-            (behind if row.get('worn_behind') else front).append(one)
+            (behind if behind_of(row) else front).append(one)
     return [b for b in behind if b is not None], [f for f in front if f is not None]
 
 

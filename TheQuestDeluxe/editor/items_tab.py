@@ -59,7 +59,7 @@ class ItemsTab(TableTab):
              'Ammunition comes in stacks of 1 to 20: each size is its own item (New ammo kind makes all 20).')
 
     GROUPS = [
-        ('Basics', True, 'what it is and what it costs', ['type', 'bag_name', 'price', 'view3d', 'quest', 'show_on_hero', 'worn_colour', 'cape', 'worn_dx', 'worn_dy', 'worn_flip', 'worn_behind',
+        ('Basics', True, 'what it is and what it costs', ['type', 'bag_name', 'price', 'view3d', 'quest', 'show_on_hero', 'worn_colour', 'worn_dx', 'worn_dy', 'worn_flip', 'worn_behind', 'worn_from',
                                                                'clasp_colour', 'clasp_when', 'clasp_alt', 'clasp_mode']),
         ('Numbers', True, 'what it adds to the hero when worn or wielded',
          ['power', 'kind', 'atk', 'def', 'warm', 'marm', 'req_str', 'req_int']),
@@ -107,7 +107,7 @@ class ItemsTab(TableTab):
         row = self.row
         if row is None:
             return
-        if value in (0, False, None):
+        if value is None or (key in ('worn_dx', 'worn_dy') and not value) or (key == 'worn_flip' and not value):
             self.drop(row, key)
         else:
             self.put(row, key, value)
@@ -196,9 +196,6 @@ class ItemsTab(TableTab):
             Field('worn_colour', 'Colour on the hero', 'choice', COLOURS, when=is_(*WORN),
                   hint='armour or a cloak gives his cloak this colour; for other things, their colour on him '
                        '(empty: the commonest colour of its bag picture)'),
-            Field('cape', 'Is a cape', 'choice', [(None, '(by its name)'), (True, 'a cape: worn behind him'),
-                                                   (False, 'armour: worn on his body')], when=is_('armour'),
-                  hint='a cape shows its inventory picture behind the hero; armour goes on his body'),
             Field('clasp_colour', 'Clasp colour', 'choice', COLOURS, when=is_('amulet'),
                   hint='the colour of the pixel under his chin while he wears it (empty: the amulet\'s colour on the hero)'),
             Field('clasp_when', 'Clasp changes when', 'choice',
@@ -210,14 +207,18 @@ class ItemsTab(TableTab):
                   hint='the colour it changes to (or flashes with) when that holds'),
             Field('clasp_mode', 'Clasp does', 'choice', [(None, 'changes colour'), ('flash', 'flashes between the two')],
                   when=is_('amulet'), hint='stays the other colour, or flashes between the two'),
-            Field('worn_dx', 'Slide on hero: right', 'int', when=is_(*WORN),
-                  hint='pixels to slide it right on the hero (negative: left); drag it in the hero preview'),
-            Field('worn_dy', 'Slide on hero: down', 'int', when=is_(*WORN),
-                  hint='pixels to slide it down on the hero (negative: up); drag it in the hero preview'),
+            Field('worn_dx', 'Position on hero: across', 'int', when=is_(*WORN), spin=(-20, 20),
+                  hint='pixels across (negative: left); the arrows, or drag it in the hero preview'),
+            Field('worn_dy', 'Position on hero: down', 'int', when=is_(*WORN), spin=(-20, 20),
+                  hint='pixels down (negative: up); the arrows, or drag it in the hero preview'),
             Field('worn_flip', 'Flipped on hero', 'bool', when=is_(*WORN),
                   hint='mirrored left to right where he wears or holds it'),
-            Field('worn_behind', 'Behind the hero', 'bool', when=is_(*WORN),
-                  hint='drawn behind his body instead of in front'),
+            Field('worn_behind', 'Layer on hero', 'choice', [(None, '(automatic: a cape behind, the rest in front)'),
+                                                            (True, 'behind him'), (False, 'in front of him')], when=is_(*WORN),
+                  hint='which side of his body it is drawn; the In front / Behind buttons in the hero preview set it'),
+            Field('worn_from', 'Picture on hero', 'choice', [(None, '(automatic: a cape its bag picture, the rest the map picture)'),
+                                                           ('bag', 'its picture in the bag'), ('ground', 'its picture on the map')],
+                  when=is_(*WORN), hint='which of its pictures he wears or holds; also under the hero preview'),
             Field('show_on_hero', 'Shown on the hero', 'bool', default=True, when=is_(*WORN),
                   hint='the hero shows it on the map while he wears it (Worn on the hero picture, or a small copy of its map '
                        'picture)'),

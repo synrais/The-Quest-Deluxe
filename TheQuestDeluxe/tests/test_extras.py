@@ -1288,6 +1288,11 @@ def clasp_and_nothing():
     assert worn.clasp_now(row, 7, low, 200) == 14, 'flashes to the other colour'
     assert worn.clasp_now(dict(row, clasp_mode=None), 7, low, 0) == 14, 'or changes while it holds'
     assert worn.clasp_now({'clasp_when': 'poisoned'}, 7, dict(ok, poisoned=1), 0) == 7, 'no second colour: no change'
+    sword = {'type': 'weapon', 'name': 'Sword'}
+    assert worn.source_of(sword) == 'ground' and worn.source_of(dict(sword, worn_from='bag')) == 'bag'
+    cloak = {'type': 'armour', 'name': 'Red Cloak'}
+    assert worn.source_of(cloak) == 'bag' and worn.behind_of(cloak) and not worn.behind_of(dict(cloak, worn_behind=False))
+    assert worn.behind_of(dict(sword, worn_behind=True)) and not worn.behind_of(sword)
     print('amulet clasp: a colour of its own, flashing or changing; nothing worn shows nothing: ok')
 
 
@@ -1343,7 +1348,7 @@ def hero_shows_gear():
     p.bag[SLOT_HELMET] = 0
     capes = {}
     for item in (111, 112, 113, 114):
-        assert worn.is_cape(g.pack.item(item)), item
+        assert worn.cape_like(g.pack.item(item)), item
         p.bag[SLOT_ARMOR] = item
         capes[item] = hero_tile({'show_gear': 'on'})
     assert len(set(capes.values())) == 4 and bare not in capes.values(), 'each cape looks as its picture'
@@ -1351,7 +1356,7 @@ def hero_shows_gear():
     behind, front = worn.layers(5, {'armour': (113, g.pack.item(113))}, lambda i: (g.renderer.sprites.bag.get(i), None))
     assert behind and behind[0].get_size() == (40, 40) and not front
     assert pygame.image.tobytes(behind[0], 'RGBA') == pygame.image.tobytes(keyed, 'RGBA'), 'pixel for pixel: the bag picture'
-    p.bag[SLOT_ARMOR] = next(i for i, r in g.pack.items.items() if r.get('type') == 'armour' and not worn.is_cape(r))
+    p.bag[SLOT_ARMOR] = next(i for i, r in g.pack.items.items() if r.get('type') == 'armour' and not worn.cape_like(r))
     mail = hero_tile({'show_gear': 'on'})
     assert mail != bare and mail not in capes.values(), 'armour goes on his body, his own cape stays behind'
     # a worn item with a picture on the ground puts that picture on him; without any, a drawing is made

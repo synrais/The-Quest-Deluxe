@@ -21,7 +21,8 @@ OPAQUE = {'bag', 'spells', 'floors'}           # pictures with no transparent pi
 
 class Field:
     def __init__(self, key, label, kind='int', choices=None, when=None, hint='', default=None, width=8,
-                 fmt=None, parse=None, suggest=None):
+                 fmt=None, parse=None, suggest=None, spin=None):
+        self.spin = spin                  # (low, high): a number with little up and down arrows
         self.suggest = suggest            # 'custom' text with a drop-down of values to start it from
         self.key, self.label, self.kind = key, label, kind
         self.fmt, self.parse = fmt, parse        # 'custom': row -> text, text -> value (ValueError if wrong)
@@ -274,6 +275,9 @@ class TableTab(ttk.Frame):
             if f.suggest:
                 w = ttk.Combobox(self.form, textvariable=var, values=list(f.suggest), width=38)
                 w.bind('<<ComboboxSelected>>', lambda e: self._typed(f, var, w))
+            elif f.spin:
+                w = ttk.Spinbox(self.form, textvariable=var, from_=f.spin[0], to=f.spin[1], width=f.width,
+                                command=lambda: self._typed(f, var, w))
             else:
                 w = ttk.Entry(self.form, textvariable=var,
                               width=f.width if f.kind == 'int' else 30 if f.kind == 'str' else 38)
