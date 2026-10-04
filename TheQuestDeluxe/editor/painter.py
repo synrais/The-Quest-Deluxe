@@ -167,9 +167,9 @@ class Painter(tk.Toplevel):
         tip(lines, 'The lines on the picture while you paint: none, every 10 pixels, or round every pixel.')
         marks = ttk.Frame(view)
         marks.grid(row=3, column=0, columnspan=2, sticky='w')
-        for text, var, words in (('Show the first picture', self.ghost,
-                                  'The picture as it was when you opened this window, faintly, where you have cleared '
-                                  'it: to trace over, or to see what you changed.'),):
+        for text, var, words in (('Compare with the first', self.ghost,
+                                  'Every pixel you have changed since you opened this window shows half way to what it '
+                                  'was, so you can see what you did; unchanged pixels look as they are.'),):
             c = ttk.Checkbutton(marks, text=text, variable=var, command=self.redraw)
             c.pack(side='left', padx=(0, 8))
             tip(c, words)
@@ -305,14 +305,13 @@ class Painter(tk.Toplevel):
 
     def _paint_rect(self, x, y):
         c = self.cells[x][y]
-        if c == CLEAR:
-            fill = self.back_colour(x, y)
-            ghost = self.original[x][y]
-            if self.ghost.get() and ghost != CLEAR:               # the first picture, half way to the background
-                back = self.canvas.winfo_rgb(fill)
-                fill = '#%02x%02x%02x' % tuple((a + b // 257) // 2 for a, b in zip(EGA[ghost], back))
-        else:
-            fill = '#%02x%02x%02x' % EGA[c]
+        fill = self.back_colour(x, y) if c == CLEAR else '#%02x%02x%02x' % EGA[c]
+        old = self.original[x][y]
+        if self.ghost.get() and c != old:                    # Compare: changed pixels show half way to what they were
+            back = tuple(v // 257 for v in self.canvas.winfo_rgb(self.back_colour(x, y)))
+            now = back if c == CLEAR else EGA[c]
+            was = back if old == CLEAR else EGA[old]
+            fill = '#%02x%02x%02x' % tuple((a + b) // 2 for a, b in zip(now, was))
         self.canvas.itemconfig(self.rects[x][y], fill=fill)
 
     def _preview(self):
