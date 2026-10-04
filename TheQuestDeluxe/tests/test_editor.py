@@ -223,6 +223,46 @@ before = [c[:] for c in pd.cells]
 pd.turn(True)
 pd.turn(False)
 assert pd.cells == before, 'a turn and a turn back'
+# the palette: every kind of picture; dropping one stamps it, double-clicking starts from it; select, copy, paste
+assert pd.palette is not None
+for kind in ('Items on the map', 'Items in the bag', 'Creatures', 'Heroes', 'Floors', 'Walls and doors',
+             'Decorations', 'Spell icons'):
+    pd.palette.kind.set(kind)
+    pd.palette.fill()
+    assert pd.palette._shown, f'{kind}: nothing on the shelf'
+pd.palette.kind.set('Creatures')
+pd.palette.fill()
+orc = pd.palette._shown[0][1]
+pd.clear()
+pd.drop(orc, pd.canvas.winfo_rootx() + 20 * pd.zoom + 2, pd.canvas.winfo_rooty() + 20 * pd.zoom + 2)
+assert any(c != -1 for col in pd.cells for c in col), 'a dropped picture is stamped'
+pd.undo()
+assert all(c == -1 for col in pd.cells for c in col), 'and Undo takes it back'
+pd.drop(orc, pd.canvas.winfo_rootx() - 50, pd.canvas.winfo_rooty() - 50)
+assert all(c == -1 for col in pd.cells for c in col), 'let go outside it: nothing'
+pd.palette.on_start(orc)
+assert any(c != -1 for col in pd.cells for c in col)
+stamped = [c[:] for c in pd.cells]
+pd.tool.set('select')
+pd._press(At(5, 5), 'left')
+pd._drag(At(12, 12), 'left')
+pd._release(At(12, 12), 'left')
+assert pd._box() == (5, 5, 12, 12)
+pd.copy()
+pd.clear()
+pd.selection = None
+pd.last_cell = (20, 20)
+pd.paste()
+assert pd.cells[20][20] == stamped[5][5] and pd.cells[27][27] == stamped[12][12]
+pd.selection = (0, 0, 3, 3)
+pd.cut()
+other = cl.paint('heroes', False, 'Painted hero')
+pump()
+other.clear()
+other.last_cell = (1, 1)
+other.paste()                                           # what was cut in the first window pastes in another
+other.dirty = False
+other.destroy()
 pd.set_zoom(16)
 assert pd.canvas.winfo_reqwidth() == 640
 pd.background.set('Grass')
@@ -230,7 +270,7 @@ pd.redraw()
 assert pd.canvas.itemcget(pd.rects[0][1], 'fill') in ('#00a800',) or pd.cells[0][1] != -1
 pd.ghost.set(True)
 pd.redraw()
-pd.grid_on.set(False)
+pd.grid_mode.set('Every pixel')
 pd.redraw()
 pd.dirty = False
 pd.destroy()

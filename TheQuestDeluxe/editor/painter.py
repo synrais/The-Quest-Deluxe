@@ -8,8 +8,13 @@ Line: drag from one end to the other
 Rectangle, Oval: drag a shape (Filled box: solid or outline)
 Fill: fill the area of one colour
 Swap: change every pixel of one colour
+Select: drag a box, then Copy / Cut / Paste
+   (Ctrl+C, Ctrl+X, Ctrl+V; Delete clears it)
 Pick: take a colour from the picture
    (Alt+click does this with any tool)
+Pictures from the palette: drag one onto
+   the picture to stamp it, double-click to
+   start from it.
 
 Left button paints the left colour,
 right button the right colour.
@@ -29,8 +34,10 @@ from .uikit import tip
 N = 40
 ZOOMS = (8, 12, 16)
 CLEAR = -1
+GRIDS = ['No lines', 'Every 10 pixels', 'Every pixel']
+CLIPBOARD: dict = {'cells': None}              # what Copy took, shared by every painter window
 # what shows behind the see-through pixels: (label, colour as '#rrggbb' or None for the chequer)
-BACKGROUNDS = [('Chequer (see-through)', None), ('Grass', '#00a800'), ('Black', '#000000'), ('White', '#ffffff'),
+BACKGROUNDS = [('Chequer (see-through)', None), ('Flat grey (no squares)', '#c8c8c8'), ('Grass', '#00a800'), ('Black', '#000000'), ('White', '#ffffff'),
                ('Grey', '#808080'), ('Sand', '#a8a800')]
 
 
@@ -61,11 +68,14 @@ def to_surface(cells) -> pygame.Surface:
 
 
 class Painter(tk.Toplevel):
-    def __init__(self, master, title: str, surface, on_save, opaque: bool = False, templates=None):
+    def __init__(self, master, title: str, surface, on_save, opaque: bool = False, templates=None, project=None):
         """opaque: every pixel has a colour (floors, bag cells); otherwise transparent is a colour too.
         templates: [(name, function returning a picture)] the painter can start from."""
         super().__init__(master)
         self.templates = list(templates or [])
+        self.project = project                  # its pictures fill the palette
+        self.selection = None                   # (x0, y0, x1, y1) of the Select tool's box
+        self.last_cell = None
         self.title(title)
         self.on_save, self.opaque = on_save, opaque
         self.cells = to_cells(surface, opaque)
@@ -73,7 +83,7 @@ class Painter(tk.Toplevel):
         self.tool = tk.StringVar(value='pencil')
         self.zoom = 12
         self.background = tk.StringVar(value=BACKGROUNDS[0][0])     # behind the see-through pixels
-        self.grid_on = tk.BooleanVar(value=True)
+        self.grid_mode = tk.StringVar(value=GRIDS[1])
         self.filled = tk.BooleanVar(value=True)
         self.mirror = tk.BooleanVar(value=False)
         self.ghost = tk.BooleanVar(value=False)                     # the picture as it was, faintly, where it is clear
@@ -90,6 +100,10 @@ class Painter(tk.Toplevel):
         self.redraw()
         self.bind('<Control-z>', lambda e: self.undo())
         self.bind('<Control-y>', lambda e: self.redo())
+        self.bind('<Control-c>', lambda e: self.copy())
+        self.bind('<Control-x>', lambda e: self.cut())
+        self.bind('<Control-v>', lambda e: self.paste())
+        self.bind('<Delete>', lambda e: self.delete_selection())
         self.protocol('WM_DELETE_WINDOW', self.close)
         from .uikit import center
         center(self, parent=master.winfo_toplevel())
@@ -101,7 +115,7 @@ class Painter(tk.Toplevel):
         tools = ttk.LabelFrame(left, text='Tool', padding=4)
         tools.pack(fill='x')
         row = [('pencil', 'Pencil'), ('line', 'Line'), ('rect', 'Rectangle'), ('oval', 'Oval'), ('fill', 'Fill'),
-               ('swap', 'Swap'), ('dither', 'Dither'), ('pick', 'Pick')]
+               ('swap', 'Swap'), ('dither', 'Dither'), ('select', 'Select'), ('pick', 'Pick')]
         if not self.opaque:
             row.insert(1, ('eraser', 'Eraser'))
         for i, (k, label) in enumerate(row):
@@ -142,12 +156,16 @@ class Painter(tk.Toplevel):
         zoom.grid(row=1, column=1, sticky='w')
         zoom.bind('<<ComboboxSelected>>', lambda e: self.set_zoom(ZOOMS[zoom.current()]))
         tip(zoom, 'How big the picture is while you paint.')
+        ttk.Label(view, text='Lines').grid(row=2, column=0, sticky='w')
+        lines = ttk.Combobox(view, textvariable=self.grid_mode, state='readonly', width=16, values=GRIDS)
+        lines.grid(row=2, column=1, sticky='w')
+        lines.bind('<<ComboboxSelected>>', lambda e: self.redraw())
+        tip(lines, 'The lines on the picture while you paint: none, every 10 pixels, or round every pixel.')
         marks = ttk.Frame(view)
-        marks.grid(row=2, column=0, columnspan=2, sticky='w')
-        for text, var, words in (('Grid', self.grid_on, 'Lines every 10 pixels.'),
-                                 ('Show the first picture', self.ghost,
+        marks.grid(row=3, column=0, columnspan=2, sticky='w')
+        for text, var, words in (('Show the first picture', self.ghost,
                                   'The picture as it was when you opened this window, faintly, where you have cleared '
-                                  'it: to trace over, or to see what you changed.')):
+                                  'it: to trace over, or to see what you changed.'),):
             c = ttk.Checkbutton(marks, text=text, variable=var, command=self.redraw)
             c.pack(side='left', padx=(0, 8))
             tip(c, words)
@@ -173,6 +191,15 @@ class Painter(tk.Toplevel):
             b = ttk.Button(moves, text=label, width=4, command=fn)
             b.grid(row=i // 4, column=i % 4, padx=1, pady=1)
             tip(b, words)
+        clip = ttk.LabelFrame(left, text='Copy and paste', padding=4)
+        clip.pack(fill='x', pady=(0, 6))
+        for i, (label, words, fn) in enumerate((
+                ('Copy', 'Copy the selected box (the whole picture if none is selected). Other painter windows can paste it.', self.copy),
+                ('Cut', 'Copy the selected box and clear it.', self.cut),
+                ('Paste', 'Paste what was copied: at the pointer, or the top left. See-through parts leave what is under them.', self.paste))):
+            b = ttk.Button(clip, text=label, width=7, command=fn)
+            b.grid(row=0, column=i, padx=1)
+            tip(b, words)
         ttk.Button(left, text='Clear', command=self.clear).pack(fill='x')
         if self.templates:
             box = ttk.LabelFrame(left, text='Start from another picture', padding=4)
@@ -181,8 +208,10 @@ class Painter(tk.Toplevel):
             ttk.Combobox(box, textvariable=self.template, state='readonly', width=22,
                          values=[name for name, _ in self.templates]).pack(fill='x')
             ttk.Button(box, text='Use it (Undo goes back)', command=self.use_template).pack(fill='x', pady=2)
-        ttk.Button(left, text='Save', command=self.save).pack(fill='x', pady=(12, 2))
-        ttk.Button(left, text='Close', command=self.close).pack(fill='x')
+        ends = ttk.Frame(left)
+        ends.pack(fill='x', pady=(8, 0))
+        ttk.Button(ends, text='Save', command=self.save).pack(side='left', fill='x', expand=True, padx=(0, 2))
+        ttk.Button(ends, text='Close', command=self.close).pack(side='left', fill='x', expand=True)
 
         mid = ttk.Frame(self, padding=6)
         mid.pack(side='left')
@@ -198,14 +227,19 @@ class Painter(tk.Toplevel):
             self.canvas.bind(f'<ButtonRelease-{b}>', lambda e, w=which: self._release(e, w))
         self.status = ttk.Label(mid, text='')
         self.status.pack(anchor='w')
-        self.canvas.bind('<Motion>', lambda e: self.status.config(text=f'({e.x // self.zoom}, {e.y // self.zoom})'))
+        self.canvas.bind('<Motion>', self._motion)
 
         right = ttk.Frame(self, padding=6)
         right.pack(side='left', fill='y')
         ttk.Label(right, text='As it looks').pack(anchor='w')
         self.previews = ttk.Label(right)
         self.previews.pack(anchor='w')
-        ttk.Label(right, text=__doc__.split('\n\n', 1)[1], foreground='#555', justify='left', wraplength=250).pack(anchor='w', pady=8)
+        self.palette = None
+        if self.project is not None:
+            from .palette import PicturePalette
+            self.palette = PicturePalette(right, self.project, self.drop, self.start_from)
+            self.palette.pack(fill='x', pady=6)
+        ttk.Button(right, text='How to paint...', command=self.help).pack(anchor='w')
 
     def _make_canvas(self):
         z = self.zoom
@@ -213,10 +247,13 @@ class Painter(tk.Toplevel):
         self.canvas.config(width=N * z, height=N * z)
         self.rects = [[self.canvas.create_rectangle(x * z, y * z, x * z + z, y * z + z, width=0)
                        for y in range(N)] for x in range(N)]
-        self.lines = []
-        for k in range(0, N + 1, 10):
-            self.lines.append(self.canvas.create_line(k * z, 0, k * z, N * z, fill='#555'))
-            self.lines.append(self.canvas.create_line(0, k * z, N * z, k * z, fill='#555'))
+        self.fine, self.lines = [], []                  # the lines round every pixel, the ones every 10
+        for k in range(N + 1):
+            ten = k % 10 == 0
+            for coords in ((k * z, 0, k * z, N * z), (0, k * z, N * z, k * z)):
+                (self.lines if ten else self.fine).append(
+                    self.canvas.create_line(*coords, fill='#555' if ten else '#888'))
+        self.sel_box = self.canvas.create_rectangle(0, 0, 0, 0, outline='#ff00ff', width=2, dash=(4, 3), state='hidden')
 
     def set_zoom(self, z):
         self.zoom = z
@@ -252,8 +289,13 @@ class Painter(tk.Toplevel):
         for x in range(N):
             for y in range(N):
                 self._paint_rect(x, y)
+        mode = self.grid_mode.get()
         for line in self.lines:
-            self.canvas.itemconfig(line, state='normal' if self.grid_on.get() else 'hidden')
+            self.canvas.itemconfig(line, state='normal' if mode != GRIDS[0] else 'hidden')
+        for line in self.fine:
+            self.canvas.itemconfig(line, state='normal' if mode == GRIDS[2] else 'hidden')
+        self.canvas.tag_raise(self.sel_box)
+        self._show_selection()
         self.redraw_swatches()
         self._preview()
 
@@ -324,6 +366,10 @@ class Painter(tk.Toplevel):
             setattr(self, which, self.cells[p[0]][p[1]])
             self.redraw_swatches()
             return
+        if tool == 'select':
+            self.start, self.selection = p, (*p, *p)
+            self._show_selection()
+            return
         self._remember()
         self.start = p
         if tool in ('pencil', 'eraser', 'dither'):
@@ -344,6 +390,10 @@ class Painter(tk.Toplevel):
         if p is None or self.start is None:
             return
         tool, colour = self.tool.get(), getattr(self, which)
+        if tool == 'select':
+            self.selection = (*self.start, *p)
+            self._show_selection()
+            return
         if tool in ('pencil', 'eraser', 'dither'):
             for q in _line(self.start, p):
                 self._set(*q, self._ink(tool, *q, colour))
@@ -363,6 +413,9 @@ class Painter(tk.Toplevel):
         if self.start is None:
             return
         tool = self.tool.get()
+        if tool == 'select':
+            self.start = None
+            return
         if tool in ('line', 'rect', 'oval'):
             self._drag(e, which)
         self.start = None
@@ -390,6 +443,93 @@ class Painter(tk.Toplevel):
     def flip(self, horizontal):
         self._remember()
         self.cells = self.cells[::-1] if horizontal else [col[::-1] for col in self.cells]
+        self._commit()
+        self.redraw()
+
+    def help(self):
+        from tkinter import messagebox
+        messagebox.showinfo('Painting', __doc__.split('\n\n', 1)[1].strip(), parent=self)
+
+    # ── select, copy and paste, pictures from the palette ──────────────────
+    def _motion(self, e):
+        self.last_cell = self._cell(e)
+        self.status.config(text=f'({e.x // self.zoom}, {e.y // self.zoom})')
+
+    def _box(self):
+        """The Select tool's box as (x0, y0, x1, y1) with x0 <= x1, y0 <= y1, or None."""
+        if self.selection is None:
+            return None
+        x0, y0, x1, y1 = self.selection
+        return min(x0, x1), min(y0, y1), max(x0, x1), max(y0, y1)
+
+    def _show_selection(self):
+        box = self._box()
+        if box is None:
+            self.canvas.itemconfig(self.sel_box, state='hidden')
+            return
+        z = self.zoom
+        self.canvas.coords(self.sel_box, box[0] * z, box[1] * z, (box[2] + 1) * z, (box[3] + 1) * z)
+        self.canvas.itemconfig(self.sel_box, state='normal')
+        self.canvas.tag_raise(self.sel_box)
+
+    def copy(self):
+        """Copy the selected box, or the whole picture when nothing is selected."""
+        x0, y0, x1, y1 = self._box() or (0, 0, N - 1, N - 1)
+        CLIPBOARD['cells'] = [[self.cells[x][y] for y in range(y0, y1 + 1)] for x in range(x0, x1 + 1)]
+        self.status.config(text=f'Copied {x1 - x0 + 1} x {y1 - y0 + 1} pixels')
+
+    def cut(self):
+        self.copy()
+        self.delete_selection(whole=True)
+
+    def delete_selection(self, whole=False):
+        """Clear the selected box (to see-through, or black where nothing can be see-through)."""
+        box = self._box() or ((0, 0, N - 1, N - 1) if whole else None)
+        if box is None:
+            return
+        self._remember()
+        empty = 0 if self.opaque else CLEAR
+        for x in range(box[0], box[2] + 1):
+            for y in range(box[1], box[3] + 1):
+                self.cells[x][y] = empty
+        self._commit()
+        self.redraw()
+
+    def paste(self):
+        """Paste what was copied, its top left at the pointer (or at the selection, or the corner)."""
+        cells = CLIPBOARD['cells']
+        if not cells:
+            self.status.config(text='Nothing copied yet')
+            return
+        at = (self._box() or (0, 0))[:2] if self.selection is not None else (self.last_cell or (0, 0))
+        self._stamp(cells, *at)
+
+    def _stamp(self, cells, x0, y0):
+        """Lay a block of colours (-1: see-through, leaves what is there) on the picture, its corner at (x0, y0)."""
+        self._remember()
+        for i, col in enumerate(cells):
+            for j, c in enumerate(col):
+                x, y = x0 + i, y0 + j
+                if c != CLEAR and 0 <= x < N and 0 <= y < N:
+                    self.cells[x][y] = c
+        self._commit()
+        self.redraw()
+
+    def drop(self, surface, root_x, root_y):
+        """A palette picture let go at a point of the screen: stamped on the picture, centred there."""
+        x = (root_x - self.canvas.winfo_rootx()) // self.zoom
+        y = (root_y - self.canvas.winfo_rooty()) // self.zoom
+        if not (-N // 2 <= x < N + N // 2 and -N // 2 <= y < N + N // 2) or \
+                not (0 <= root_x - self.canvas.winfo_rootx() < N * self.zoom and
+                     0 <= root_y - self.canvas.winfo_rooty() < N * self.zoom):
+            return                                   # let go somewhere else: nothing happens
+        cells = to_cells(surface, False)
+        self._stamp(cells, x - N // 2, y - N // 2)
+
+    def start_from(self, surface):
+        """Start the picture as a copy of a palette picture (Undo goes back)."""
+        self._remember()
+        self.cells = to_cells(surface, self.opaque)
         self._commit()
         self.redraw()
 

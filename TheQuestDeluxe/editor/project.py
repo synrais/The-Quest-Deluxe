@@ -142,6 +142,18 @@ class Project:
         p = self.path('sprites', folder, f'{v}.png')
         return pygame.image.load(p) if os.path.exists(p) else None
 
+    def picture_ids(self, folder: str) -> list[int]:
+        """The numbers of the pictures in a sprite folder, those still to be saved included, those deleted not."""
+        ids = set()
+        d = self.path('sprites', folder)
+        if os.path.isdir(d):
+            ids |= {int(n[:-4]) for n in os.listdir(d) if n.endswith('.png') and n[:-4].lstrip('-').isdigit()}
+        for rel, data in self.pictures.items():
+            head, _, name = rel.partition('/')
+            if head == folder and name.endswith('.png') and name[:-4].lstrip('-').isdigit():
+                (ids.add if data is not None else ids.discard)(int(name[:-4]))
+        return sorted(ids)
+
     def set_picture(self, folder: str, v: int, surface):
         """Store a picture (a pygame Surface), or delete it (None), when the pack is saved."""
         import pygame

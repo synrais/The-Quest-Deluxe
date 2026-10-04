@@ -395,7 +395,7 @@ class TableTab(ttk.Frame):
                 self.select(row['id'])
             self.set_picture(folder, surface, is_bag)
         return Painter(self, f'{label}: {self.label(row)}', self.start_picture(folder, row), keep,
-                       opaque=opaque, templates=self.templates(folder, row))
+                       opaque=opaque, templates=self.templates(folder, row), project=self.app.project)
 
     def start_picture(self, folder, row):
         """What the painter opens with: the entry's picture, if it has one."""
