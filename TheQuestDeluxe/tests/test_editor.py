@@ -374,6 +374,8 @@ assert len(pw.small) == 4 and len(pw.big) == 4, 'the painter shows the item on t
 pw._preview()
 pw.dirty = False
 pw.destroy()
+bare = pygame.image.tostring(hero_preview.dressed(app.project, 5, {'weapon': 0, 'shield': 0, 'helmet': 0, 'amulet': 0, 'armour': 0}, cls=1), 'RGBA')
+assert bare == pygame.image.tostring(hero_preview.dressed(app.project, 5, {}, cls=1), 'RGBA'), 'item 0 is nothing, not an item'
 # place the item on the hero: drag, flip, front / behind, reset
 itab.select(206)
 pump()

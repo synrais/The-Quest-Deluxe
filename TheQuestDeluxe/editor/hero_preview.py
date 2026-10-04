@@ -44,7 +44,7 @@ def dressed(project, colour: int, parts: dict, replace=None, cls=None) -> pygame
         flat.blit(base, (0, 0))
         base = flat
     by_id = {r['id']: r for r in project.tables['items']}
-    rows = {p: (i, by_id[i]) for p, i in parts.items() if i in by_id}
+    rows = {p: (i, by_id[i]) for p, i in parts.items() if i and i in by_id}
     return worn.dress(colour, rows, picture_of, (lambda item: replace[item] if replace and item in replace else own_of(item)),
                       base=base)
 
