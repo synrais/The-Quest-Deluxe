@@ -376,6 +376,40 @@ pw.dirty = False
 pw.destroy()
 bare = pygame.image.tostring(hero_preview.dressed(app.project, 5, {'weapon': 0, 'shield': 0, 'helmet': 0, 'amulet': 0, 'armour': 0}, cls=1), 'RGBA')
 assert bare == pygame.image.tostring(hero_preview.dressed(app.project, 5, {}, cls=1), 'RGBA'), 'item 0 is nothing, not an item'
+# the inventory layout: drag from the list onto a slot, from slot to slot, a bit off takes it away; right and left hand views
+itab.select(1)
+pump()
+box = [w for w in itab.pics.winfo_children() if isinstance(w, hero_preview.HeroPreview)][0]
+def centre(slot):
+    cv = box.slots[slot]
+    return cv.winfo_rootx() + 20, cv.winfo_rooty() + 20
+box.dress['helmet'] = 0
+assert box.drop_from_list(407, *centre('helmet')) and box.dress['helmet'] == 407, 'a helmet from the list onto the helmet slot'
+assert not box.drop_from_list(407, *centre('amulet')), 'it only fits where it goes'
+assert not box.drop_from_list(407, 1, 1), 'let go over nothing: nothing'
+class Pt:
+    def __init__(s, x, y): s.x_root, s.y_root = x, y
+box.pick_up('helmet', Pt(*centre('helmet')))
+box.carry('helmet', Pt(centre('helmet')[0] + 60, centre('helmet')[1] + 200))
+box.put_down('helmet', Pt(centre('helmet')[0] + 60, centre('helmet')[1] + 200))
+assert box.dress['helmet'] == 0, 'dragged a bit off: taken away'
+sword = next(r['id'] for r in app.project.tables['items'] if r.get('type') == 'weapon')
+box.dress_with('weapon', sword)
+box.pick_up('weapon', Pt(*centre('weapon')))
+box.carry('weapon', Pt(centre('shield')[0], centre('shield')[1]))
+box.put_down('weapon', Pt(*centre('shield')))
+assert box.dress['weapon'] == 0 and box.dress['shield'] == sword, 'a weapon moved to the left hand'
+assert [c for _, c, _, _, _ in hero_preview.SLOTS if 'hand' in c] == ['RIGHT hand', 'LEFT hand']
+itab.select(sword)
+pump()
+box = [w for w in itab.pics.winfo_children() if isinstance(w, hero_preview.HeroPreview)][0]
+assert box.subject_slot() == 'weapon' and box.mirror() == 1, 'a weapon starts in his right hand'
+box.hand.set('left'); box.chose_hand()
+assert box.subject_slot() == 'shield' and box.mirror() == -1 and box.parts()['shield'] == sword, 'the left hand view: flipped'
+itab.row.pop('worn_dx', None)
+box.nudge(1, 0)
+assert itab.row.get('worn_dx') == -1, 'in the mirrored view, right is the other way'
+box.reset()
 # place the item on the hero: drag, flip, front / behind, reset
 itab.select(206)
 pump()

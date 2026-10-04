@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from tkinter import simpledialog, messagebox
 
+import pygame
+
 from engine import worn
 from .table_tab import TableTab, Field
 from .tiles_tab import key_choices
@@ -87,21 +89,63 @@ class ItemsTab(TableTab):
         ttk.Button(self.buttons, text='New ammo kind...', command=self.new_ammo_kind).pack(side='left', padx=2)
 
     def hero_parts(self, row):
-        """What the hero tried on here wears: what was chosen to dress him, and the item being looked at."""
-        from .hero_preview import place_of
+        """What the hero tried on here wears: what was chosen to dress him, and the item being looked at (in its place, a
+        weapon or shield in the hand chosen to see it in)."""
+        from .hero_preview import slot_for, place_of
         dress = self.__dict__.setdefault('_dress', {'class': 1})
         parts = {p: dress.get(p, 0) for p in ('armour', 'helmet', 'amulet', 'weapon', 'shield')}
         if row is not None and place_of(row):
-            parts[place_of(row)] = row['id']
+            parts[slot_for(row, dress)] = row['id']
         return dress, parts
 
     def extra_previews(self, parent, column):
-        """The hero to try the item on, and boxes to dress him with other items."""
+        """The inventory's layout to dress the hero in, with the hero beside it."""
         from .hero_preview import HeroPreview
         dress, _ = self.hero_parts(self.row)
         box = HeroPreview(parent, self.app.project, dress, self.place_on_hero)
         box.grid(row=0, column=column, sticky='n')
         box.show(self.row)
+        self.hero_box = box
+        if not getattr(self, '_drag_bound', False):
+            self._drag_bound = True
+            self.list.bind('<ButtonPress-1>', self.list_press, add='+')
+            self.list.bind('<B1-Motion>', self.list_drag, add='+')
+            self.list.bind('<ButtonRelease-1>', self.list_release, add='+')
+
+    # dragging an item from the list onto a slot of the hero
+    def list_press(self, event):
+        iid = self.list.identify_row(event.y)
+        self._lift = (int(iid), event.x_root, event.y_root, False) if iid and iid.lstrip('-').isdigit() else None
+
+    def list_drag(self, event):
+        lift = getattr(self, '_lift', None)
+        if not lift:
+            return None
+        item, x, y, moving = lift
+        if not moving and abs(event.x_root - x) + abs(event.y_root - y) > 6:
+            from .hero_preview import Ghost
+            pic = self.app.project.picture('bag', item)
+            if pic is not None:
+                self._ghost = Ghost(self)
+                flat = pygame.Surface(pic.get_size())
+                flat.blit(pic, (0, 0))
+                self._ghost.show(flat, event.x_root, event.y_root)
+            moving = True
+            self._lift = (item, x, y, True)
+        if moving:
+            if getattr(self, '_ghost', None):
+                self._ghost.move(event.x_root, event.y_root)
+            return 'break'                                 # (the list does not follow the mouse while an item is carried)
+        return None
+
+    def list_release(self, event):
+        ghost, self._ghost = getattr(self, '_ghost', None), None
+        if ghost:
+            ghost.close()
+        lift, self._lift = getattr(self, '_lift', None), None
+        box = getattr(self, 'hero_box', None)
+        if lift and lift[3] and box is not None and box.winfo_exists():
+            box.drop_from_list(lift[0], event.x_root, event.y_root)
 
     def place_on_hero(self, key, value, final=True):
         """The hero preview moved, flipped or turned the item: keep it on the item (0 / off leaves the key out)."""

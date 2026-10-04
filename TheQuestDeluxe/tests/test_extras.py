@@ -1368,12 +1368,20 @@ def hero_shows_gear():
     p.bag[SLOT_ARMOR] = next(i for i, r in g.pack.items.items() if r.get('type') == 'armour' and not worn.cape_like(r))
     mail = hero_tile({'show_gear': 'on'})
     assert mail != bare and mail not in capes.values(), 'armour goes on his body, his own cape stays behind'
-    # a worn item with a picture on the ground puts that picture on him; without any, a drawing is made
+    # a worn item with a picture on the ground puts that picture on him
     row = {'name': 'Mystery Blade', 'type': 'weapon'}
     ground = pygame.Surface((40, 40), pygame.SRCALPHA)
     ground.fill((255, 0, 0, 255), (5, 5, 3, 3))
     assert pygame.image.tobytes(worn.overlay('weapon', row, None, ground), 'RGBA') == pygame.image.tobytes(ground, 'RGBA')
-    assert worn.overlay('weapon', row, None, None).get_bounding_rect().width > 0
+    assert worn.overlay('weapon', row, None, None) is None, 'nothing is drawn for him: items have pictures'
+    # hands: the weapon slot is his right hand (the screen's left), the off-hand slot his left; the other hand: flipped
+    right, left = worn.layers(5, {'weapon': (1, row)}, lambda i: (None, ground))[1][0], \
+        worn.layers(5, {'shield': (1, row)}, lambda i: (None, ground))[1][0]
+    assert pygame.image.tobytes(right, 'RGBA') == pygame.image.tobytes(ground, 'RGBA'), 'a weapon in the right hand: as it is'
+    assert pygame.image.tobytes(left, 'RGBA') == pygame.image.tobytes(pygame.transform.flip(ground, True, False), 'RGBA'), \
+        'in the left hand: flipped'
+    shield = {'name': 'Buckler', 'type': 'shield'}
+    assert not worn.mirrored(shield, 'shield') and worn.mirrored(shield, 'weapon') and worn.mirrored(row, 'shield')
     clasp = worn.overlay('amulet', {'type': 'amulet', 'worn_colour': 12}, None, ground)
     assert clasp.get_bounding_rect() == pygame.Rect(worn.CLASP[0], worn.CLASP[1], 1, 1), 'an amulet is one pixel'
     # the base hero, recoloured for the class
