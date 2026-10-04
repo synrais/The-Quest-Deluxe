@@ -43,7 +43,7 @@ TEXT = ('.json', '.txt', '.qs', '.md', '.ini')                 # compared withou
 SKIP_DIRS = {'__pycache__', '.git'}
 SKIP_FILES = {'Thumbs.db', '.DS_Store', 'desktop.ini'}
 TABLES = ('items.json', 'creatures.json', 'spells.json', 'classes.json', 'skills.json', 'tiles.json', 'quest.json')
-PICTURE_FOLDERS = ('floors', 'walls', 'decos', 'items', 'bag', 'creatures', 'spells', 'heroes')   # where the editor looks
+PICTURE_FOLDERS = ('floors', 'walls', 'decos', 'items', 'bag', 'creatures', 'spells', 'heroes', 'worn')   # where the editor looks
 
 
 def file_hash(path: str) -> str:

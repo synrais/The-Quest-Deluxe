@@ -1276,6 +1276,41 @@ def respawn_and_kits():
     print('respawn: wakes at the square with life, gold lost and a kit; the Underworld strips and returns his things: ok')
 
 
+def hero_shows_gear():
+    """settings.ini show_gear: what the hero wears is laid over him on the map; a game without settings is as it was."""
+    from engine.state import SLOT_WEAPON, SLOT_OFFHAND, SLOT_HELMET, SLOT_ARMOR, SLOT_AMULET
+    g = with_changes(lambda folder, json: None)
+    p = g.player
+    for slot, kind in ((SLOT_WEAPON, 'weapon'), (SLOT_OFFHAND, 'shield'), (SLOT_HELMET, 'helmet'), (SLOT_ARMOR, 'armour'),
+                       (SLOT_AMULET, 'amulet')):
+        p.bag[slot] = next(i for i, r in g.pack.items.items() if r.get('type') == kind)
+    ox, oy = g.world.origin
+    area = ((p.X - ox) * 40, (p.Y - oy) * 40, 40, 40)
+
+    def hero_tile(settings):
+        g.settings = settings
+        g.renderer.draw(g, present=False)
+        return pygame.image.tobytes(g.renderer.screen.subsurface(area), 'RGB')
+    plain = hero_tile(None)
+    assert hero_tile({'show_gear': 'off'}) == plain, 'off: as it was'
+    worn_on = hero_tile({'show_gear': 'on'})
+    assert worn_on != plain, 'on: the gear shows on him'
+    for slot in (SLOT_WEAPON, SLOT_OFFHAND, SLOT_HELMET, SLOT_ARMOR, SLOT_AMULET):
+        p.bag[slot] = 0
+    assert hero_tile({'show_gear': 'on'}) == plain, 'nothing worn: nothing shows'
+    p.bag[SLOT_HELMET] = next(i for i, r in g.pack.items.items() if r.get('type') == 'helmet')
+    helm = hero_tile({'show_gear': 'on'})
+    assert helm != plain
+    g.pack.items[p.bag[SLOT_HELMET]]['show_on_hero'] = False
+    assert hero_tile({'show_gear': 'on'}) == plain, 'an item with show_on_hero false is left off'
+    g.pack.items[p.bag[SLOT_HELMET]].pop('show_on_hero')
+    own = pygame.Surface((40, 40), pygame.SRCALPHA)
+    own.fill((255, 0, 255, 255), (0, 0, 40, 4))
+    g.renderer.sprites.worn[p.bag[SLOT_HELMET]] = own                # its own Worn on the hero picture
+    assert hero_tile({'show_gear': 'on'}) not in (plain, helm)
+    print('gear: the hero shows what he wears on the map (its own picture or a small copy), off as it was: ok')
+
+
 def hands_react():
     from engine.game import Game
     from engine.state import SLOT_WEAPON, SLOT_OFFHAND
@@ -1365,6 +1400,7 @@ if __name__ == '__main__':
     thieves_and_light()
     underworld()
     respawn_and_kits()
+    hero_shows_gear()
     hands_react()
     usable_items()
     behaviour()

@@ -40,12 +40,17 @@ class Sprites:
         self.bag: dict[int, pygame.Surface] = {}
         self.names: dict[tuple[str, int], str] = pack.names()
         self.hero: dict[str, pygame.Surface] = {}
+        self.worn: dict[int, pygame.Surface] = {}              # sprites/worn/<item>.png: an item as shown on the hero
+        self._worn_auto: dict[int, object] = {}
         self.gold = None
         for kind, folder in SPRITE_DIRS.items():
             for n, path in self._pngs(pack.sprite_dir(folder)):
                 self.images[(kind, int(n))] = pygame.image.load(path).convert_alpha()
         for n, path in self._pngs(pack.sprite_dir('heroes')):
             self.hero[n] = pygame.image.load(path).convert_alpha()
+        for n, path in self._pngs(pack.sprite_dir('worn')):
+            if n.lstrip('-').isdigit():
+                self.worn[int(n)] = pygame.image.load(path).convert_alpha()
         for n, path in self._pngs(pack.sprite_dir('bag')):
             self.bag[int(n)] = pygame.image.load(path).convert()
         gold = pack.path('sprites', 'gold.png')
@@ -168,6 +173,27 @@ class Renderer:
             big = pygame.transform.scale(layer, (TILE * 3 // 2, TILE * 3 // 2))
             scr.blit(big, (hx - TILE // 4, hy - TILE // 2))
 
+    def gear(self, game, scr, hx, hy):
+        """settings.ini show_gear = on: what the hero wears, laid over him (engine.worn)."""
+        from . import worn
+        from .state import SLOT_WEAPON, SLOT_OFFHAND, SLOT_HELMET, SLOT_ARMOR, SLOT_AMULET
+        p = game.player
+        slots = {'weapon': SLOT_WEAPON, 'launcher': SLOT_WEAPON, 'shield': SLOT_OFFHAND, 'helmet': SLOT_HELMET,
+                 'armour': SLOT_ARMOR, 'amulet': SLOT_AMULET}
+        allowed = {'weapon': ('weapon', 'launcher'), 'shield': ('shield', 'weapon', 'launcher')}
+        for kind in worn.ORDER:
+            item = p.bag.get(slots[kind])
+            row = self.pack.item(item) if item else {}
+            if not row or row.get('show_on_hero') is False or row.get('type') not in allowed.get(kind, (kind,)):
+                continue
+            layer = self.sprites.worn.get(item)
+            if layer is None:
+                if (item, kind) not in self.sprites._worn_auto:
+                    self.sprites._worn_auto[(item, kind)] = worn.auto_overlay(kind, self.sprites.get('object', item), self.sprites.bag.get(item))
+                layer = self.sprites._worn_auto[(item, kind)]
+            if layer is not None:
+                scr.blit(layer, (hx, hy))
+
     def _hero_pixels(self, scr, game, hx, hy):
         """guy2(), ported call for call (engine.anim.draw_guy2), at pixel position (hx, hy)."""
         p, st = game.player, game.status
@@ -182,11 +208,15 @@ class Renderer:
                 painted = painted.copy()
                 painted.set_alpha(70)                            # invisible: a ghost of him
             scr.blit(painted, (hx, hy))
+            if (getattr(game, 'settings', None) or {}).get('show_gear') == 'on' and p.hero.invisible <= 0:
+                self.gear(game, scr, hx, hy)
             return
         self.bgi.s = scr
         anim.draw_guy2(self.bgi, hx // TILE + 1, hy // TILE + 1, p.hero.type, p.hero.invisible, p.hero.poisoned,
                        st.killer, st.powboost, st.Shield, st.fShield,
                        look=self.pack.classes.get(p.hero.type, {}).get('look'))
+        if (getattr(game, 'settings', None) or {}).get('show_gear') == 'on' and p.hero.invisible <= 0:
+            self.gear(game, scr, hx, hy)
 
     # ── the original's animations ─────────────────────────────────────────────
     def play(self, game, gen, fast=False, redraw=True, raw=False, in_view=True):

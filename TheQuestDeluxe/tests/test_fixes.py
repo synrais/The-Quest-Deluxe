@@ -220,7 +220,7 @@ def player_settings():
     open(path, 'w').write('[play]\nfixes = ON ; a comment\nsound = maybe\n')
     assert settings.load(path) == {'fixes': 'on', 'sound': None, 'items_on_top': 'off', 'floating_numbers': 'off',
                                    'fps_quality': 'normal', 'fps_dither': 'ordered', 'fps_view_distance': 'level',
-                                   'smooth_scaling': 'off', 'render_quality': 'normal', 'fps_texture_filter': 'off', 'fps_fog_start': 45, 'fps_transition': 'on'}   # not a choice: default
+                                   'smooth_scaling': 'off', 'render_quality': 'normal', 'fps_texture_filter': 'off', 'fps_fog_start': 45, 'fps_transition': 'on', 'show_gear': 'off'}   # not a choice: default
     shipped = settings.load()
     assert shipped['fixes'] == 'on' and shipped['items_on_top'] == 'on', shipped   # the folder's settings.ini
     # the player's choice beats the pack's, both ways; without settings the pack's own stands

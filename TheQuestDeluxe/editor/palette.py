@@ -15,6 +15,7 @@ COLS = 6
 CELL = 44
 # (label, sprite folder, where the names are)
 KINDS = [('Items on the map', 'items', 'items'), ('Items in the bag', 'bag', 'items'),
+         ('Worn on the hero', 'worn', 'items'),
          ('Creatures', 'creatures', 'creatures'), ('Heroes', 'heroes', 'classes'), ('Floors', 'floors', 'floors'),
          ('Walls and doors', 'walls', 'walls'), ('Decorations', 'decos', 'decos'), ('Spell icons', 'spells', 'spells')]
 

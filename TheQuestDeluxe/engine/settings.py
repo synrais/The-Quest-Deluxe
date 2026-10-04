@@ -12,6 +12,7 @@
     fps_dither = ordered ; FPS mode, the fog: ordered, fine, smooth (a blend) or off
     fps_fog_start = 45 ; FPS mode: how far the fog fade starts, in percent of the view distance (100: only at the edge)
     fps_texture_filter = off ; FPS mode: average the far ground, walls and things (on) or skip pixels (off)
+    show_gear = on ; the hero shows what he wears (a weapon in his hand, a helmet ...) on the map: on or off
     fps_transition = on ; F: the map zooms in on the hero and drops into the FPS view (on), or it just switches (off)
 
 Only a real game reads it (run_deluxe.py); a Game made without settings, as the tests make it, plays
@@ -27,12 +28,12 @@ PATH = os.path.join(ROOT, 'settings.ini')
 CHOICES = {'fixes': ('on', 'off', 'pack'), 'sound': ('on', 'off'), 'items_on_top': ('on', 'off'),
            'floating_numbers': ('on', 'off'), 'fps_quality': ('low', 'normal', 'high', 'ultra', 'max'),
            'fps_dither': ('ordered', 'fine', 'smooth', 'off'), 'smooth_scaling': ('on', 'off'),
-           'fps_texture_filter': ('on', 'off'), 'fps_transition': ('on', 'off'),
+           'fps_texture_filter': ('on', 'off'), 'fps_transition': ('on', 'off'), 'show_gear': ('on', 'off'),
            'render_quality': ('normal', 'high', 'ultra')}
 DEFAULTS = {'fixes': 'pack', 'sound': None, 'items_on_top': 'off',   # sound None: as sound.txt says
             'floating_numbers': 'off', 'fps_quality': 'normal', 'fps_dither': 'ordered',
             'fps_view_distance': 'level', 'smooth_scaling': 'off', 'render_quality': 'normal',
-            'fps_texture_filter': 'off', 'fps_fog_start': 45, 'fps_transition': 'on'}
+            'fps_texture_filter': 'off', 'fps_fog_start': 45, 'fps_transition': 'on', 'show_gear': 'off'}
 QUALITY_ORDER = ('low', 'normal', 'high', 'ultra', 'max')
 RENDER_QUALITY = {'high': 'high', 'ultra': 'max'}                      # what each level of render_quality means
 

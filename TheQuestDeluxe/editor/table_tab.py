@@ -364,12 +364,14 @@ class TableTab(ttk.Frame):
             ttk.Label(box, text='How it looks').pack(anchor='w')
             ttk.Label(box, image=ph).pack(anchor='w')
         for i, (label, folder, is_bag) in enumerate(self.PICTURES):
+            if not self.has_picture_kind(folder, self.row):
+                continue
             box = ttk.Frame(self.pics)
             box.grid(row=0, column=i, padx=(0, 18), sticky='n')
             ttk.Label(box, text=label).pack(anchor='w')
             s = pygame.Surface((80, 80))
             s.fill((60, 60, 60))
-            img = p.picture(folder, v)
+            img = self.shown_picture(folder, self.row)
             if img is not None:
                 s.blit(pygame.transform.scale(img, (80, 80)), (0, 0))
             ph = photo(s)
@@ -397,9 +399,17 @@ class TableTab(ttk.Frame):
         return Painter(self, f'{label}: {self.label(row)}', self.start_picture(folder, row), keep,
                        opaque=opaque, templates=self.templates(folder, row), project=self.app.project, folder=folder)
 
+    def has_picture_kind(self, folder, row) -> bool:
+        """Does this entry have this kind of picture at all? (an item only wears something if it can be worn)"""
+        return True
+
+    def shown_picture(self, folder, row):
+        """The picture shown for an entry (subclasses can show a made-up one where none is stored)."""
+        return self.app.project.picture(folder, row['id'])
+
     def start_picture(self, folder, row):
         """What the painter opens with: the entry's picture, if it has one."""
-        return self.app.project.picture(folder, row['id'])
+        return self.shown_picture(folder, row)
 
     def templates(self, folder, row):
         """Every other entry with a picture in this folder: a new picture can start as a copy of one."""
@@ -427,7 +437,7 @@ class TableTab(ttk.Frame):
             surface = bag_cell(p, surface) if surface.get_flags() & pygame.SRCALPHA else surface
         p.set_picture(folder, v, surface)
         bag = next((f for _, f, b in self.PICTURES if b), None)
-        if not is_bag and bag and p.picture(bag, v) is None:
+        if not is_bag and folder != 'worn' and bag and p.picture(bag, v) is None:
             p.set_picture(bag, v, bag_cell(p, surface))          # a new item gets a bag picture too
         self.app.pictures_changed(self.ICON_LAYER, v)
         self.app.changed()
