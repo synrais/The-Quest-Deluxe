@@ -5,8 +5,7 @@ wearing nothing, 40 x 40. On top of it, each item's own picture (the one in the 
 laid on pixel for pixel (armour, which rarely fits, shows only where it touches his armour area: his body from chin to groin, arms left out), moved as the item says (`worn_dx`, `worn_dy`, `worn_rotate`), behind him or in front (`worn_behind`,
 a cape is behind). A held item is placed once, for his LEFT hand (the off-hand slot, the screen's right); in the weapon slot (his RIGHT
 hand, the screen's left) it is drawn as the mirror of that. A cape can turn his hood a colour (`hood_colour`). An amulet only colours the yellow pixel of the clasp under his
-chin. An item's own Worn on the hero picture, sprites/worn/<item number>.png (40 x 40, see-through), is used instead of
-its pictures, and `show_on_hero: false` leaves an item off. No tkinter here: the editor shows the same drawings."""
+chin. `show_on_hero: false` leaves an item off. No tkinter here: the editor shows the same drawings."""
 from __future__ import annotations
 
 import os
@@ -215,8 +214,7 @@ def clip_to_hero(layer):
 
 def overlay(slot: str, row: dict, bag_picture, ground_picture=None) -> pygame.Surface | None:
     """The 40 x 40 layer for an item in a place ('armour', 'helmet', 'amulet', 'weapon', 'offhand', 'shield'): its own picture
-    laid on pixel for pixel (see picture_layer), or for an amulet the clasp's pixel. The editor starts a Worn on the hero
-    picture from this."""
+    laid on pixel for pixel (see picture_layer), or for an amulet the clasp's pixel."""
     if slot == 'amulet':
         layer = pygame.Surface((TILE, TILE), pygame.SRCALPHA)
         draw_amulet(layer, row, colour_of(row, bag_picture))
@@ -256,38 +254,38 @@ def slid(layer, dx: int):
 
 def placed(layer, row: dict):
     """A layer moved as the item says: `worn_rotate` (a multiple of 45 degrees, clockwise) turns the picture about its own
-    middle, then `worn_dx` and `worn_dy` slide it that many pixels (right and down). Untouched when the item says nothing."""
+    middle, then `worn_dx` and `worn_dy` slide it that many pixels (right and down). The turn is made on a roomy canvas, so
+    nothing is cut off by the edge of the square before it is placed. Untouched when the item says nothing."""
     if layer is None:
         return None
     dx, dy = int(row.get('worn_dx') or 0), int(row.get('worn_dy') or 0)
     turn = int(row.get('worn_rotate') or 0) % 360
     if not (dx or dy or turn):
         return layer
-    src = layer
-    if turn:
-        box = layer.get_bounding_rect()
-        if box.width and box.height:
-            part = pygame.transform.rotate(layer.subsurface(box), -turn)        # (pygame turns anticlockwise)
-            src = pygame.Surface(layer.get_size(), pygame.SRCALPHA)
-            src.blit(part, part.get_rect(center=box.center))
-    out = pygame.Surface(layer.get_size(), pygame.SRCALPHA)
-    out.blit(src, (dx, dy))
+    w, h = layer.get_size()
+    room = pygame.Surface((w * 3, h * 3), pygame.SRCALPHA)          # the picture in the middle of a canvas three times as big
+    room.blit(layer, (w, h))
+    box = layer.get_bounding_rect()
+    if turn and box.width and box.height:
+        part = pygame.transform.rotate(layer.subsurface(box), -turn)        # (pygame turns anticlockwise)
+        room.fill((0, 0, 0, 0))
+        room.blit(part, part.get_rect(center=(box.centerx + w, box.centery + h)))
+    out = pygame.Surface((w, h), pygame.SRCALPHA)
+    out.blit(room, (dx - w, dy - h))
     return out
 
 
-def layers(colour: int, parts: dict, picture_of, own_of=lambda item: None):
+def layers(colour: int, parts: dict, picture_of):
     """What goes on the hero, as (behind, front) lists of 40 x 40 layers. parts: {'armour': (item, row), 'helmet': ...,
     'amulet': ..., 'weapon': ..., 'shield': ...} for what he wears (an armour-slot item may be a cape). picture_of(item)
-    gives (bag picture, ground picture); own_of(item) an item's own Worn on the hero picture, if it has one. Behind him
+    gives (bag picture, ground picture). Behind him
     goes his cape (the one he wears, or the cape of his class's colour), in front of him his armour, helmet, the clasp, his
     weapon and his shield."""
     def layer(item, row, place):
-        own = own_of(item)
-        if own is None:
-            bag, ground = picture_of(item)
-            own = overlay(place, row, bag, ground)
-            if own is not None and place == 'armour' and not cape_like(row):
-                return clip_to_hero(placed(own, row))                   # armour: only where it touches him
+        bag, ground = picture_of(item)
+        own = overlay(place, row, bag, ground)
+        if own is not None and place == 'armour' and not cape_like(row):
+            return clip_to_hero(placed(own, row))                       # armour: only where it touches him
         return placed(own, row)
     behind, front = [], []
     item, row = parts.get('armour', (0, {}))
@@ -316,9 +314,9 @@ def without_right_arm(base):
     return out
 
 
-def dress(colour: int, parts: dict, picture_of, own_of=lambda item: None, base_path=None, base=None) -> pygame.Surface:
+def dress(colour: int, parts: dict, picture_of, base_path=None, base=None) -> pygame.Surface:
     """The whole hero wearing parts (see layers): a 40 x 40 picture, see-through round him. The editor's previews use it."""
-    behind, front = layers(colour, parts, picture_of, own_of)
+    behind, front = layers(colour, parts, picture_of)
     hood = hood_colour(parts.get('armour', (0, {}))[1])
     if hood is not None:
         if base is not None:

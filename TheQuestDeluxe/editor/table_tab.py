@@ -402,12 +402,7 @@ class TableTab(ttk.Frame):
                 self.select(row['id'])
             self.set_picture(folder, surface, is_bag)
         return Painter(self, f'{label}: {self.label(row)}', self.start_picture(folder, row), keep,
-                       opaque=opaque, templates=self.templates(folder, row), project=self.app.project, folder=folder,
-                       hero_dress=self.hero_dress(folder, row))
-
-    def hero_dress(self, folder, row):
-        """For the painter: a function from the picture being painted to the hero wearing it (None: no hero to show)."""
-        return None
+                       opaque=opaque, templates=self.templates(folder, row), project=self.app.project, folder=folder)
 
     def extra_previews(self, parent, column):
         """More to show beside an entry's pictures (the Items tab puts a hero there to try it on)."""
@@ -450,7 +445,7 @@ class TableTab(ttk.Frame):
             surface = bag_cell(p, surface) if surface.get_flags() & pygame.SRCALPHA else surface
         p.set_picture(folder, v, surface)
         bag = next((f for _, f, b in self.PICTURES if b), None)
-        if not is_bag and folder != 'worn' and bag and p.picture(bag, v) is None:
+        if not is_bag and bag and p.picture(bag, v) is None:
             p.set_picture(bag, v, bag_cell(p, surface))          # a new item gets a bag picture too
         self.app.pictures_changed(self.ICON_LAYER, v)
         self.app.changed()

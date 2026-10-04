@@ -1348,11 +1348,6 @@ def hero_shows_gear():
     g.pack.items[p.bag[SLOT_HELMET]]['show_on_hero'] = False
     assert hero_tile({'show_gear': 'on'}) == bare, 'an item with show_on_hero false is left off'
     g.pack.items[p.bag[SLOT_HELMET]].pop('show_on_hero')
-    own = pygame.Surface((40, 40), pygame.SRCALPHA)
-    own.fill((255, 0, 255, 255), (0, 0, 40, 4))
-    g.renderer.sprites.worn[p.bag[SLOT_HELMET]] = own                # its own Worn on the hero picture
-    assert hero_tile({'show_gear': 'on'}) not in (bare, helm)
-    g.renderer.sprites.worn.clear()
     # capes: the inventory picture, kept behind him; his class's cape until he puts one on
     p.bag[SLOT_HELMET] = 0
     capes = {}
@@ -1392,6 +1387,11 @@ def hero_shows_gear():
     diag = worn.placed(dot, {'worn_rotate': 45}).get_bounding_rect()
     assert diag.width > 2 and diag.height > 2, 'a diagonal at 45 degrees'
     assert worn.placed(dot, {'worn_dx': 3}).get_bounding_rect().x == 13 and worn.placed(dot, {}) is dot
+    low = pygame.Surface((40, 40), pygame.SRCALPHA)
+    low.fill((200, 0, 0, 255), (18, 30, 4, 10))                          # drawn right down to the square's bottom edge
+    up = worn.placed(low, {'worn_rotate': 90, 'worn_dy': -12}).get_bounding_rect()
+    assert up.size == (10, 4) and up.y == 21, 'turned and then raised: nothing is cut off by the edge'
+    assert worn.placed(low, {'worn_rotate': 90, 'worn_dy': -12}).get_bounding_rect().w == 10
     plate = pygame.Surface((40, 40), pygame.SRCALPHA)
     plate.fill((200, 0, 0, 255), (0, 0, 40, 40))                         # armour a size too big for him
     plain = {'type': 'armour', 'name': 'Plate'}

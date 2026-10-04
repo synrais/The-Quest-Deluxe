@@ -40,7 +40,6 @@ class Sprites:
         self.bag: dict[int, pygame.Surface] = {}
         self.names: dict[tuple[str, int], str] = pack.names()
         self.hero: dict[str, pygame.Surface] = {}
-        self.worn: dict[int, pygame.Surface] = {}              # sprites/worn/<item>.png: an item as shown on the hero
         self._worn_auto: dict[int, object] = {}
         self.gold = None
         for kind, folder in SPRITE_DIRS.items():
@@ -48,9 +47,6 @@ class Sprites:
                 self.images[(kind, int(n))] = pygame.image.load(path).convert_alpha()
         for n, path in self._pngs(pack.sprite_dir('heroes')):
             self.hero[n] = pygame.image.load(path).convert_alpha()
-        for n, path in self._pngs(pack.sprite_dir('worn')):
-            if n.lstrip('-').isdigit():
-                self.worn[int(n)] = pygame.image.load(path).convert_alpha()
         for n, path in self._pngs(pack.sprite_dir('bag')):
             self.bag[int(n)] = pygame.image.load(path).convert()
         gold = pack.path('sprites', 'gold.png')
@@ -185,8 +181,7 @@ class Renderer:
     def gear_layers(self, game, colour):
         """(behind, front) for the hero in gear mode (engine.worn.layers): his cape behind him (his class's, or the one he
         wears); in front of his body his armour and helmet, the amulet colouring the clasp, a weapon in his hand and a shield
-        on his arm. Items use their own Worn on the hero picture, else their pictures (a cape its bag picture, anything else
-        its picture on the ground), else a drawing made for them."""
+        on his arm. Items use their own pictures (a cape its bag picture, anything else its picture on the ground)."""
         from . import worn
         from .state import SLOT_WEAPON, SLOT_OFFHAND, SLOT_HELMET, SLOT_ARMOR, SLOT_AMULET
         parts = {}
@@ -200,8 +195,7 @@ class Renderer:
         cache = self.sprites._worn_auto
         if key not in cache:
             cache[key] = worn.layers(colour, parts,
-                                     lambda item: (self.sprites.bag.get(item), self.sprites.get('object', item)),
-                                     self.sprites.worn.get)
+                                     lambda item: (self.sprites.bag.get(item), self.sprites.get('object', item)))
         return cache[key]
 
     def clasp(self, game, scr, hx, hy):
@@ -209,7 +203,7 @@ class Renderer:
         from . import worn
         from .state import SLOT_AMULET
         item, row = self.worn_row(game, SLOT_AMULET)
-        if not row or not row.get('clasp_when') or self.sprites.worn.get(item) is not None:
+        if not row or not row.get('clasp_when'):
             return
         h, st = game.player.hero, game.status
         state = {'life': h.life, 'mlife': h.mlife, 'poisoned': h.poisoned, 'shield': st.Shield + st.fShield,

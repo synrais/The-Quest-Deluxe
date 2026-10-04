@@ -53,20 +53,15 @@ def class_colour(project, cls: int) -> int:
 
 
 def pictures_of(project):
-    """picture_of and own_of for engine.worn: an item's bag and ground pictures, and its Worn on the hero picture."""
+    """picture_of for engine.worn: an item's bag and ground pictures."""
     def picture_of(item):
         return project.picture('bag', item), project.picture('items', item)
-
-    def own_of(item):
-        img = project.picture('worn', item)
-        return img.convert_alpha() if img is not None else None
-    return picture_of, own_of
+    return picture_of
 
 
-def dressed(project, colour: int, parts: dict, replace=None, cls=None, one_arm=True) -> pygame.Surface:
-    """The hero in a colour wearing parts {place: item number}. replace: {item number: a picture} to use instead of the
-    stored Worn on the hero picture (the painter's work in progress)."""
-    picture_of, own_of = pictures_of(project)
+def dressed(project, colour: int, parts: dict, cls=None, one_arm=True) -> pygame.Surface:
+    """The hero in a colour wearing parts {place: item number}, as the game draws him."""
+    picture_of = pictures_of(project)
     base = project.picture('heroes', cls) if cls is not None else None       # the class's painted hero, else the base
     if base is not None:
         flat = pygame.Surface(base.get_size(), pygame.SRCALPHA)
@@ -76,8 +71,7 @@ def dressed(project, colour: int, parts: dict, replace=None, cls=None, one_arm=T
         base = worn.without_right_arm(base if base is not None else worn.base_hero(colour))
     by_id = {r['id']: r for r in project.tables['items']}
     rows = {p: (i, by_id[i]) for p, i in parts.items() if i and i in by_id}
-    return worn.dress(colour, rows, picture_of, (lambda item: replace[item] if replace and item in replace else own_of(item)),
-                      base=base)
+    return worn.dress(colour, rows, picture_of, base=base)
 
 
 def place_of(row: dict):

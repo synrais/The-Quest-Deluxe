@@ -366,15 +366,6 @@ itab.select(111)                                   # a cape: it takes the armour
 pump()
 box = [w for w in itab.pics.winfo_children() if isinstance(w, hero_preview.HeroPreview)][0]
 assert box.parts()['armour'] == 111 and box.parts()['helmet'] == 407, 'the dressing is kept from item to item'
-maker = itab.hero_dress('worn', itab.row)
-assert maker is not None and len(maker(pygame.Surface((40, 40), pygame.SRCALPHA))) == 4, 'one hero a class'
-assert itab.hero_dress('items', itab.row) is None
-pw = itab.paint('worn', False, 'Worn on the hero')
-pump()
-assert len(pw.small) == 4 and len(pw.big) == 4, 'the painter shows the item on the four heroes, live'
-pw._preview()
-pw.dirty = False
-pw.destroy()
 bare = pygame.image.tostring(hero_preview.dressed(app.project, 5, {'weapon': 0, 'shield': 0, 'helmet': 0, 'amulet': 0, 'armour': 0}, cls=1), 'RGBA')
 assert bare == pygame.image.tostring(hero_preview.dressed(app.project, 5, {}, cls=1), 'RGBA'), 'item 0 is nothing, not an item'
 # the inventory layout: drag from the list onto a slot, from slot to slot, a bit off takes it away; right and left hand views

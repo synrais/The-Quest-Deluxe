@@ -191,7 +191,7 @@ FIELDS = {
     'worn_from': 'Which of this item\'s pictures the hero wears or holds on the map: its picture in the bag (inventory) or its picture on the ground. Automatic: a cape its bag picture, everything else its map picture.',
     'worn_rotate': 'Turn this item about its middle on the hero, clockwise, in steps of 45 degrees (a sword held out in front, a club over his shoulder). The Rotate button in the hero preview turns it a step each click (right-click: back a step).',
     'worn_behind': 'Which side of the hero\'s body this item is drawn: behind him (a cape, a shield on his back) or in front. Automatic: a cape behind, anything else in front.',
-    'show_on_hero': 'The hero shows this on the map while he wears it: its Worn on the hero picture, or a small copy of its map picture where it is worn (weapon in his hand, helmet, armour, amulet, shield). Untick for a ring or anything that should not show.',
+    'show_on_hero': 'The hero shows this on the map while he wears it: its map or bag picture, laid on him (weapon in his hand, helmet, armour, amulet, shield). Untick for a ring or anything that should not show.',
     'roof': 'Indoors: the wall picture FPS mode draws overhead.',
     'water': 'Water: a hero wearing something that lets him walk on water crosses it. (A wall that freezes counts '
              'as water too.)',

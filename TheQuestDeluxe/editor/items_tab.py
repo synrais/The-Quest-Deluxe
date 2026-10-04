@@ -55,8 +55,7 @@ class ItemsTab(TableTab):
     TABLE = 'items'
     ICON_LAYER = 'item'
     LIST_ICON = 'bag'                      # bag pictures read better than map pictures at list size
-    PICTURES = [('On the map', 'items', False), ('In the bag and shops', 'bag', True),
-                ('Worn on the hero', 'worn', False)]
+    PICTURES = [('On the map', 'items', False), ('In the bag and shops', 'bag', True)]
     INTRO = ('Everything the hero can find, carry, wear or buy. What an item does comes from its type and '
              'numbers; its pictures are 40 x 40 in the 16 EGA colours (imported pictures are converted). '
              'Ammunition comes in stacks of 1 to 20: each size is its own item (New ammo kind makes all 20).')
@@ -170,29 +169,6 @@ class ItemsTab(TableTab):
         if final:
             self._show(row)
 
-    def hero_dress(self, folder, row):
-        """For the painter of Worn on the hero: the item being painted on each of the four heroes (and what else is on him)."""
-        if folder != 'worn':
-            return None
-        from .hero_preview import class_colour, dressed
-        project = self.app.project
-        dress, parts = self.hero_parts(row)
-        classes = sorted(c['id'] for c in project.tables['classes'])[:4]
-        return lambda layer: [dressed(project, class_colour(project, c), parts, replace={row['id']: layer}, cls=c) for c in classes]
-
-    def has_picture_kind(self, folder, row):
-        return folder != 'worn' or row.get('type') in WORN
-
-    def shown_picture(self, folder, row):
-        """The Worn on the hero picture, or what the game makes from the map picture where there is none."""
-        img = super().shown_picture(folder, row)
-        if img is None and folder == 'worn' and row.get('type') in WORN:
-            from engine import worn
-            slot = worn.slot_of(row)
-            img = worn.overlay(slot, row, self.app.project.picture('bag', row['id']),
-                               self.app.project.picture('items', row['id']))
-        return img
-
     def ammo_kinds(self):
         seen = []
         for r in self.rows:
@@ -282,7 +258,7 @@ class ItemsTab(TableTab):
                                                            ('bag', 'its picture in the bag'), ('ground', 'its picture on the map')],
                   when=is_(*WORN), hint='which of its pictures he wears or holds; also under the hero preview'),
             Field('show_on_hero', 'Shown on the hero', 'bool', default=True, when=is_(*WORN),
-                  hint='the hero shows it on the map while he wears it (Worn on the hero picture, or a small copy of its map '
+                  hint='the hero shows it on the map while he wears it (its map or bag picture, '
                        'picture)'),
             Field('quest', 'Quest item', 'bool', hint="can't be sold or dropped", when=is_('treasure', 'weapon', 'launcher', 'armour',
                                                                         'shield', 'helmet', 'amulet')),

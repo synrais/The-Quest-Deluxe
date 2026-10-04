@@ -15,7 +15,6 @@ COLS = 6
 CELL = 44
 # (label, sprite folder, where the names are)
 KINDS = [('Items on the map', 'items', 'items'), ('Items in the bag', 'bag', 'items'),
-         ('Worn on the hero', 'worn', 'items'),
          ('Creatures', 'creatures', 'creatures'), ('Heroes', 'heroes', 'classes'), ('Floors', 'floors', 'floors'),
          ('Walls and doors', 'walls', 'walls'), ('Decorations', 'decos', 'decos'), ('Spell icons', 'spells', 'spells')]
 
@@ -26,8 +25,7 @@ class PicturePalette(ttk.LabelFrame):
         super().__init__(master, text='Pictures to start from', padding=4)
         self.project, self.on_drop, self.on_start = project, on_drop, on_start
         # it opens on the kind of picture being painted: creatures on creatures, floors on floors ...
-        self.kind = tk.StringVar(value=KINDS[0][0] if folder == 'worn' else      # (a worn picture starts from the item's own)
-                                 next((k[0] for k in KINDS if k[1] == folder), KINDS[0][0]))
+        self.kind = tk.StringVar(value=next((k[0] for k in KINDS if k[1] == folder), KINDS[0][0]))
         self.find = tk.StringVar()
         self._shown: list = []          # [(name, surface)] in the grid
         self._photos: list = []
