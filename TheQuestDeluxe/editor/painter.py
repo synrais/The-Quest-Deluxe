@@ -218,7 +218,14 @@ class Painter(tk.Toplevel):
         ttk.Button(ends, text='Close', command=self.close).pack(side='left', fill='x', expand=True)
 
         mid = ttk.Frame(self, padding=6)
-        mid.pack(side='left')
+        mid.pack(side='left', anchor='n')
+        self.mid = mid
+        strip = ttk.LabelFrame(mid, text='On the pack\'s floors (live)', padding=3)
+        strip.pack(fill='x', pady=(0, 6))
+        self.previews = ttk.Label(strip)
+        self.previews.pack(anchor='w')
+        tip(self.previews, 'How the picture looks standing on each floor of the pack (and on black), as you paint. '
+                           'A picture with no see-through pixels is shown tiled instead, to check its edges meet.')
         self.canvas = tk.Canvas(mid, highlightthickness=0, background='#333')
         self.canvas.pack()
         self._make_canvas()
@@ -229,21 +236,21 @@ class Painter(tk.Toplevel):
             self.canvas.bind(f'<Alt-ButtonPress-{b}>', lambda e, w=which: self._press(e, w, alt=True))
             self.canvas.bind(f'<B{b}-Motion>', lambda e, w=which: self._drag(e, w))
             self.canvas.bind(f'<ButtonRelease-{b}>', lambda e, w=which: self._release(e, w))
-        self.status = ttk.Label(mid, text='')
-        self.status.pack(anchor='w')
+        foot = ttk.Frame(mid)
+        foot.pack(fill='x')
+        self.status = ttk.Label(foot, text='')
+        self.status.pack(side='left')
+        ttk.Button(foot, text='How to paint...', command=self.help).pack(side='right')
         self.canvas.bind('<Motion>', self._motion)
 
         right = ttk.Frame(self, padding=6)
-        right.pack(side='left', fill='y')
-        ttk.Label(right, text='As it looks').pack(anchor='w')
-        self.previews = ttk.Label(right)
-        self.previews.pack(anchor='w')
+        right.pack(side='left', anchor='n')
         self.palette = None
         if self.project is not None:
             from .palette import PicturePalette
             self.palette = PicturePalette(right, self.project, self.drop, self.start_from, self.folder)
-            self.palette.pack(fill='x', pady=6)
-        ttk.Button(right, text='How to paint...', command=self.help).pack(anchor='w')
+            self.palette.pack(anchor='n')
+            self.after_idle(self._align_palette)
 
     def _make_canvas(self):
         z = self.zoom
@@ -314,19 +321,50 @@ class Painter(tk.Toplevel):
             fill = '#%02x%02x%02x' % tuple((a + b) // 2 for a, b in zip(now, was))
         self.canvas.itemconfig(self.rects[x][y], fill=fill)
 
+    PER_ROW = 12
+
+    def _floors(self):
+        """The pack's floor pictures (40 x 40), read once: [(number, surface)]."""
+        if getattr(self, '_floor_cache', None) is None:
+            out = []
+            if self.project is not None:
+                for v in self.project.picture_ids('floors')[:36]:
+                    img = self.project.picture('floors', v)
+                    if img is not None:
+                        out.append((v, img if img.get_size() == (40, 40) else pygame.transform.scale(img, (40, 40))))
+            self._floor_cache = out
+        return self._floor_cache
+
     def _preview(self):
+        """The strip above the picture: it standing on every floor of the pack (and black), live. A picture with no
+        see-through pixels (a floor, a bag cell) is shown tiled 2 x 2 and on its own instead."""
         img = to_surface(self.cells)
-        s = pygame.Surface((4 + 40 * 3 + 8 + 40 * 2, 4 + 40 * 3))
-        s.fill((80, 80, 80))
-        back = dict(BACKGROUNDS).get(self.background.get()) or '#00a800'
-        shown = tuple(int(back[i:i + 2], 16) for i in (1, 3, 5))
-        for n, (bg, scale) in enumerate(((shown, 3), ((0, 0, 0), 2))):
-            x = 2 if n == 0 else 4 + 40 * 3 + 6
-            tile = pygame.Surface((40, 40))
-            tile.fill(bg)
-            tile.blit(img, (0, 0))
-            s.blit(pygame.transform.scale(tile, (40 * scale, 40 * scale)), (x, 2))
-        self._pimg = photo(s)
+        shots = []
+        if self.opaque:
+            tile = pygame.Surface((80, 80))
+            for i in range(2):
+                for j in range(2):
+                    tile.blit(img, (i * 40, j * 40))
+            shots = [tile, img]
+        else:
+            black = pygame.Surface((40, 40))
+            for floor in [None] + [f for _, f in self._floors()]:
+                tile = pygame.Surface((40, 40))
+                if floor is None:
+                    tile.fill((0, 0, 0))
+                else:
+                    tile.blit(floor, (0, 0))
+                tile.blit(img, (0, 0))
+                shots.append(tile)
+        per = min(self.PER_ROW, len(shots)) or 1
+        rows = (len(shots) + per - 1) // per
+        wide = max(s.get_width() for s in shots)
+        high = max(s.get_height() for s in shots)
+        sheet = pygame.Surface((per * (wide + 3) + 3, rows * (high + 3) + 3))
+        sheet.fill((80, 80, 80))
+        for i, shot in enumerate(shots):
+            sheet.blit(shot, (3 + (i % per) * (wide + 3), 3 + (i // per) * (high + 3)))
+        self._pimg = photo(sheet)
         self.previews.config(image=self._pimg)
 
     # ── editing ─────────────────────────────────────────────────────────────
@@ -413,6 +451,7 @@ class Painter(tk.Toplevel):
             for q in _line(self.start, p):
                 self._pen(tool, q[0], q[1], colour, which)
             self.start = p
+            self._preview()
         elif tool in ('line', 'rect', 'oval'):
             self.cells = [col[:] for col in self.before]
             filled = self.filled.get()
@@ -460,6 +499,13 @@ class Painter(tk.Toplevel):
         self.cells = self.cells[::-1] if horizontal else [col[::-1] for col in self.cells]
         self._commit()
         self.redraw()
+
+    def _align_palette(self):
+        """Make the palette as tall as the picture column beside it: its top and bottom line up with the strip and the
+        status line."""
+        self.update_idletasks()
+        chrome = self.palette.winfo_reqheight() - self.palette.canvas.winfo_reqheight()
+        self.palette.canvas.config(height=max(120, self.mid.winfo_reqheight() - chrome - 14))
 
     def help(self):
         from tkinter import messagebox
