@@ -204,18 +204,18 @@ class Renderer:
                                      self.sprites.worn.get)
         return cache[key]
 
-    def gear(self, game, scr, hx, hy):
-        """Over a painted hero (sprites/heroes): what he wears laid on him, capes left out (his own picture has its)."""
+    def clasp(self, game, scr, hx, hy):
+        """An amulet that flashes or changes colour (clasp_when) paints the clasp under his chin its colour of the moment."""
         from . import worn
-        from .state import SLOT_WEAPON, SLOT_OFFHAND, SLOT_HELMET, SLOT_AMULET
-        for slot, how in ((SLOT_HELMET, 'helmet'), (SLOT_AMULET, 'amulet'), (SLOT_WEAPON, 'weapon'), (SLOT_OFFHAND, 'shield')):
-            item, row = self.worn_row(game, slot)
-            if row:
-                how = 'offhand' if slot == SLOT_OFFHAND and row.get('type') != 'shield' else how
-                layer = worn.placed(self.sprites.worn.get(item) or worn.overlay(how, row, self.sprites.bag.get(item),
-                                                                    self.sprites.get('object', item)), row)
-                if layer is not None:
-                    scr.blit(layer, (hx, hy))
+        from .state import SLOT_AMULET
+        item, row = self.worn_row(game, SLOT_AMULET)
+        if not row or not row.get('clasp_when') or self.sprites.worn.get(item) is not None:
+            return
+        h, st = game.player.hero, game.status
+        state = {'life': h.life, 'mlife': h.mlife, 'poisoned': h.poisoned, 'shield': st.Shield + st.fShield,
+                 'invisible': h.invisible, 'powered': st.powboost}
+        c = worn.clasp_now(row, worn.colour_of(row, self.sprites.bag.get(item)), state, pygame.time.get_ticks())
+        scr.set_at((hx + worn.CLASP[0], hy + worn.CLASP[1]), worn.EGA[c])
 
     def _hero_pixels(self, scr, game, hx, hy):
         """guy2(), ported call for call (engine.anim.draw_guy2), at pixel position (hx, hy)."""
@@ -226,14 +226,24 @@ class Renderer:
                 scr.blit(shape, (hx, hy))
                 return
         gear = self.gear_on(game)
-        painted = self.sprites.hero.get(str(p.hero.type))        # sprites/heroes/<class>.png: a painted hero
+        painted = self.sprites.hero.get(str(p.hero.type)) if (getattr(game, 'settings', None) or {}).get('show_gear') == 'on' else None   # sprites/heroes/<class>.png
         if painted is not None:
-            if p.hero.invisible > 0:
+            if gear:                                             # he wears what he carries (nothing: nothing shows)
+                from . import worn
+                behind, front = self.gear_layers(game, 0)
+                tile = pygame.Surface((TILE, TILE), pygame.SRCALPHA)
+                for layer in behind:
+                    tile.blit(layer, (0, 0))
+                tile.blit(painted, (0, 0))
+                for layer in front:
+                    tile.blit(layer, (0, 0))
+                self.clasp(game, tile, 0, 0)
+                painted = tile
+            elif p.hero.invisible > 0:
                 painted = painted.copy()
+            if p.hero.invisible > 0:
                 painted.set_alpha(70)                            # invisible: a ghost of him
             scr.blit(painted, (hx, hy))
-            if gear:
-                self.gear(game, scr, hx, hy)
             return
         self.bgi.s = scr
         look = self.pack.classes.get(p.hero.type, {}).get('look')
@@ -249,6 +259,7 @@ class Renderer:
             for layer in front:
                 if layer is not None:
                     scr.blit(layer, (hx, hy))
+            self.clasp(game, scr, hx, hy)
             anim.draw_hero_effects(self.bgi, hx // TILE + 1, hy // TILE + 1, p.hero.invisible, p.hero.poisoned,
                                    st.killer, st.powboost, st.Shield, st.fShield)
             return

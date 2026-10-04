@@ -229,9 +229,37 @@ def draw_helmet(layer, row: dict, c: int):
             layer.set_at((px, py), EGA[15])
 
 
+def clasp_colour(row: dict, c: int) -> int:
+    """The colour of the clasp under his chin: the amulet's `clasp_colour`, else its colour on the hero."""
+    return int(row['clasp_colour']) % 16 if row.get('clasp_colour') is not None else (c if c != 0 else 8)
+
+
 def draw_amulet(layer, row: dict, c: int):
     """The yellow pixel of the clasp under his chin takes the amulet's colour."""
-    layer.set_at(CLASP, (*EGA[c if c != 0 else 8], 255))
+    layer.set_at(CLASP, (*EGA[clasp_colour(row, c)], 255))
+
+
+CLASP_WHEN = {'always': lambda s: True,
+              'low_life': lambda s: s['mlife'] > 0 and s['life'] * 4 <= s['mlife'],
+              'hurt': lambda s: s['life'] < s['mlife'],
+              'poisoned': lambda s: s['poisoned'] > 0,
+              'shielded': lambda s: s['shield'] > 0,
+              'invisible': lambda s: s['invisible'] > 0,
+              'powered': lambda s: s['powered'] > 0}
+
+
+def clasp_now(row: dict, c: int, state: dict, ticks: int) -> int:
+    """The clasp's colour right now. `clasp_when` (always, low_life, hurt, poisoned, shielded, invisible, powered) says when
+    it changes to `clasp_alt`: `clasp_mode` 'flash' alternates between the two (about three times a second), 'change'
+    (the default) just shows the other colour while it holds. state: life, mlife, poisoned, shield, invisible, powered."""
+    base = clasp_colour(row, c)
+    when = CLASP_WHEN.get(row.get('clasp_when'))
+    if when is None or row.get('clasp_alt') is None or not when(state):
+        return base
+    alt = int(row['clasp_alt']) % 16
+    if row.get('clasp_mode') == 'flash' and (ticks // 160) % 2 == 0:
+        return base
+    return alt
 
 
 def draw_armour(layer, row: dict, c: int):
@@ -369,8 +397,7 @@ def layers(colour: int, parts: dict, picture_of, own_of=lambda item: None):
     place = slot_of(row) if row else None
     if place == 'cape':
         behind.append(layer(item, row, 'cape'))
-    else:
-        behind.append(cape_layer(colour))                          # nothing on: the cape of his class
+    else:                                                          # nothing on: nothing shown
         if place == 'armour':
             (behind if row.get('worn_behind') else front).append(layer(item, row, 'armour'))
     for name in ('helmet', 'amulet', 'weapon', 'shield'):
@@ -381,13 +408,13 @@ def layers(colour: int, parts: dict, picture_of, own_of=lambda item: None):
     return [b for b in behind if b is not None], [f for f in front if f is not None]
 
 
-def dress(colour: int, parts: dict, picture_of, own_of=lambda item: None, base_path=None) -> pygame.Surface:
+def dress(colour: int, parts: dict, picture_of, own_of=lambda item: None, base_path=None, base=None) -> pygame.Surface:
     """The whole hero wearing parts (see layers): a 40 x 40 picture, see-through round him. The editor's previews use it."""
     behind, front = layers(colour, parts, picture_of, own_of)
     out = pygame.Surface((TILE, TILE), pygame.SRCALPHA)
     for layer in behind:
         out.blit(layer, (0, 0))
-    out.blit(base_hero(colour, base_path), (0, 0))
+    out.blit(base if base is not None else base_hero(colour, base_path), (0, 0))
     for layer in front:
         out.blit(layer, (0, 0))
     return out

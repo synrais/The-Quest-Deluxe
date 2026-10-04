@@ -59,7 +59,8 @@ class ItemsTab(TableTab):
              'Ammunition comes in stacks of 1 to 20: each size is its own item (New ammo kind makes all 20).')
 
     GROUPS = [
-        ('Basics', True, 'what it is and what it costs', ['type', 'bag_name', 'price', 'view3d', 'quest', 'show_on_hero', 'worn_colour', 'cape', 'worn_dx', 'worn_dy', 'worn_flip', 'worn_behind']),
+        ('Basics', True, 'what it is and what it costs', ['type', 'bag_name', 'price', 'view3d', 'quest', 'show_on_hero', 'worn_colour', 'cape', 'worn_dx', 'worn_dy', 'worn_flip', 'worn_behind',
+                                                               'clasp_colour', 'clasp_when', 'clasp_alt', 'clasp_mode']),
         ('Numbers', True, 'what it adds to the hero when worn or wielded',
          ['power', 'kind', 'atk', 'def', 'warm', 'marm', 'req_str', 'req_int']),
         ('Stat bonuses', False, 'added to the hero while worn', ['str', 'int', 'dex', 'acc', 'power_bonus']),
@@ -123,7 +124,7 @@ class ItemsTab(TableTab):
         project = self.app.project
         dress, parts = self.hero_parts(row)
         classes = sorted(c['id'] for c in project.tables['classes'])[:4]
-        return lambda layer: [dressed(project, class_colour(project, c), parts, replace={row['id']: layer}) for c in classes]
+        return lambda layer: [dressed(project, class_colour(project, c), parts, replace={row['id']: layer}, cls=c) for c in classes]
 
     def has_picture_kind(self, folder, row):
         return folder != 'worn' or row.get('type') in WORN
@@ -198,6 +199,17 @@ class ItemsTab(TableTab):
             Field('cape', 'Is a cape', 'choice', [(None, '(by its name)'), (True, 'a cape: worn behind him'),
                                                    (False, 'armour: worn on his body')], when=is_('armour'),
                   hint='a cape shows its inventory picture behind the hero; armour goes on his body'),
+            Field('clasp_colour', 'Clasp colour', 'choice', COLOURS, when=is_('amulet'),
+                  hint='the colour of the pixel under his chin while he wears it (empty: the amulet\'s colour on the hero)'),
+            Field('clasp_when', 'Clasp changes when', 'choice',
+                  [(None, '(never)'), ('always', 'always'), ('low_life', 'his life is low (a quarter)'),
+                   ('hurt', 'he is hurt'), ('poisoned', 'he is poisoned'), ('shielded', 'a Shield spell is on him'),
+                   ('invisible', 'he is invisible'), ('powered', 'a power potion works')], when=is_('amulet'),
+                  hint='the circumstance that changes the clasp to the other colour'),
+            Field('clasp_alt', 'Clasp then', 'choice', COLOURS, when=is_('amulet'),
+                  hint='the colour it changes to (or flashes with) when that holds'),
+            Field('clasp_mode', 'Clasp does', 'choice', [(None, 'changes colour'), ('flash', 'flashes between the two')],
+                  when=is_('amulet'), hint='stays the other colour, or flashes between the two'),
             Field('worn_dx', 'Slide on hero: right', 'int', when=is_(*WORN),
                   hint='pixels to slide it right on the hero (negative: left); drag it in the hero preview'),
             Field('worn_dy', 'Slide on hero: down', 'int', when=is_(*WORN),

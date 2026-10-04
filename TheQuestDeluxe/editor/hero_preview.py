@@ -34,13 +34,19 @@ def pictures_of(project):
     return picture_of, own_of
 
 
-def dressed(project, colour: int, parts: dict, replace=None) -> pygame.Surface:
+def dressed(project, colour: int, parts: dict, replace=None, cls=None) -> pygame.Surface:
     """The hero in a colour wearing parts {place: item number}. replace: {item number: a picture} to use instead of the
     stored Worn on the hero picture (the painter's work in progress)."""
     picture_of, own_of = pictures_of(project)
+    base = project.picture('heroes', cls) if cls is not None else None       # the class's painted hero, else the base
+    if base is not None:
+        flat = pygame.Surface(base.get_size(), pygame.SRCALPHA)
+        flat.blit(base, (0, 0))
+        base = flat
     by_id = {r['id']: r for r in project.tables['items']}
     rows = {p: (i, by_id[i]) for p, i in parts.items() if i in by_id}
-    return worn.dress(colour, rows, picture_of, (lambda item: replace[item] if replace and item in replace else own_of(item)))
+    return worn.dress(colour, rows, picture_of, (lambda item: replace[item] if replace and item in replace else own_of(item)),
+                      base=base)
 
 
 def place_of(row: dict):
@@ -72,7 +78,7 @@ class HeroPreview(ttk.LabelFrame):
         self.hero.set(self.classes[min(len(self.classes), dress.get('class', 1)) - 1][1] if self.classes else '')
         self.hero.grid(row=0, column=1, sticky='w')
         self.hero.bind('<<ComboboxSelected>>', lambda e: self.chose_class())
-        tip(self.hero, 'Whose colours to try it on.')
+        tip(self.hero, 'Which hero to try it on.')
         self.boxes = {}
         items = sorted(project.tables['items'], key=lambda r: r['id'])
         for k, (place, label, types) in enumerate(PLACES, start=1):
@@ -162,7 +168,7 @@ class HeroPreview(ttk.LabelFrame):
 
     def refresh(self):
         colour = class_colour(self.project, self.dress.get('class', 1))
-        hero = dressed(self.project, colour, self.parts())
+        hero = dressed(self.project, colour, self.parts(), cls=self.dress.get('class', 1))
         tile = pygame.Surface((40, 40))
         tile.fill((0, 168, 0))
         tile.blit(hero, (0, 0))

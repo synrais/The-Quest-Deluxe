@@ -386,6 +386,7 @@ def painted_hero():
         pygame.draw.rect(img, (255, 0, 255, 255), (10, 10, 20, 20))
         pygame.image.save(img, os.path.join(folder, 'sprites', 'heroes', '2.png'))
     g = with_changes(paint)                                       # quick_start(2, 1): a Mage
+    g.settings = {'show_gear': 'on'}                              # (a painted hero is a Deluxe setting, like the gear)
     p = g.player
     g.renderer.draw(g, present=False)
     ox, oy = g.world.origin
@@ -1276,6 +1277,20 @@ def respawn_and_kits():
     print('respawn: wakes at the square with life, gold lost and a kit; the Underworld strips and returns his things: ok')
 
 
+def clasp_and_nothing():
+    from engine import worn
+    behind, front = worn.layers(5, {}, lambda item: (None, None))
+    assert behind == [] and front == [], 'wearing nothing shows nothing (no cape)'
+    row = {'clasp_colour': 4, 'clasp_when': 'low_life', 'clasp_alt': 14, 'clasp_mode': 'flash'}
+    ok = {'life': 50, 'mlife': 50, 'poisoned': 0, 'shield': 0, 'invisible': -1, 'powered': 0}
+    low = dict(ok, life=10)
+    assert worn.clasp_now(row, 7, ok, 0) == 4 and worn.clasp_now(row, 7, low, 0) == 4
+    assert worn.clasp_now(row, 7, low, 200) == 14, 'flashes to the other colour'
+    assert worn.clasp_now(dict(row, clasp_mode=None), 7, low, 0) == 14, 'or changes while it holds'
+    assert worn.clasp_now({'clasp_when': 'poisoned'}, 7, dict(ok, poisoned=1), 0) == 7, 'no second colour: no change'
+    print('amulet clasp: a colour of its own, flashing or changing; nothing worn shows nothing: ok')
+
+
 def hero_shows_gear():
     """settings.ini show_gear: the base hero (wearing nothing) with his cape behind him, what he wears on him: a cape its
     inventory picture behind him, anything else its picture on the ground; the amulet colours the clasp."""
@@ -1481,6 +1496,7 @@ if __name__ == '__main__':
     thieves_and_light()
     underworld()
     respawn_and_kits()
+    clasp_and_nothing()
     hero_shows_gear()
     custom_packs_switching()
     hands_react()
