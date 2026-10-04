@@ -57,8 +57,8 @@ class PicturePalette(ttk.LabelFrame):
         c.bind('<MouseWheel>', lambda e: c.yview_scroll(-1 if e.delta > 0 else 1, 'units'))
         c.bind('<Button-4>', lambda e: c.yview_scroll(-1, 'units'))
         c.bind('<Button-5>', lambda e: c.yview_scroll(1, 'units'))
-        tip(c, 'Every picture of the pack: drag one onto the picture you are painting (it is stamped where you let '
-               'go), or double-click to start the picture as a copy of it. Undo takes it back.')
+        tip(c, 'Every picture of the pack: drag one onto the picture you are painting (it is stamped in the middle '
+               'of it, wherever you let go), or double-click to start the picture as a copy of it. Undo takes it back.')
         self.cache: dict = {}
         self.fill()
 

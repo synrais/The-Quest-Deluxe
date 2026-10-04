@@ -248,6 +248,10 @@ orc = pd.palette._shown[0][1]
 pd.clear()
 pd.drop(orc, pd.canvas.winfo_rootx() + 20 * pd.zoom + 2, pd.canvas.winfo_rooty() + 20 * pd.zoom + 2)
 assert any(c != -1 for col in pd.cells for c in col), 'a dropped picture is stamped'
+stamped_at_middle = [c[:] for c in pd.cells]
+pd.undo()
+pd.drop(orc, pd.canvas.winfo_rootx() + 3, pd.canvas.winfo_rooty() + 3)          # let go near a corner: still centred
+assert pd.cells == stamped_at_middle, 'a dropped picture is centred wherever it is let go'
 pd.undo()
 assert all(c == -1 for col in pd.cells for c in col), 'and Undo takes it back'
 pd.drop(orc, pd.canvas.winfo_rootx() - 50, pd.canvas.winfo_rooty() - 50)

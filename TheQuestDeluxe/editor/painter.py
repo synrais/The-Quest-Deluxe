@@ -631,15 +631,12 @@ class Painter(tk.Toplevel):
         self.redraw()
 
     def drop(self, surface, root_x, root_y):
-        """A palette picture let go at a point of the screen: stamped on the picture, centred there."""
-        x = (root_x - self.canvas.winfo_rootx()) // self.zoom
-        y = (root_y - self.canvas.winfo_rooty()) // self.zoom
-        if not (-N // 2 <= x < N + N // 2 and -N // 2 <= y < N + N // 2) or \
-                not (0 <= root_x - self.canvas.winfo_rootx() < N * self.zoom and
-                     0 <= root_y - self.canvas.winfo_rooty() < N * self.zoom):
-            return                                   # let go somewhere else: nothing happens
-        cells = to_cells(surface, False)
-        self._stamp(cells, x - N // 2, y - N // 2)
+        """A palette picture let go over the picture: stamped in the middle of it (the pictures are 40 x 40, as this
+        is), wherever on the picture it was let go. Let go anywhere else, nothing happens."""
+        x, y = root_x - self.canvas.winfo_rootx(), root_y - self.canvas.winfo_rooty()
+        if not (0 <= x < N * self.zoom and 0 <= y < N * self.zoom):
+            return
+        self._stamp(to_cells(surface, False), 0, 0)
 
     def start_from(self, surface):
         """Start the picture as a copy of a palette picture (Undo goes back)."""
