@@ -567,6 +567,8 @@ class Game:
         kind = self.pack.item_type(q.item)
         if kind in LINK_ITEMS:
             self.take_link()
+        elif kind == 'exit' and self.in_afterlife() and self.events.meta(w.level, 'UNDERWORLD_RETURN', 'exit') == 'exit':
+            self.revive()                                    # the way out of the Underworld leads back to his body
         elif kind == 'exit':
             if self.events.meta(w.level, 'ASK_TO_LEAVE', True):
                 self.overlay = ui.YesNo('Want to travel further? (Y)es (N)o', self.next_level)
@@ -919,10 +921,101 @@ class Game:
         if h.exper <= 0 and not self.overlay:
             self.level_up()
 
+    # ── the Underworld: death sends him to a level of the pack, from which he fights his way back to his body ──
+    def underworld_level(self) -> int:
+        """The level marked UNDERWORLD = True in its script (0 if the pack has none)."""
+        return next((n for n in range(1, self.levels + 1) if self.events.meta(n, 'UNDERWORLD', False)), 0)
+
+    def in_afterlife(self) -> bool:
+        return bool(self.player.more.get('body')) and self.world.level == self.underworld_level()
+
+    def enter_underworld(self) -> bool:
+        """The hero has died: his body stays where it fell (the level is kept as it is) and he wakes on the Underworld
+        level, with UNDERWORLD_LIFE percent of his life (50). False if the pack has no Underworld, or he is already
+        dead once (dying there is the real death)."""
+        p, h, w, st = self.player, self.player.hero, self.world, self.status
+        uw = self.underworld_level()
+        if not uw or p.more.get('body') or w.level == uw:
+            return False
+        p.more['body'] = {'level': w.level, 'x': p.X, 'y': p.Y}
+        w.sq(p.X, p.Y).deco = self.pack.deco('remains2')
+        self.messages = []
+        self.play('death2')
+        pct = int(self.events.meta(uw, 'UNDERWORLD_LIFE', 50))
+        h.life = max(1, h.mlife * pct // 100)
+        h.mana = max(h.mana, h.mmana * pct // 100)
+        h.poisoned = 0
+        st.powboost = st.armboost = 0
+        self.target = None
+        w.stash.pop(uw, None)                                   # the Underworld is new each time
+        fresh = w.travel(uw, *tuple(self.events.meta(uw, 'START', (5, 5))), p, st)
+        self.count_hostiles()
+        p.more['uw_foes'] = self.foes_left()
+        self.events.on_level_start()
+        if fresh:
+            self.events.run('level_start')
+        self.report('You have died. You wake in the Underworld...', 12)
+        story = self.events.meta(uw, 'UNDERWORLD_STORY', 0)
+        if story:
+            self.show_story(int(story), lambda: None)
+        return True
+
+    def foes_left(self) -> int:
+        """Monsters (numbers above 0) on the whole level."""
+        return sum(1 for col in self.world.grid[1:] for q in col[1:] if q.mon > 0)
+
+    def free_near(self, x: int, y: int):
+        """The nearest square to (x, y) with nobody on it and nothing solid or a door in it."""
+        w = self.world
+        for r in range(0, 12):
+            for dx in range(-r, r + 1):
+                for dy in range(-r, r + 1):
+                    if max(abs(dx), abs(dy)) != r or not w.in_map(x + dx, y + dy):
+                        continue
+                    q, wall = w.sq(x + dx, y + dy), self.pack.wall(w.sq(x + dx, y + dy).wall)
+                    if not q.mon and not wall.get('solid') and not wall.get('door') and not w.enemy_at(x + dx, y + dy):
+                        return x + dx, y + dy
+        return x, y
+
+    def revive(self) -> bool:
+        """Back to the body, where it lay on the level he died on (as he left it), with REVIVE_LIFE percent of his life
+        (50). The Underworld is dropped, to be new next time. False if he is not in the Underworld."""
+        p, h, w, st = self.player, self.player.hero, self.world, self.status
+        body = p.more.get('body')
+        if not body or w.level != self.underworld_level():
+            return False
+        uw = w.level
+        pct = int(self.events.meta(uw, 'REVIVE_LIFE', 50))
+        self.tones((300, 80), (400, 80), (500, 80), (700, 150))
+        self.target = None
+        w.travel(body['level'], body['x'], body['y'], p, st)
+        w.stash.pop(uw, None)
+        q = w.sq(body['x'], body['y'])
+        if q.deco == self.pack.deco('remains2'):
+            q.deco = 0                                          # he is back in it
+        p.X, p.Y = self.free_near(body['x'], body['y'])
+        w.enter_room(p, st)
+        h.life = max(h.life, max(1, h.mlife * pct // 100))
+        h.poisoned = 0
+        p.more.pop('body', None)
+        p.more.pop('uw_foes', None)
+        self.count_hostiles()
+        self.events.on_level_start()
+        self.report('You return to your body.', 10)
+        return True
+
+    def underworld_check(self):
+        """UNDERWORLD_RETURN = 'clear': when the last monster of the Underworld level is dead, he returns."""
+        if self.in_afterlife() and self.events.meta(self.world.level, 'UNDERWORLD_RETURN', 'exit') == 'clear' and \
+                self.player.more.get('uw_foes') and not self.foes_left():
+            self.revive()
+
     def death(self):
         """death(): the hero's body, death2()'s last words, then 'Want to load?'; No closes the
         screen in a black box and goes back to the title (mastermind())."""
         p = self.player
+        if self.enter_underworld():
+            return
         self.world.sq(p.X, p.Y).deco = self.pack.deco('remains2')
         self.messages = []
         self.play('death2')
@@ -1244,6 +1337,7 @@ class Game:
             e.moved = False
         self.count_hostiles()
         rules.status_update(p, st, self.items)
+        self.underworld_check()
 
     def level_up(self):
         p, st = self.player, self.status

@@ -31,6 +31,8 @@ from .uikit import on_wheel, tip
 
 LAYERS = [('floor', 'Floor'), ('wall', 'Wall / door'), ('deco', 'Decoration'), ('item', 'Item'),
           ('mon', 'Creature'), ('gold', 'Gold')]
+UNDERWORLD_RETURNS = [('exit', 'at the level exit'), ('clear', 'when every monster is dead'),
+                      ('script', 'when an event calls revive()')]
 SETTINGS_3D = [('SKY_3D', '3D sky colour'), ('FOG_3D', '3D fog colour'), ('RANGE_3D', '3D range')]
 TOOLS = [('paint', 'Paint'), ('rect', 'Rectangle'), ('fill', 'Fill'), ('pick', 'Pick'),
          ('start', 'Start'), ('shop', 'Shop'), ('peace', 'Peaceful'), ('dark', 'Dark'), ('link', 'Link')]
@@ -88,13 +90,31 @@ class MapTab(ttk.Frame):
         self.jingle = tk.BooleanVar()
         ttk.Checkbutton(box, text='Jingle when leaving', variable=self.jingle).grid(row=4, column=0, columnspan=2,
                                                                                   sticky='w')
+        self.underworld = tk.BooleanVar()
+        uw = ttk.Checkbutton(box, text='This is the Underworld', variable=self.underworld)
+        uw.grid(row=5, column=0, columnspan=2, sticky='w')
+        tip(uw, 'When the hero dies he wakes on this level instead of seeing Game Over. His body stays where it fell. '
+                'He fights his way back by the exit, by clearing the level, or by an event, as set below.')
+        ttk.Label(box, text='He returns').grid(row=6, column=0, sticky='w')
+        self.uw_return = ttk.Combobox(box, values=[label for _, label in UNDERWORLD_RETURNS], state='readonly', width=22)
+        self.uw_return.grid(row=6, column=1, columnspan=2, sticky='w')
+        tip(self.uw_return, 'How he gets back to his body: stepping on the level exit, killing every monster of the '
+                            'level, or when an event calls revive().')
+        ttk.Label(box, text='Life on waking %').grid(row=7, column=0, sticky='w')
+        self.uw_life = ttk.Entry(box, width=10)
+        self.uw_life.grid(row=7, column=1, sticky='w')
+        ttk.Label(box, text='Life on return %').grid(row=8, column=0, sticky='w')
+        self.uw_back = ttk.Entry(box, width=10)
+        self.uw_back.grid(row=8, column=1, sticky='w')
+        tip(self.uw_life, 'How much of his life he has when he wakes in the Underworld (empty: 50).')
+        tip(self.uw_back, 'The least life he has when he is back in his body (empty: 50).')
         self.look3d = {}
         for i, (name, label) in enumerate(SETTINGS_3D):
-            ttk.Label(box, text=label).grid(row=5 + i, column=0, sticky='w')
+            ttk.Label(box, text=label).grid(row=9 + i, column=0, sticky='w')
             e = ttk.Entry(box, width=10)
-            e.grid(row=5 + i, column=1, sticky='w')
+            e.grid(row=9 + i, column=1, sticky='w')
             self.look3d[name] = e
-        ttk.Button(box, text='Apply', command=self._apply_settings).grid(row=8, column=0, columnspan=2, pady=4)
+        ttk.Button(box, text='Apply', command=self._apply_settings).grid(row=12, column=0, columnspan=2, pady=4)
         ttk.Label(left, text='Stories: numbers from\nthe Text tab, e.g. 2, 3.\nTeleporter: dx, dy.\n'
                              '3D: EGA colours 0-15 and\nhow far the eye sees\n(empty: the default).',
                   foreground='#555').pack(anchor='w')
@@ -228,6 +248,13 @@ class MapTab(ttk.Frame):
         self.teleport.insert(0, f'{tp[0]}, {tp[1]}')
         self.ask_leave.set(p.constant(self.level, 'ASK_TO_LEAVE', True))
         self.jingle.set(p.constant(self.level, 'LEAVE_JINGLE', True))
+        self.underworld.set(bool(p.constant(self.level, 'UNDERWORLD', False)))
+        way = p.constant(self.level, 'UNDERWORLD_RETURN', 'exit')
+        self.uw_return.set(dict(UNDERWORLD_RETURNS).get(way, UNDERWORLD_RETURNS[0][1]))
+        for entry, name in ((self.uw_life, 'UNDERWORLD_LIFE'), (self.uw_back, 'REVIVE_LIFE')):
+            v = p.constant(self.level, name)
+            entry.delete(0, 'end')
+            entry.insert(0, '' if v is None else str(v))
         for name, e in self.look3d.items():
             v = p.constant(self.level, name)
             e.delete(0, 'end')
@@ -271,6 +298,29 @@ class MapTab(ttk.Frame):
                 p.remove_constant(n, name)
             elif v != p.constant(n, name):
                 p.set_constant(n, name, v, dict(SETTINGS_3D)[name].lower())
+        try:
+            lives = {name: (int(e.get()) if e.get().strip() else None)
+                     for name, e in (('UNDERWORLD_LIFE', self.uw_life), ('REVIVE_LIFE', self.uw_back))}
+            assert all(v is None or 1 <= v <= 100 for v in lives.values())
+        except (ValueError, AssertionError):
+            messagebox.showerror('Level settings', 'The Underworld lives are percents of his life, 1 to 100.')
+            return
+        for name, v in lives.items():
+            if v is None:
+                p.remove_constant(n, name)
+            elif v != p.constant(n, name):
+                p.set_constant(n, name, v, 'percent of his life in the Underworld')
+        if self.underworld.get() != bool(p.constant(n, 'UNDERWORLD', False)):
+            if self.underworld.get():
+                p.set_constant(n, 'UNDERWORLD', True, 'the dead wake on this level and fight their way back')
+            else:
+                p.remove_constant(n, 'UNDERWORLD')
+        way = next((k for k, label in UNDERWORLD_RETURNS if label == self.uw_return.get()), 'exit')
+        if way != p.constant(n, 'UNDERWORLD_RETURN', 'exit'):
+            if way == 'exit':
+                p.remove_constant(n, 'UNDERWORLD_RETURN')
+            else:
+                p.set_constant(n, 'UNDERWORLD_RETURN', way, 'how he gets back to his body')
         for name, var, what in (('ASK_TO_LEAVE', self.ask_leave, 'ask before leaving by the exit'),
                                 ('LEAVE_JINGLE', self.jingle, 'play the jingle when leaving')):
             if var.get() != p.constant(n, name, True):

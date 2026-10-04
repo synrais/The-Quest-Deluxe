@@ -1187,6 +1187,57 @@ def thieves_and_light():
     print('thieves and light: steal gold and mana, gold falls when hit and at death, dark screens show only his light: ok')
 
 
+def underworld():
+    """Death sends the hero to the Underworld level, and winning there sends him back to his body."""
+    def mark(extra):
+        def change(folder, json):
+            path = os.path.join(folder, 'levels', '3', 'script.qs')
+            text = open(path, encoding='utf-8').read()
+            open(path, 'w', encoding='utf-8', newline='').write(text.rstrip('\n') + '\nUNDERWORLD = True\n' + extra)
+        return change
+    g = with_changes(lambda folder, json: None)
+    p, h, w = g.player, g.player.hero, g.world
+    assert g.underworld_level() == 0
+    h.life = -9
+    g.upkeep()
+    assert not g.enter_underworld(), 'no Underworld in the pack: the real death'
+    g = with_changes(mark(''))
+    p, h, w = g.player, g.player.hero, g.world
+    assert g.underworld_level() == 3
+    bx, by, level = p.X, p.Y, w.level
+    gold = p.inv.coins
+    h.life = -9
+    g.death()
+    assert w.level == 3 and p.more['body'] == {'level': level, 'x': bx, 'y': by}, p.more
+    assert h.life == max(1, h.mlife // 2) and level in w.stash, 'he wakes with half his life; his level is kept'
+    assert w.stash[level][0][bx][by].deco == g.pack.deco('remains2'), 'his body lies where he fell'
+    assert g.in_afterlife()
+    h.life = 3
+    assert g.revive()
+    assert w.level == level and (p.X, p.Y) == (bx, by) and not p.more.get('body')
+    assert h.life >= max(1, h.mlife // 2) and 3 not in w.stash, 'back at his body, the Underworld dropped'
+    assert w.sq(bx, by).deco != g.pack.deco('remains2')
+    assert not g.revive(), 'not in the Underworld: nothing'
+    # dying in the Underworld is the real death (no second Underworld)
+    h.life = -9
+    g.enter_underworld()
+    p.more['body'] = {'level': level, 'x': bx, 'y': by}
+    assert not g.enter_underworld()
+    # the way back by clearing the level
+    g = with_changes(mark("UNDERWORLD_RETURN = 'clear'\n"))
+    p, h, w = g.player, g.player.hero, g.world
+    level = w.level
+    g.enter_underworld()
+    assert g.in_afterlife() and p.more['uw_foes'] > 0, 'it has monsters to clear'
+    for col in w.grid[1:]:
+        for q in col[1:]:
+            if q.mon > 0:
+                q.mon = 0
+    g.upkeep()
+    assert w.level == level and not p.more.get('body'), 'the last monster dead: he returns'
+    print('underworld: death sends him to the Underworld level, clearing it or its exit sends him back to his body: ok')
+
+
 def hands_react():
     from engine.game import Game
     from engine.state import SLOT_WEAPON, SLOT_OFFHAND
@@ -1274,6 +1325,7 @@ if __name__ == '__main__':
     fps_transition()
     standing_effects()
     thieves_and_light()
+    underworld()
     hands_react()
     usable_items()
     behaviour()

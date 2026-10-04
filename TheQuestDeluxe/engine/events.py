@@ -25,6 +25,7 @@ The host API mirrors the original's globals so scripts read like the C they were
   change_rep(d)                reputation +- 1 with the original message
   hero_step(dx, dy)            move the hero
   poison(), autosave(slot), effect(name, *args)
+  revive()                     the hero wakes from the Underworld, at his body (UNDERWORLD level, see docs/EVENTS.md)
 """
 from __future__ import annotations
 
@@ -290,7 +291,7 @@ class Events:
             'ay', 'attacker'}
     FUNCS = {'say', 'talk', 'random', 'has', 'has_any', 'take', 'take_any', 'give', 'put', 'remove', 'room',
              'map', 'count', 'visited', 'enemies', 'refresh', 'change_rep', 'hero_step', 'poison', 'autosave',
-             'effect', 'min', 'max', 'abs', 'range', 'slot', 'said', 'len', 'restart', 'hurt_hero', 'next_level', 'message'}
+             'effect', 'min', 'max', 'abs', 'range', 'slot', 'said', 'len', 'restart', 'hurt_hero', 'next_level', 'message', 'revive'}
 
     def has_var(self, name):
         return name in self.VARS
@@ -535,6 +536,10 @@ class Events:
         p = self.g.player
         p.X += dx
         p.Y += dy
+
+    def f_revive(self):
+        """Send the hero back to his body from the Underworld (the level's UNDERWORLD_RETURN = 'script'); 1 if he went."""
+        return 1 if self.g.revive() else 0
 
     def f_poison(self):
         """hero.poisoned = 1; ampoisoned(1), over whatever the screen shows (the original doesn't redraw)."""

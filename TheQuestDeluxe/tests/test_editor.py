@@ -311,6 +311,24 @@ assert 'mar' in (cl.row['no_skill'] if isinstance(cl.row['no_skill'], list) else
 print('classes: Marksmanship shows as not offered to all but the Rogue: ok')
 print('painting: a click paints, Alt picks, a picture starts from another, a hero can be painted: ok')
 
+# the Underworld: marked in the Map tab's level settings
+mt = app.map_tab
+app.tabs.select(mt)
+pump()
+mt.underworld.set(True)
+mt.uw_return.set('when every monster is dead')
+mt.uw_life.delete(0, 'end')
+mt.uw_life.insert(0, '40')
+mt._apply_settings()
+lv = mt.level
+assert app.project.constant(lv, 'UNDERWORLD') is True and app.project.constant(lv, 'UNDERWORLD_RETURN') == 'clear'
+assert app.project.constant(lv, 'UNDERWORLD_LIFE') == 40
+mt.underworld.set(False)
+mt.uw_return.set('at the level exit')
+mt.uw_life.delete(0, 'end')
+mt._apply_settings()
+assert app.project.constant(lv, 'UNDERWORLD') is None and app.project.constant(lv, 'UNDERWORLD_RETURN') is None
+print('map: a level can be made the Underworld and how he returns set: ok')
 # the Classes tab: a new class with a starting kit
 cl = app.classes_tab
 app.tabs.select(cl)
