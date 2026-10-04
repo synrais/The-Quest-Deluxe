@@ -11,6 +11,7 @@ Right: the tools, the layer, and the palette of what can go in that layer.
   Start      where the hero arrives on this level (START)
   Shop       which shop a screen's shopkeeper runs (SHOPS)
   Peaceful   screens where people and allies leave monsters alone (PEACEFUL_SCREENS)
+  Dark       screens where nothing shows but the hero, and what his light reaches (DARK_SCREENS; an item's Light)
   Link       where the ladder, rope, stairs, hole or jump pad on the clicked square leads: a square on
              another level (LINKS). Put the item on the square first (Item layer).
   Mouse wheel scrolls the map up and down, Shift+wheel sideways, Ctrl+wheel zooms in and out round the pointer.
@@ -32,7 +33,7 @@ LAYERS = [('floor', 'Floor'), ('wall', 'Wall / door'), ('deco', 'Decoration'), (
           ('mon', 'Creature'), ('gold', 'Gold')]
 SETTINGS_3D = [('SKY_3D', '3D sky colour'), ('FOG_3D', '3D fog colour'), ('RANGE_3D', '3D range')]
 TOOLS = [('paint', 'Paint'), ('rect', 'Rectangle'), ('fill', 'Fill'), ('pick', 'Pick'),
-         ('start', 'Start'), ('shop', 'Shop'), ('peace', 'Peaceful'), ('link', 'Link')]
+         ('start', 'Start'), ('shop', 'Shop'), ('peace', 'Peaceful'), ('dark', 'Dark'), ('link', 'Link')]
 ZOOMS = {'Large (40)': 40, 'Medium (24)': 24, 'Small (12)': 12}
 
 
@@ -410,9 +411,15 @@ class MapTab(ttk.Frame):
                     pygame.draw.line(surf, (255, 255, 0), (0, at(0, y)[1]), (cols * s, at(0, y)[1]))
         peaceful = set(map(tuple, p.constant(self.level, 'PEACEFUL_SCREENS', ()) or ()))
         shops = p.constant(self.level, 'SHOPS', {}) or {}
+        dark = set(map(tuple, p.constant(self.level, 'DARK_SCREENS', ()) or ()))
         for sx in range(1, 11):
             for sy in range(1, 11):
                 px, py = at((sx - 1) * 10 + 1, (sy - 1) * 10 + 1)
+                if (sx, sy) in dark:                              # shaded: it is dark there
+                    shade = pygame.Surface((10 * s, 10 * s), pygame.SRCALPHA)
+                    shade.fill((0, 0, 40, 130))
+                    surf.blit(shade, (px, py))
+                    pygame.draw.rect(surf, (140, 140, 255), (px + 2, py + 2, 10 * s - 4, 10 * s - 4), 1)
                 if (sx, sy) in peaceful:
                     pygame.draw.rect(surf, (80, 200, 255), (px + 2, py + 2, 10 * s - 4, 10 * s - 4), 2)
                 if (sx, sy) in shops:
@@ -485,7 +492,7 @@ class MapTab(ttk.Frame):
             self._show_settings()
             self.app.changed()
             self.app.scripts_changed(self.level)
-        elif tool in ('shop', 'peace'):
+        elif tool in ('shop', 'peace', 'dark'):
             self._screen_tool(tool, (x - 1) // 10 + 1, (y - 1) // 10 + 1)
         elif tool == 'link':
             self._link_tool(x, y)
@@ -643,6 +650,16 @@ class MapTab(ttk.Frame):
             else:
                 shops.pop((sx, sy), None)
             p.set_constant(n, 'SHOPS', shops, 'screen (column, row) -> shop number')
+        elif tool == 'dark':
+            dark = [tuple(v) for v in p.constant(n, 'DARK_SCREENS', []) or []]
+            if (sx, sy) in dark:
+                dark.remove((sx, sy))
+            else:
+                dark.append((sx, sy))
+            if dark:
+                p.set_constant(n, 'DARK_SCREENS', dark, 'screens where only the hero and his light show')
+            else:
+                p.remove_constant(n, 'DARK_SCREENS')
         else:
             peaceful = [tuple(v) for v in p.constant(n, 'PEACEFUL_SCREENS', []) or []]
             if (sx, sy) in peaceful:

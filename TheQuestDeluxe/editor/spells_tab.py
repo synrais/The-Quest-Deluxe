@@ -48,6 +48,15 @@ def eff(*names):
 
 class SpellsTab(TableTab):
     TABLE = 'spells'
+    GROUPS = [
+        ('Casting', True, 'what it costs and how far it reaches',
+         ['req_int', 'mana', 'range', 'needs_target', 'fizzle', 'empties_mana']),
+        ('What it does', True, 'the effect and how strong it is',
+         ['effect', 'power', 'duration', 'repeat', 'burns', 'freezes_water', 'absorb_power_of', 'freeze_power_of']),
+        ('Summons and creatures', False, 'raising or calling creatures',
+         ['creature', 'creatures', 'follows', 'clones_hero', 'npc_anger']),
+        ('How it looks', False, 'the animation', ['anim']),
+    ]
     ICON_LAYER = 'spell'
     PICTURES = [('Spell book icon', 'spells', False)]
     INTRO = ('The spell book holds 20 spells a page; more than 20 add pages (the original has one). Range 0 casts on the hero; '

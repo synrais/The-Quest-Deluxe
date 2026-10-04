@@ -35,6 +35,7 @@ TELEPORT = (20, 0)             # how far a teleporter pad (item 999) moves the h
 ASK_TO_LEAVE = True            # ask "Want to travel further?" at the exit (item 1000)
 LEAVE_JINGLE = True            # play song_bevcop() when leaving for the next level
 PEACEFUL_SCREENS = [(1, 1)]    # Deluxe: screens where people and allies don't attack monsters
+DARK_SCREENS = [(2, 3)]        # Deluxe: screens where only the hero shows, and what an item's `light` reaches (map tool Dark)
 LINKS = {(24, 55): (2, 10, 12)}  # Deluxe: where a ladder, rope, stairs, hole or jump pad (item types) leads:
                                # (level, x, y), or (level, x, y, "words shown"). The Map tab's Link tool sets it
 ```

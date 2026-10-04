@@ -36,12 +36,17 @@ class TableTab(ttk.Frame):
     LIST_ICON = ''                        # the layer the list's icons come from (default ICON_LAYER)
     PICTURES: list = []                   # [(label, sprite folder, is_bag_cell)]
     INTRO = ''
+    # The form in sections: [(title, open at first, what it is for, [field keys])]. A field in no section goes in
+    # "More"; a field with no section at all stays at the top (the number, the name). A section opens by itself when
+    # the entry has something set in it, and the person can open or close any (the arrows) -- kept while this tab is.
+    GROUPS: list = []
 
     def __init__(self, master, app):
         super().__init__(master)
         self.app = app
         self.row = None
         self.widgets = {}
+        self._open = {}                    # section title -> the person's choice
         self._build()
 
     # ── what subclasses provide ─────────────────────────────────────────────
@@ -179,8 +184,9 @@ class TableTab(ttk.Frame):
         if row is None:
             return
         line = 0
-        for f in self.fields():
-            if f.when and not f.when(row):
+        for title, blurb, f in self._sections(row):
+            if f is None:                                     # a section's heading
+                line = self._heading(line, title, blurb, row)
                 continue
             lab = ttk.Label(self.form, text=f.label)
             lab.grid(row=line, column=0, sticky='nw', pady=2, padx=(0, 8))
@@ -195,6 +201,49 @@ class TableTab(ttk.Frame):
                 ttk.Label(self.form, text=f.hint, foreground='#666', wraplength=300,
                           justify='left').grid(row=line, column=2, sticky='w', padx=8)
             line += 1
+
+    def _sections(self, row):
+        """What the form shows for this entry, in order: (title, blurb, None) for a section's heading, then
+        (title, blurb, Field) for each field that applies and is not in a closed section."""
+        fields = [f for f in self.fields() if not f.when or f.when(row)]
+        if not self.GROUPS:
+            return [('', '', f) for f in fields]
+        where = {k: i for i, (_, _, _, keys) in enumerate(self.GROUPS) for k in keys}
+        more = len(self.GROUPS)
+        out = [('', '', f) for f in fields if f.key not in where and f.key in ('id', '_role', 'name')]
+        rest = [f for f in fields if f not in [o[2] for o in out]]
+        for i in range(more + 1):
+            mine = [f for f in rest if where.get(f.key, more) == i]
+            if not mine:
+                continue
+            title, default, blurb, _ = self.GROUPS[i] if i < more else ('More', False, '', [])
+            is_set = sum(1 for f in mine if self.get(row, f.key) not in (None, 0, False, '', [], {}))
+            opened = self._open.get(title, default or is_set > 0)
+            out.append((title, (blurb, opened, is_set, len(mine)), None))
+            if opened:
+                out += [(title, blurb, f) for f in mine]
+        return out
+
+    def _heading(self, line, title, info, row):
+        blurb, opened, is_set, total = info
+        box = ttk.Frame(self.form)
+        box.grid(row=line, column=0, columnspan=3, sticky='ew', pady=(10, 2))
+        arrow = '\u25bc' if opened else '\u25b6'
+        head = ttk.Label(box, text=f'{arrow}  {title}', font=('TkDefaultFont', 10, 'bold'), cursor='hand2')
+        head.pack(side='left')
+        words = blurb + (f'   ({is_set} set)' if is_set and not opened else '')
+        if words.strip():
+            ttk.Label(box, text=words, foreground='#666').pack(side='left', padx=10)
+        ttk.Separator(box).pack(side='left', fill='x', expand=True, padx=6)
+        for w in (head, box):
+            w.bind('<Button-1>', lambda e, t=title, o=opened: self._toggle_section(t, not o))
+        tip(head, 'Click to open or close this section.')
+        return line + 1
+
+    def _toggle_section(self, title, opened):
+        self._open[title] = opened
+        if self.row is not None:
+            self._show(self.row)
 
     def _widget(self, f: Field, row):
         value = self.get(row, f.key, f.default)

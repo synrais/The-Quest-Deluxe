@@ -407,6 +407,24 @@ class Renderer:
             big.set_alpha(int(255 * fade))
             scr.blit(big, (0, 0))
 
+    def darken(self, game, scr):
+        """A dark screen: nothing shows but the squares the hero's light reaches (his own always), a dim ring round
+        them."""
+        if not game.dark_screen():
+            return
+        r, p = game.light_radius(), game.player
+        ox, oy = game.world.origin
+        shade = {}
+        for a in (150, 255):
+            s = pygame.Surface((TILE, TILE))
+            s.set_alpha(a)
+            shade[a] = s
+        for x, y in game.world.room_tiles():
+            d2 = (x - p.X) ** 2 + (y - p.Y) ** 2
+            if d2 <= r * r + r:
+                continue
+            scr.blit(shade[150 if d2 <= (r + 1) ** 2 + r + 1 else 255], ((x - ox) * TILE, (y - oy) * TILE))
+
     def draw_map(self, game, scr):
         """The screen from above, as the original shows it."""
         w, p = game.world, game.player
@@ -418,6 +436,7 @@ class Renderer:
         self.draw_hero(scr, game, hx, hy)
         if self.on_top(game):
             self.draw_objects(scr, hx, hy, w.grid[p.X][p.Y])     # what the hero stands on, over him
+        self.darken(game, scr)
         t = game.target
         if t is not None and t in w.enemies:
             pygame.draw.rect(scr, EGA[12], ((t.x - ox) * TILE, (t.y - oy) * TILE, TILE, TILE), 1)
@@ -463,6 +482,7 @@ class Renderer:
             scene.sky = meta(w.level, 'SKY_3D', dflt.get('sky', view3d.Scene.sky))
             scene.fog = meta(w.level, 'FOG_3D', dflt.get('fog', scene.sky))
             scene.range = meta(w.level, 'RANGE_3D', dflt.get('range', view3d.Scene.range))
+            scene.base_sky, scene.base_fog = scene.sky, scene.fog
             self._scene, self._scene_key = scene, key
         return self._scene
 
@@ -517,10 +537,17 @@ class Renderer:
         want = (getattr(game, 'settings', None) or {}).get('fps_view_distance')     # settings.ini: see further
         far = want if isinstance(want, int) else 0
         scene.range = max(base, far) + game.sight_bonus()          # (a worn item that sees further adds to it)
+        dark = game.dark_screen()
+        scene.sky, scene.fog = (0, 0) if dark else (scene.base_sky, scene.base_fog)
+        if dark:                                                   # a dark screen: only what his light reaches
+            lit = game.light_radius()
+            scene.range = min(scene.range, lit + 1.5 if lit else 1.2)
         self.v3d.dither = (getattr(game, 'settings', None) or {}).get('fps_dither') or 'ordered'
         self.v3d.filter = (getattr(game, 'settings', None) or {}).get('fps_texture_filter') == 'on'
         start = (getattr(game, 'settings', None) or {}).get('fps_fog_start')
         self.v3d.fog_start = (45 if start is None else start) / 100
+        if dark:
+            self.v3d.fog_start = 0.3
         self.v3d.eye = self.eye_height(game) + lift
         frame = self.v3d.render(scene, self.camera(game, snap))
         k = MAP_PX / view3d.RES

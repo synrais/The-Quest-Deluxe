@@ -97,11 +97,35 @@ class CreaturesTab(TableTab):
              'summoned allies (-100 and below). What people say is in the Text tab under their number. '
              'Loot: rules tried with a roll of 1-100, the first whose range holds it applies.')
 
+    GROUPS = [
+        ('Fighting', True, 'how hard it is to kill and how it attacks',
+         ['life', 'power', 'atk', 'def', 'warm', 'marm', 'range', 'att', 'magic_attack', 'rests_after_moving',
+          'missile_anim', 'cast_anim']),
+        ('Rewards', True, 'what it gives when it dies',
+         ['exp', 'loot', 'drop_on_level', 'death_gold.chance', 'death_gold.min', 'death_gold.max']),
+        ('Gold and thieves', False, 'steals gold when it hits him; drops some when it is hit',
+         ['steal_gold.chance', 'steal_gold.min', 'steal_gold.max', 'hit_gold.chance', 'hit_gold.min',
+          'hit_gold.max', 'hit_item', 'hit_item_chance', 'hit_drops', 'drain_mana.chance', 'drain_mana.min',
+          'drain_mana.max']),
+        ('Poison and special attacks', False, 'poison, exploding, healing friends, raising the dead',
+         ['poison_melee', 'poison_ranged', 'poison_cast', 'drains_life', 'heals_allies', 'raises_dead', 'explodes']),
+        ('Body', False, 'what it looks like when it is hurt or dead',
+         ['size', 'log_name', 'corpse', 'bleeds', 'silences_witnesses']),
+        ('Behaviour', False, 'hiding, chasing, running away',
+         ['invisible', 'reveals_as', 'hides_as', 'chase_range', 'flees_within', 'animal']),
+        ('Changes and rising again', False, 'turning into something else, bursting, rising from blood',
+         ['becomes_on_death', 'bursts_into', 'transforms_into', 'transforms_below', 'transforms_damage',
+          'regenerates_from_blood', 'rise_limit', 'blood_range']),
+        ('Resistances', False, 'what it shrugs off', ['resists']),
+    ]
+
     def fields(self):
         opt = lambda k, label, hint='': Field(k, label, 'custom', fmt=fmt_key(k), parse=parse_int_or_none, hint=hint)
         monsters = [(None, '(none)')] + [(c['id'], self.label(c)) for c in
                                          sorted(self.rows, key=lambda c: c['id'])]
         pick = lambda k, label, hint='': Field(k, label, 'choice', monsters, hint=hint)
+        items = [(None, '(nothing)')] + [(r['id'], f'{r["id"]} {r.get("name", "")}') for r in
+                                        sorted(self.app.project.tables.get('items', []), key=lambda r: r['id'])]
         return [
             Field('id', 'Number', 'readonly'),
             Field('_role', 'Is a', 'readonly', default=None),
@@ -121,6 +145,26 @@ class CreaturesTab(TableTab):
                   hint='e.g. 20-100: gold 3+1; 10-20: item 620 (random(3)+1 gold, or item 620)'),
             Field('hit_drops', 'Drops when hit', 'custom', fmt=fmt_rules('hit_drops'), parse=parse_loot,
                   hint='something falls each time it is hurt: rules like Loot, e.g. 1-30: gold 3+1; 30-40: item 620'),
+            Field('death_gold.chance', 'Drops gold: chance %', 'int',
+                  hint='when it dies: the chance (1-100) that it leaves gold, from min to max (empty: never)'),
+            Field('death_gold.min', '... at least', 'int', when=lambda r: (r.get('death_gold') or {}).get('chance')),
+            Field('death_gold.max', '... at most', 'int', when=lambda r: (r.get('death_gold') or {}).get('chance')),
+            Field('steal_gold.chance', 'Steals gold: chance %', 'int',
+                  hint='when its blow or shot hurts the hero: the chance (1-100) it takes gold, min to max. It carries '
+                       'it and drops it when it dies'),
+            Field('steal_gold.min', '... at least', 'int', when=lambda r: (r.get('steal_gold') or {}).get('chance')),
+            Field('steal_gold.max', '... at most', 'int', when=lambda r: (r.get('steal_gold') or {}).get('chance')),
+            Field('hit_gold.chance', 'Drops gold when hit: chance %', 'int',
+                  hint='each time the hero hurts it: the chance (1-100) that gold falls, min to max'),
+            Field('hit_gold.min', '... at least', 'int', when=lambda r: (r.get('hit_gold') or {}).get('chance')),
+            Field('hit_gold.max', '... at most', 'int', when=lambda r: (r.get('hit_gold') or {}).get('chance')),
+            Field('hit_item', 'Drops an item when hit', 'choice', items, hint='each time it is hurt (see the chance)'),
+            Field('hit_item_chance', '... chance %', 'int', when=lambda r: r.get('hit_item'),
+                  hint='1-100 (empty: every time)'),
+            Field('drain_mana.chance', 'Drains mana: chance %', 'int',
+                  hint='when its blow or shot hurts the hero: the chance (1-100) it takes mana, min to max'),
+            Field('drain_mana.min', '... at least', 'int', when=lambda r: (r.get('drain_mana') or {}).get('chance')),
+            Field('drain_mana.max', '... at most', 'int', when=lambda r: (r.get('drain_mana') or {}).get('chance')),
             Field('drop_on_level', 'Always drops', 'custom', fmt=fmt_pairs('drop_on_level'), parse=parse_pairs,
                   hint='level: item, e.g. 3: 12'),
             Field('corpse', 'Leaves', 'choice', CORPSES),

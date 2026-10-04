@@ -174,6 +174,67 @@ pd.save()
 assert app.project.picture('heroes', 1) is not None
 pd.dirty = False
 pd.destroy()
+# the painter's tools: eraser, oval, mirror, swap, turn, zoom, background
+pd = cl.paint('heroes', False, 'Painted hero')
+pump()
+
+
+class At:
+    def __init__(self, x, y):
+        self.x, self.y, self.state = x * pd.zoom + 2, y * pd.zoom + 2, 0
+
+
+pd.clear()
+pd.left, pd.right = 4, 1
+pd.tool.set('pencil')
+pd.mirror.set(True)
+pd._press(At(3, 5), 'left')
+pd._release(At(3, 5), 'left')
+assert pd.cells[3][5] == 4 and pd.cells[36][5] == 4, 'Mirror paints both sides'
+pd.mirror.set(False)
+pd.tool.set('eraser')
+pd._press(At(3, 5), 'left')
+pd._release(At(3, 5), 'left')
+assert pd.cells[3][5] == -1 and pd.cells[36][5] == 4
+pd.tool.set('oval')
+pd.filled.set(False)
+pd._press(At(10, 10), 'left')
+pd._drag(At(20, 16), 'left')
+pd._release(At(20, 16), 'left')
+assert pd.cells[15][10] == 4 and pd.cells[15][13] == -1 and pd.cells[10][13] == 4, 'an outline of an oval'
+pd.filled.set(True)
+pd.tool.set('oval')
+pd._press(At(25, 25), 'left')
+pd._drag(At(30, 30), 'left')
+pd._release(At(30, 30), 'left')
+assert pd.cells[27][27] == 4
+pd.tool.set('swap')
+pd.left = 9
+pd._press(At(27, 27), 'left')
+pd._release(At(27, 27), 'left')
+assert pd.cells[27][27] == 9 and pd.cells[15][10] == 9 and pd.cells[36][5] == 9, 'Swap changes every pixel of that colour'
+pd.tool.set('dither')
+pd.left, pd.right = 2, 3
+pd._press(At(0, 0), 'left')
+pd._drag(At(3, 0), 'left')
+pd._release(At(3, 0), 'left')
+assert [pd.cells[x][0] for x in range(4)] == [2, 3, 2, 3]
+before = [c[:] for c in pd.cells]
+pd.turn(True)
+pd.turn(False)
+assert pd.cells == before, 'a turn and a turn back'
+pd.set_zoom(16)
+assert pd.canvas.winfo_reqwidth() == 640
+pd.background.set('Grass')
+pd.redraw()
+assert pd.canvas.itemcget(pd.rects[0][1], 'fill') in ('#00a800',) or pd.cells[0][1] != -1
+pd.ghost.set(True)
+pd.redraw()
+pd.grid_on.set(False)
+pd.redraw()
+pd.dirty = False
+pd.destroy()
+print('painter: eraser, oval, mirror, swap, dither, turn, zoom and the background: ok')
 # the four default heroes: Marksmanship is not offered to any but the Rogue (it comes free with that class)
 cl.select(1)
 assert cl.row['no_skill'] in ('mar', ['mar']) or 'mar' in cl.row['no_skill'], cl.row.get('no_skill')   # Knight

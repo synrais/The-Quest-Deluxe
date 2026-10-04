@@ -186,7 +186,7 @@ class View3D:
         cx, cy, a = cam
         f = self.frame
         ground, roof = self.ground(scene, cx, cy)
-        key = (cam, self._ground_key, id(scene), self.eye)
+        key = (cam, self._ground_key, id(scene), self.eye, scene.sky, scene.fog, scene.range, self.fog_start)
         if key == getattr(self, '_frame_key', None):
             return f                                      # nothing moved: the last frame stands
         self._frame_key = key

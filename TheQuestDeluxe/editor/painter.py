@@ -2,14 +2,18 @@
 drawn over the floor).
 
 Pencil: paint pixels (drag to draw)
+Eraser: make pixels see-through
+Dither: paint a chequer of both colours
 Line: drag from one end to the other
+Rectangle, Oval: drag a shape (Filled box: solid or outline)
 Fill: fill the area of one colour
-Rectangle: drag a filled rectangle
+Swap: change every pixel of one colour
 Pick: take a colour from the picture
    (Alt+click does this with any tool)
 
 Left button paints the left colour,
 right button the right colour.
+Mirror paints both halves at once.
 Ctrl+Z / Ctrl+Y undo and redo.
 """
 from __future__ import annotations
@@ -23,8 +27,11 @@ from .art import EGA, photo
 from .uikit import tip
 
 N = 40
-ZOOM = 12
+ZOOMS = (8, 12, 16)
 CLEAR = -1
+# what shows behind the see-through pixels: (label, colour as '#rrggbb' or None for the chequer)
+BACKGROUNDS = [('Chequer (see-through)', None), ('Grass', '#00a800'), ('Black', '#000000'), ('White', '#ffffff'),
+               ('Grey', '#808080'), ('Sand', '#a8a800')]
 
 
 def to_cells(surface, opaque: bool) -> list[list[int]]:
@@ -64,6 +71,13 @@ class Painter(tk.Toplevel):
         self.cells = to_cells(surface, opaque)
         self.left, self.right = 15, (0 if opaque else CLEAR)
         self.tool = tk.StringVar(value='pencil')
+        self.zoom = 12
+        self.background = tk.StringVar(value=BACKGROUNDS[0][0])     # behind the see-through pixels
+        self.grid_on = tk.BooleanVar(value=True)
+        self.filled = tk.BooleanVar(value=True)
+        self.mirror = tk.BooleanVar(value=False)
+        self.ghost = tk.BooleanVar(value=False)                     # the picture as it was, faintly, where it is clear
+        self.original = [col[:] for col in self.cells]
         self.undo_stack, self.redo_stack = [], []
         self.start = None
         self.before = None
@@ -86,20 +100,57 @@ class Painter(tk.Toplevel):
         left.pack(side='left', fill='y')
         tools = ttk.LabelFrame(left, text='Tool', padding=4)
         tools.pack(fill='x')
-        for k, label in (('pencil', 'Pencil'), ('line', 'Line'), ('fill', 'Fill'), ('rect', 'Rectangle'),
-                         ('pick', 'Pick')):
-            ttk.Radiobutton(tools, text=label, value=k, variable=self.tool).pack(anchor='w')
+        row = [('pencil', 'Pencil'), ('line', 'Line'), ('rect', 'Rectangle'), ('oval', 'Oval'), ('fill', 'Fill'),
+               ('swap', 'Swap'), ('dither', 'Dither'), ('pick', 'Pick')]
+        if not self.opaque:
+            row.insert(1, ('eraser', 'Eraser'))
+        for i, (k, label) in enumerate(row):
+            ttk.Radiobutton(tools, text=label, value=k, variable=self.tool).grid(row=i // 2, column=i % 2, sticky='w',
+                                                                               padx=(0, 8))
+        opts = ttk.Frame(tools)
+        opts.grid(row=(len(row) + 1) // 2, column=0, columnspan=2, sticky='w', pady=(4, 0))
+        for text, var, words in (
+                ('Filled', self.filled, 'Rectangles and ovals are solid (ticked) or just an outline.'),
+                ('Mirror', self.mirror, 'Everything you paint is copied to the other side, left to right (faces, '
+                                        'shields, swords).')):
+            c = ttk.Checkbutton(opts, text=text, variable=var)
+            c.pack(side='left', padx=(0, 8))
+            tip(c, words)
         pal = ttk.LabelFrame(left, text='Colours', padding=4)
         pal.pack(fill='x', pady=6)
         choices = list(range(16)) + ([] if self.opaque else [CLEAR])
         for i, c in enumerate(choices):
             sw = tk.Canvas(pal, width=26, height=26, highlightthickness=1, highlightbackground='#888')
             self._swatch(sw, c)
-            sw.grid(row=i // 4, column=i % 4, padx=1, pady=1)
+            sw.grid(row=i // 8, column=i % 8, padx=1, pady=1)
             sw.bind('<Button-1>', lambda e, c=c: self._choose(c, 'left'))
             sw.bind('<Button-3>', lambda e, c=c: self._choose(c, 'right'))
-        ttk.Label(pal, text='left / right click\na colour to choose it', foreground='#555').grid(
-            row=5, column=0, columnspan=4, pady=4)
+        ttk.Label(pal, text='left / right click a colour to choose it', foreground='#555').grid(
+            row=3, column=0, columnspan=8, pady=2)
+        view = ttk.LabelFrame(left, text='View', padding=4)
+        view.pack(fill='x', pady=(0, 6))
+        ttk.Label(view, text='Background').grid(row=0, column=0, sticky='w')
+        bg = ttk.Combobox(view, textvariable=self.background, state='readonly', width=20,
+                          values=[name for name, _ in BACKGROUNDS])
+        bg.grid(row=0, column=1, sticky='w')
+        bg.bind('<<ComboboxSelected>>', lambda e: self.redraw())
+        tip(bg, 'What shows behind the see-through pixels while you paint and in the small pictures: the chequer, '
+                'or a ground colour to see how it will look standing on it. It is never saved.')
+        ttk.Label(view, text='Zoom').grid(row=1, column=0, sticky='w')
+        zoom = ttk.Combobox(view, state='readonly', width=6, values=[f'{z * N} px' for z in ZOOMS])
+        zoom.set(f'{self.zoom * N} px')
+        zoom.grid(row=1, column=1, sticky='w')
+        zoom.bind('<<ComboboxSelected>>', lambda e: self.set_zoom(ZOOMS[zoom.current()]))
+        tip(zoom, 'How big the picture is while you paint.')
+        marks = ttk.Frame(view)
+        marks.grid(row=2, column=0, columnspan=2, sticky='w')
+        for text, var, words in (('Grid', self.grid_on, 'Lines every 10 pixels.'),
+                                 ('Show the first picture', self.ghost,
+                                  'The picture as it was when you opened this window, faintly, where you have cleared '
+                                  'it: to trace over, or to see what you changed.')):
+            c = ttk.Checkbutton(marks, text=text, variable=var, command=self.redraw)
+            c.pack(side='left', padx=(0, 8))
+            tip(c, words)
         cur = ttk.Frame(left)
         cur.pack(fill='x')
         ttk.Label(cur, text='Left').pack(side='left')
@@ -108,12 +159,20 @@ class Painter(tk.Toplevel):
         ttk.Label(cur, text='Right').pack(side='left')
         self.rsw = tk.Canvas(cur, width=26, height=26)
         self.rsw.pack(side='left', padx=4)
-        moves = ttk.LabelFrame(left, text='Move', padding=4)
+        moves = ttk.LabelFrame(left, text='Move, flip, turn', padding=4)
         moves.pack(fill='x', pady=6)
-        for i, (label, fn) in enumerate((('Left', lambda: self.shift(-1, 0)), ('Right', lambda: self.shift(1, 0)),
-                                         ('Up', lambda: self.shift(0, -1)), ('Down', lambda: self.shift(0, 1)),
-                                         ('Flip ↔', lambda: self.flip(True)), ('Flip ↕', lambda: self.flip(False)))):
-            ttk.Button(moves, text=label, width=7, command=fn).grid(row=i // 2, column=i % 2, padx=1, pady=1)
+        for i, (label, words, fn) in enumerate((
+                ('\u25c0', 'Move the picture one pixel left.', lambda: self.shift(-1, 0)),
+                ('\u25b2', 'Move the picture one pixel up.', lambda: self.shift(0, -1)),
+                ('\u25bc', 'Move the picture one pixel down.', lambda: self.shift(0, 1)),
+                ('\u25b6', 'Move the picture one pixel right.', lambda: self.shift(1, 0)),
+                ('\u2194', 'Flip left to right.', lambda: self.flip(True)),
+                ('\u2195', 'Flip top to bottom.', lambda: self.flip(False)),
+                ('\u21bb', 'Turn a quarter clockwise.', lambda: self.turn(True)),
+                ('\u21ba', 'Turn a quarter anticlockwise.', lambda: self.turn(False)))):
+            b = ttk.Button(moves, text=label, width=4, command=fn)
+            b.grid(row=i // 4, column=i % 4, padx=1, pady=1)
+            tip(b, words)
         ttk.Button(left, text='Clear', command=self.clear).pack(fill='x')
         if self.templates:
             box = ttk.LabelFrame(left, text='Start from another picture', padding=4)
@@ -127,13 +186,9 @@ class Painter(tk.Toplevel):
 
         mid = ttk.Frame(self, padding=6)
         mid.pack(side='left')
-        self.canvas = tk.Canvas(mid, width=N * ZOOM, height=N * ZOOM, highlightthickness=0, background='#333')
+        self.canvas = tk.Canvas(mid, highlightthickness=0, background='#333')
         self.canvas.pack()
-        self.rects = [[self.canvas.create_rectangle(x * ZOOM, y * ZOOM, x * ZOOM + ZOOM, y * ZOOM + ZOOM, width=0)
-                       for y in range(N)] for x in range(N)]
-        for k in range(0, N + 1, 10):
-            self.canvas.create_line(k * ZOOM, 0, k * ZOOM, N * ZOOM, fill='#555')
-            self.canvas.create_line(0, k * ZOOM, N * ZOOM, k * ZOOM, fill='#555')
+        self._make_canvas()
         for b, which in (('1', 'left'), ('3', 'right')):
             self.canvas.bind(f'<ButtonPress-{b}>', lambda e, w=which: self._press(e, w))
             # Alt+click picks a colour. Asked of the event's modifier bits this was wrong on Windows, where
@@ -143,14 +198,37 @@ class Painter(tk.Toplevel):
             self.canvas.bind(f'<ButtonRelease-{b}>', lambda e, w=which: self._release(e, w))
         self.status = ttk.Label(mid, text='')
         self.status.pack(anchor='w')
-        self.canvas.bind('<Motion>', lambda e: self.status.config(text=f'({e.x // ZOOM}, {e.y // ZOOM})'))
+        self.canvas.bind('<Motion>', lambda e: self.status.config(text=f'({e.x // self.zoom}, {e.y // self.zoom})'))
 
         right = ttk.Frame(self, padding=6)
         right.pack(side='left', fill='y')
         ttk.Label(right, text='As it looks').pack(anchor='w')
         self.previews = ttk.Label(right)
         self.previews.pack(anchor='w')
-        ttk.Label(right, text=__doc__.split('\n\n', 1)[1], foreground='#555', justify='left').pack(anchor='w', pady=8)
+        ttk.Label(right, text=__doc__.split('\n\n', 1)[1], foreground='#555', justify='left', wraplength=250).pack(anchor='w', pady=8)
+
+    def _make_canvas(self):
+        z = self.zoom
+        self.canvas.delete('all')
+        self.canvas.config(width=N * z, height=N * z)
+        self.rects = [[self.canvas.create_rectangle(x * z, y * z, x * z + z, y * z + z, width=0)
+                       for y in range(N)] for x in range(N)]
+        self.lines = []
+        for k in range(0, N + 1, 10):
+            self.lines.append(self.canvas.create_line(k * z, 0, k * z, N * z, fill='#555'))
+            self.lines.append(self.canvas.create_line(0, k * z, N * z, k * z, fill='#555'))
+
+    def set_zoom(self, z):
+        self.zoom = z
+        self._make_canvas()
+        self.redraw()
+
+    def back_colour(self, x, y):
+        """What shows at a see-through pixel: the chosen background, or the chequer."""
+        colour = dict(BACKGROUNDS).get(self.background.get())
+        if colour:
+            return colour
+        return '#ffffff' if (x + y) % 2 else '#cccccc'
 
     def _swatch(self, canvas, c):
         canvas.delete('all')
@@ -174,13 +252,19 @@ class Painter(tk.Toplevel):
         for x in range(N):
             for y in range(N):
                 self._paint_rect(x, y)
+        for line in self.lines:
+            self.canvas.itemconfig(line, state='normal' if self.grid_on.get() else 'hidden')
         self.redraw_swatches()
         self._preview()
 
     def _paint_rect(self, x, y):
         c = self.cells[x][y]
         if c == CLEAR:
-            fill = '#ffffff' if (x + y) % 2 else '#cccccc'
+            fill = self.back_colour(x, y)
+            ghost = self.original[x][y]
+            if self.ghost.get() and ghost != CLEAR:               # the first picture, half way to the background
+                back = self.canvas.winfo_rgb(fill)
+                fill = '#%02x%02x%02x' % tuple((a + b // 257) // 2 for a, b in zip(EGA[ghost], back))
         else:
             fill = '#%02x%02x%02x' % EGA[c]
         self.canvas.itemconfig(self.rects[x][y], fill=fill)
@@ -189,7 +273,9 @@ class Painter(tk.Toplevel):
         img = to_surface(self.cells)
         s = pygame.Surface((4 + 40 * 3 + 8 + 40 * 2, 4 + 40 * 3))
         s.fill((80, 80, 80))
-        for n, (bg, scale) in enumerate((((0, 168, 0), 3), ((0, 0, 0), 2))):
+        back = dict(BACKGROUNDS).get(self.background.get()) or '#00a800'
+        shown = tuple(int(back[i:i + 2], 16) for i in (1, 3, 5))
+        for n, (bg, scale) in enumerate(((shown, 3), ((0, 0, 0), 2))):
             x = 2 if n == 0 else 4 + 40 * 3 + 6
             tile = pygame.Surface((40, 40))
             tile.fill(bg)
@@ -200,7 +286,7 @@ class Painter(tk.Toplevel):
 
     # ── editing ─────────────────────────────────────────────────────────────
     def _cell(self, e):
-        x, y = e.x // ZOOM, e.y // ZOOM
+        x, y = e.x // self.zoom, e.y // self.zoom
         return (x, y) if 0 <= x < N and 0 <= y < N else None
 
     def _remember(self):
@@ -215,9 +301,18 @@ class Painter(tk.Toplevel):
         self._preview()
 
     def _set(self, x, y, c):
-        if self.cells[x][y] != c:
-            self.cells[x][y] = c
-            self._paint_rect(x, y)
+        for px in ({x, N - 1 - x} if self.mirror.get() else {x}):          # Mirror: the other side too
+            if self.cells[px][y] != c:
+                self.cells[px][y] = c
+                self._paint_rect(px, y)
+
+    def _ink(self, tool, x, y, colour):
+        """The colour a freehand tool puts on pixel (x, y)."""
+        if tool == 'eraser':
+            return CLEAR
+        if tool == 'dither':
+            return self.left if (x + y) % 2 == 0 else self.right
+        return colour
 
     def _press(self, e, which, alt=False):
         p = self._cell(e)
@@ -231,10 +326,17 @@ class Painter(tk.Toplevel):
             return
         self._remember()
         self.start = p
-        if tool == 'pencil':
-            self._set(*p, colour)
+        if tool in ('pencil', 'eraser', 'dither'):
+            self._set(*p, self._ink(tool, *p, colour))
         elif tool == 'fill':
             self._flood(*p, colour)
+            self._commit()
+        elif tool == 'swap':
+            old = self.cells[p[0]][p[1]]
+            for x in range(N):
+                for y in range(N):
+                    if self.cells[x][y] == old:
+                        self._set(x, y, colour)
             self._commit()
 
     def _drag(self, e, which):
@@ -242,22 +344,26 @@ class Painter(tk.Toplevel):
         if p is None or self.start is None:
             return
         tool, colour = self.tool.get(), getattr(self, which)
-        if tool == 'pencil':
+        if tool in ('pencil', 'eraser', 'dither'):
             for q in _line(self.start, p):
-                self._set(*q, colour)
+                self._set(*q, self._ink(tool, *q, colour))
             self.start = p
-        elif tool in ('line', 'rect'):
+        elif tool in ('line', 'rect', 'oval'):
             self.cells = [col[:] for col in self.before]
-            shape = _line(self.start, p) if tool == 'line' else _rect(self.start, p)
+            filled = self.filled.get()
+            shape = (_line(self.start, p) if tool == 'line' else _rect(self.start, p, filled) if tool == 'rect'
+                     else _oval(self.start, p, filled))
+            mirror = self.mirror.get()
             for q in shape:
-                self.cells[q[0]][q[1]] = colour
+                for x in ({q[0], N - 1 - q[0]} if mirror else {q[0]}):
+                    self.cells[x][q[1]] = colour
             self.redraw()
 
     def _release(self, e, which):
         if self.start is None:
             return
         tool = self.tool.get()
-        if tool in ('line', 'rect'):
+        if tool in ('line', 'rect', 'oval'):
             self._drag(e, which)
         self.start = None
         self._commit()
@@ -284,6 +390,16 @@ class Painter(tk.Toplevel):
     def flip(self, horizontal):
         self._remember()
         self.cells = self.cells[::-1] if horizontal else [col[::-1] for col in self.cells]
+        self._commit()
+        self.redraw()
+
+    def turn(self, clockwise):
+        """A quarter turn (the picture is square)."""
+        self._remember()
+        if clockwise:
+            self.cells = [[self.cells[y][N - 1 - x] for y in range(N)] for x in range(N)]
+        else:
+            self.cells = [[self.cells[N - 1 - y][x] for y in range(N)] for x in range(N)]
         self._commit()
         self.redraw()
 
@@ -350,6 +466,24 @@ def _line(a, b):
     return [(x0 + round((x1 - x0) * k / n), y0 + round((y1 - y0) * k / n)) for k in range(n + 1)] if n else [a]
 
 
-def _rect(a, b):
+def _rect(a, b, filled=True):
     (x0, y0), (x1, y1) = a, b
-    return [(x, y) for x in range(min(x0, x1), max(x0, x1) + 1) for y in range(min(y0, y1), max(y0, y1) + 1)]
+    lo_x, hi_x, lo_y, hi_y = min(x0, x1), max(x0, x1), min(y0, y1), max(y0, y1)
+    return [(x, y) for x in range(lo_x, hi_x + 1) for y in range(lo_y, hi_y + 1)
+            if filled or x in (lo_x, hi_x) or y in (lo_y, hi_y)]
+
+
+def _oval(a, b, filled=True):
+    """The pixels of the oval that fills the box from a to b: all of them, or just its outline."""
+    (x0, y0), (x1, y1) = a, b
+    lo_x, hi_x, lo_y, hi_y = min(x0, x1), max(x0, x1), min(y0, y1), max(y0, y1)
+    cx, cy = (lo_x + hi_x) / 2, (lo_y + hi_y) / 2
+    rx, ry = (hi_x - lo_x) / 2 + 0.5, (hi_y - lo_y) / 2 + 0.5
+
+    def inside(x, y):
+        return ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 <= 1
+    solid = {(x, y) for x in range(lo_x, hi_x + 1) for y in range(lo_y, hi_y + 1) if inside(x, y)}
+    if filled:
+        return sorted(solid)
+    return sorted(q for q in solid if any((q[0] + dx, q[1] + dy) not in solid
+                                          for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))))

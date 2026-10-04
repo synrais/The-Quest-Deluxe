@@ -54,6 +54,27 @@ class ItemsTab(TableTab):
              'numbers; its pictures are 40 x 40 in the 16 EGA colours (imported pictures are converted). '
              'Ammunition comes in stacks of 1 to 20: each size is its own item (New ammo kind makes all 20).')
 
+    GROUPS = [
+        ('Basics', True, 'what it is and what it costs', ['type', 'bag_name', 'price', 'view3d', 'quest']),
+        ('Numbers', True, 'what it adds to the hero when worn or wielded',
+         ['power', 'kind', 'atk', 'def', 'warm', 'marm', 'req_str', 'req_int']),
+        ('Stat bonuses', False, 'added to the hero while worn', ['str', 'int', 'dex', 'acc', 'power_bonus']),
+        ('Launchers and ammunition', True, 'what a bow fires, and how it looks in FPS mode',
+         ['fires', 'missile_anim', 'no_ammo_bonus', 'ammo', 'count', 'power_x2', 'fps_attack', 'fps_turn']),
+        ('Potions and keys', True, '', ['potion', 'key']),
+        ('Light', False, 'lights up a dark screen while he carries it', ['light']),
+        ('Powers while worn', False, 'healing, sight, thorns, walking on water ...',
+         ['regen', 'mana_regen', 'thorns', 'lifesteal', 'sight', 'poison_immune', 'see_invisible', 'water_walk',
+          'makes_small', 'makes_giant']),
+        ('Does something on certain ground', False, 'while worn: rage in blood, healing on a floor ...',
+         ['stand_on', 'stand_id', 'stand_effect', 'stand_amount']),
+        ('Elements', False, 'what a hit adds: fire, ice, poison ...',
+         ['element', 'element_chance', 'element_power', 'element_turns']),
+        ('Using or eating it', False, 'from the bag, or when picked up',
+         ['use.life', 'use.mana', 'use.cure_poison', 'use.message', 'pickup.grow', 'pickup.shrink', 'pickup.life',
+          'pickup.mana', 'pickup.foresight', 'pickup.poison', 'pickup.message']),
+    ]
+
     def __init__(self, master, app):
         super().__init__(master, app)
         from tkinter import ttk
@@ -131,6 +152,8 @@ class ItemsTab(TableTab):
             Field('stand_effect', 'It does', 'choice', STAND_EFFECTS, when=has('stand_on')),
             Field('stand_amount', 'Amount (or turns)', 'int', when=has('stand_on'),
                   hint='life or mana a turn; for berserk, how many turns it lasts'),
+            Field('light', 'Lights up (squares)', 'int',
+                  hint='on a dark screen, he sees this many squares round him while he carries it (worn or in the bag)'),
             Field('makes_small', 'Makes him small', 'bool', when=is_(*WORN), hint='while worn (a ring of shrinking)'),
             Field('makes_giant', 'Makes him a giant', 'bool', when=is_(*WORN), hint='while worn (a belt of giants)'),
             Field('use.life', 'Used: restores life', 'int', when=lambda r: r.get('type') in EATEN,

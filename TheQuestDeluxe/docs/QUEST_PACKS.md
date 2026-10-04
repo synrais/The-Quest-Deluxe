@@ -82,6 +82,7 @@ with two conventions the engine and saves rely on:
 | `sight` | Worn items: squares further the eye sees in FPS mode. |
 | `poison_immune`, `see_invisible`, `water_walk` | Worn items: poison cannot touch him; invisible creatures show (like foresight); walls with `freezes_to` (water) do not stop him. |
 | `stand_on`, `stand_id`, `stand_effect`, `stand_amount` | Worn items: while worn, each turn the hero stands on `stand_on` (`blood`: any pile of blood, footprints or remains; `deco`, `floor`: the decoration or floor numbered `stand_id`; `item`: an item lying there, `stand_id` or any if 0), the item does `stand_effect` (`berserk`: the Berserker potion's doubled power and armour for `stand_amount` turns (at least 2); `heal`, `hurt`, `mana`, `drain_mana`: that much a turn; `poison`, `cure_poison`). |
+| `light` | Any item: on a dark screen (`DARK_SCREENS`) the hero sees this many squares round him while he wears or carries it (the best of what he has; none: only his own square). |
 | `makes_small`, `makes_giant` | Worn items: while worn the hero is small, or a giant (both: his own size). |
 | `use` | Any item: `{"life": 20, "mana": 5, "cure_poison": true, "message": "..."}`. In the inventory (i), Enter on it in the backpack uses it up (food, a bandage, a mana root): `life` and `mana` are an amount, or `"half"` or `"full"`; the other effects of `pickup` work too (`grow`, `shrink`, `foresight`, `berserk`, `poison`). It cannot be worn. |
 | `pickup` | Any item: `{"grow": 40, "life": 10, "message": "..."}`. Picked up with Enter it is used at once and gone (a mushroom): `grow` or `shrink` (turns), `life`, `mana`, `foresight` (turns), `poison` (true), `message`. |
@@ -124,6 +125,9 @@ Traits (all optional):
 | `becomes_on_death` | A creature number: it doesn't die, it turns into that creature (at full life, where it stood). The hero still gets the first form's experience and loot. |
 | `bursts_into` | `{"12": 3, "13": 1}`: when it dies, that many of each creature spring up on free squares near its body. |
 | `transforms_into`, `transforms_below`, `transforms_damage` | When it is hurt enough it becomes the creature `transforms_into`, at that creature's full life: `transforms_below` is the percent of its life at or under which, `transforms_damage` the damage taken in all (either). A second form can transform again. |
+| `steal_gold`, `drain_mana` | `{"chance": 30, "min": 1, "max": 4}`: when its blow or shot hurts the hero, a `chance` percent (1-100) that it takes `min` to `max` gold (never more than he has; it carries it and drops it where it dies) or mana. The Gold and thieves section of the Creatures tab. |
+| `hit_gold`, `hit_item`, `hit_item_chance` | Each time the hero hurts it in melee: `hit_gold` (same form as above) lets that much gold fall on its square; `hit_item` (an item number) falls with `hit_item_chance` percent (every time if left out). |
+| `death_gold` | Same form: a `chance` percent that it leaves `min` to `max` gold when it dies, as well as its `loot`. |
 | `hit_drops` | Rules like `loot` (`[lo, hi, "gold", n, base]` or `[lo, hi, "item", id]`), rolled each time it is hurt (not by burning or poison): it drops gold or an item on its square. |
 | `rise_limit` | With `regenerates_from_blood`: how many times it can rise (1, 2 ...). Left out: for ever, while there is blood. |
 | `chase_range` | A hostile creature only comes for the hero when he is within this many squares; further away it stays where it is. Left out: as far as it sees. |

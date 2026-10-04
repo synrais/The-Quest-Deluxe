@@ -1117,6 +1117,17 @@ class Game:
         else:
             p.more.pop('frozen', None)
 
+    def dark_screen(self) -> bool:
+        """Is the hero on a dark screen (the level's DARK_SCREENS, set with the map tool Dark)?"""
+        p = self.player
+        screens = self.events.meta(self.world.level, 'DARK_SCREENS', ()) or ()
+        return ((p.X - 1) // 10 + 1, (p.Y - 1) // 10 + 1) in {tuple(s) for s in screens}
+
+    def light_radius(self) -> int:
+        """How many squares round him the hero sees on a dark screen: the best `light` of anything he wears or
+        carries in the bag (0: only his own square)."""
+        return max([int(self.pack.item(v).get('light') or 0) for v in self.player.bag.values() if v] or [0])
+
     STAND_EFFECTS = ('berserk', 'heal', 'hurt', 'mana', 'drain_mana', 'poison', 'cure_poison')
 
     def blood_deco(self, deco: int) -> bool:

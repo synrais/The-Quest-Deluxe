@@ -1127,6 +1127,66 @@ def standing_effects():
     print('standing: blood wakes the ring\'s rage, lava hurts, a spring heals, nothing else changes: ok')
 
 
+def thieves_and_light():
+    """Creatures that steal gold or mana, drop gold when hit or die; dark screens and the light an item gives."""
+    def change(folder, json):
+        path = os.path.join(folder, 'creatures.json')
+        data = json.load(open(path))
+        for r in data['creatures']:
+            if r['id'] == 2:
+                r.update({'steal_gold': {'chance': 100, 'min': 2, 'max': 2}, 'hit_gold': {'chance': 100, 'min': 3, 'max': 3},
+                          'death_gold': {'chance': 100, 'min': 4, 'max': 4}, 'drain_mana': {'chance': 100, 'min': 5, 'max': 5}})
+            if r['id'] == 1:
+                r.update({'steal_gold': {'chance': 0, 'min': 9, 'max': 9}})          # a chance of 0 never
+        json.dump(data, open(path, 'w'))
+        path = os.path.join(folder, 'items.json')
+        data = json.load(open(path))
+        lamp = dict(next(r for r in data['items'] if r.get('type') == 'amulet'))
+        lamp.update({'id': 2800, 'name': 'Lamp', 'light': 3})
+        data['items'].append(lamp)
+        json.dump(data, open(path, 'w'))
+    g = with_changes(change)
+    p, h, w, c = g.player, g.player.hero, g.world, g.combat
+    orc = next(e for e in w.enemies if e.type == 2) if any(e.type == 2 for e in w.enemies) else None
+    if orc is None:
+        from engine.state import Enemy
+        orc = Enemy(type=2, x=p.X + 1, y=p.Y, life=5, mlife=5)
+        w.enemies.append(orc)
+    p.inv.coins, h.mana, h.mmana = 50, 20, 20
+    c.hit_effects(orc, 'orc')
+    assert p.inv.coins == 48 and h.mana == 15 and orc.__dict__['_purse'] == 2
+    p.inv.coins = 1
+    c.hit_effects(orc, 'orc')
+    assert p.inv.coins == 0 and orc.__dict__['_purse'] == 3                # it can't take what he hasn't got
+    q = w.sq(orc.x, orc.y)
+    q.gold = 0
+    c.hit_drops(orc)
+    assert q.gold == 3                                                      # gold falls when it is hit
+    q.gold = 0
+    orc.life = 0
+    c.check_dead()
+    assert w.sq(orc.x, orc.y).gold >= 4 + 3, w.sq(orc.x, orc.y).gold       # death gold, and what it stole
+    # dark screens and light
+    sx, sy = (p.X - 1) // 10 + 1, (p.Y - 1) // 10 + 1
+    real = g.events.meta
+    g.events.meta = lambda level, name, default=None: [(sx, sy)] if name == 'DARK_SCREENS' else real(level, name, default)
+    assert g.dark_screen() and g.light_radius() == 0
+    p.bag[(12, 10)] = 2800                                                  # a lamp in the bag
+    assert g.light_radius() == 3
+    surf = pygame.Surface((400, 400))
+    g.renderer.draw_map(g, surf)
+    ox, oy = w.origin
+    hx, hy = (p.X - ox) * 40 + 20, (p.Y - oy) * 40 + 20
+    far = (min(max((p.X - ox + 6) % 10, 0), 9) * 40 + 20, min(max((p.Y - oy + 6) % 10, 0), 9) * 40 + 20)
+    assert tuple(surf.get_at(far))[:3] == (0, 0, 0)                         # far away: black
+    near_lit = sum(1 for dx in range(-2, 3) for dy in range(-2, 3)
+                   if tuple(surf.get_at((max(0, min(399, hx + dx * 40)), max(0, min(399, hy + dy * 40)))))[:3] != (0, 0, 0))
+    assert near_lit >= 3                                                    # round him: it shows
+    g.events.meta = real
+    assert not g.dark_screen()
+    print('thieves and light: steal gold and mana, gold falls when hit and at death, dark screens show only his light: ok')
+
+
 def hands_react():
     from engine.game import Game
     from engine.state import SLOT_WEAPON, SLOT_OFFHAND
@@ -1213,6 +1273,7 @@ if __name__ == '__main__':
     loot_stays_only_when_cleared()
     fps_transition()
     standing_effects()
+    thieves_and_light()
     hands_react()
     usable_items()
     behaviour()

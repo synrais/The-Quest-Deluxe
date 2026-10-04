@@ -168,7 +168,7 @@ class Combat:
             gained = before - h.exper
             self.g.report(f'The {self.g.monster_name(e.type)} dies.' + (f' +{gained} experience.' if gained > 0 else ''),
                           15)
-        q.gold += gold
+        q.gold += gold + int(e.__dict__.pop('_purse', 0))           # (and what it stole from the hero)
         witness = 0
         for o in w.enemies:
             if -100 < o.type < 0:
@@ -269,10 +269,45 @@ class Combat:
             if (below is not None and e.life * 100 <= e.mlife * below) or (taken and e.mlife - e.life >= taken):
                 self.transform(e, int(into))
 
+    def chance_amount(self, rule) -> int:
+        """A creature's {"chance": %, "min": n, "max": n} rule (creatures.json steal_gold, drain_mana, hit_gold,
+        death_gold): the amount it comes to this time, 0 when the chance fails or there is no rule. Draws nothing
+        from the random stream when there is no rule."""
+        if not rule or not rule.get('chance'):
+            return 0
+        if random(100) + 1 > int(rule['chance']):
+            return 0
+        lo = int(rule.get('min') or 1)
+        hi = max(lo, int(rule.get('max') or lo))
+        return random(hi - lo + 1) + lo
+
+    def hit_effects(self, e: Enemy, name: str):
+        """The hero was hurt by e's blow or shot: it may steal some of his gold (and carries it until it dies, then
+        it falls where it dies), or drain his mana."""
+        pk, h, inv = self.g.pack, self.p.hero, self.p.inv
+        got = min(inv.coins, self.chance_amount(pk.trait(e.type, 'steal_gold')))
+        if got > 0:
+            inv.coins -= got
+            e.__dict__['_purse'] = e.__dict__.get('_purse', 0) + got
+            self.g.report(f'The {name} steals {got} gold from you!', 14, (self.p.X, self.p.Y), f'-{got} gold')
+        got = min(h.mana, self.chance_amount(pk.trait(e.type, 'drain_mana')))
+        if got > 0:
+            h.mana -= got
+            self.g.report(f'The {name} drains {got} mana from you.', 13, (self.p.X, self.p.Y), f'-{got} mana')
+
     def hit_drops(self, e: Enemy):
         """A creature with `hit_drops` lets something fall each time it is hurt: the same rules as `loot` (a roll
         of 1-100, the first rule whose range holds it applies)."""
-        rules_ = self.g.pack.trait(e.type, 'hit_drops')
+        pk = self.g.pack
+        got = self.chance_amount(pk.trait(e.type, 'hit_gold'))
+        if got:
+            self.w.sq(e.x, e.y).gold += got
+            self.g.report(f'The {self.g.monster_name(e.type)} drops {got} gold.', 14, (e.x, e.y), f'+{got}')
+        item = pk.trait(e.type, 'hit_item')
+        if item and self.chance_amount({'chance': pk.trait(e.type, 'hit_item_chance') or 100}):
+            self.g.put_item(e.x, e.y, item)
+            self.g.report(f'The {self.g.monster_name(e.type)} drops {self.g.a_name(item)}.', 14)
+        rules_ = pk.trait(e.type, 'hit_drops')
         if not rules_:
             return
         roll = random(100) + 1
@@ -304,6 +339,7 @@ class Combat:
                 elif kind == 'item':
                     self.g.put_item(e.x, e.y, args[0])
                 break
+        gold += self.chance_amount(self.g.pack.trait(e.type, 'death_gold'))
         drop = reward.get('drop_on_level', {}).get(str(self.w.level))
         if drop:
             self.g.put_item(e.x, e.y, drop)
@@ -636,6 +672,7 @@ class Combat:
             if thorns and e.life > 0:
                 self.hurt(thorns, e, 3, by_hero=True, how='thorns')   # what he wears hurts whoever strikes him
             self.bleed_hero()
+            self.hit_effects(e, name)
             n = g.pack.trait(e.type, 'poison_melee')
             if n and random(n) == 1 and not h.poisoned:
                 self.poison_hero()
@@ -654,6 +691,7 @@ class Combat:
             self.g.hand_react('hit')
             self.hurt(e.power, None, 2, e)
             self.bleed_hero()
+            self.hit_effects(e, self.g.monster_name(e.type))
             n = self.g.pack.trait(e.type, 'poison_ranged')
             if n and random(n) == 1 and not h.poisoned:
                 self.poison_hero()

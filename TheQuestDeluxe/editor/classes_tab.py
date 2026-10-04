@@ -74,6 +74,13 @@ def drawn_hero(row) -> pygame.Surface:
 
 class ClassesTab(TableTab):
     TABLE = 'classes'
+    GROUPS = [
+        ('Starting numbers', True, 'what a new hero of this class starts with', ['life', 'mana', 'str', 'int', 'dex', 'acc']),
+        ('Growing and skills', True, 'how he gains levels and what he can do',
+         ['growth', 'skill', 'no_skill', 'no_fault', 'reclass']),
+        ('Kit and spells', False, 'what he carries and knows at the start', ['bag', 'spells']),
+        ('How he looks', False, 'colour and equipment shown', ['look.colour', 'look.shield_and_sword']),
+    ]
     PICTURES = [('Painted hero', 'heroes', False)]
     INTRO = ('The classes a new hero can choose. Character creation lists them in this order, then the '
              "questionnaire (which picks between Quest I's four). The hero is drawn by the original's guy2() "
