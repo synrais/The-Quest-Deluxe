@@ -238,9 +238,8 @@ class ItemsTab(TableTab):
             Field('key', 'Opens', 'choice', key_choices(self.app.project.quest, {
                 'yellow': 'gold-key doors', 'red': 'red-key doors', 'blue': 'blue-key doors'}), when=is_('key'),
                   hint='yellow, red and blue are the original\'s; more colours are defined on the Quest tab'),
-            Field('worn_colour', 'Colour on the hero', 'choice', COLOURS, when=is_(*WORN),
-                  hint='armour or a cloak gives his cloak this colour; for other things, their colour on him '
-                       '(empty: the commonest colour of its bag picture)'),
+            Field('worn_colour', 'Colour on the hero', 'choice', COLOURS, when=is_('amulet'),
+                  hint='the clasp\'s colour (empty: the commonest colour of its bag picture); other items show their pictures as they are'),
             Field('cape', 'Is a cape', 'choice', [(None, '(by its name)'), (True, 'a cape: worn behind him'),
                                                    (False, 'armour: worn on his body')], when=is_('armour'),
                   hint='a cape shows its inventory picture behind the hero; armour goes on his body'),
