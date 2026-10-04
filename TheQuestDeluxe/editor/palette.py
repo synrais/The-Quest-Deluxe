@@ -20,11 +20,12 @@ KINDS = [('Items on the map', 'items', 'items'), ('Items in the bag', 'bag', 'it
 
 
 class PicturePalette(ttk.LabelFrame):
-    def __init__(self, master, project, on_drop, on_start):
+    def __init__(self, master, project, on_drop, on_start, folder=None):
         """on_drop(surface, root_x, root_y): a picture was let go there; on_start(surface): double-clicked."""
         super().__init__(master, text='Pictures to start from', padding=4)
         self.project, self.on_drop, self.on_start = project, on_drop, on_start
-        self.kind = tk.StringVar(value=KINDS[0][0])
+        # it opens on the kind of picture being painted: creatures on creatures, floors on floors ...
+        self.kind = tk.StringVar(value=next((k[0] for k in KINDS if k[1] == folder), KINDS[0][0]))
         self.find = tk.StringVar()
         self._shown: list = []          # [(name, surface)] in the grid
         self._photos: list = []

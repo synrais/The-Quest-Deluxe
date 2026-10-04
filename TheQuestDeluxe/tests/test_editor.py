@@ -225,6 +225,7 @@ pd.turn(False)
 assert pd.cells == before, 'a turn and a turn back'
 # the palette: every kind of picture; dropping one stamps it, double-clicking starts from it; select, copy, paste
 assert pd.palette is not None
+assert pd.palette.kind.get() == 'Heroes', 'a hero opens on the heroes'
 for kind in ('Items on the map', 'Items in the bag', 'Creatures', 'Heroes', 'Floors', 'Walls and doors',
              'Decorations', 'Spell icons'):
     pd.palette.kind.set(kind)
@@ -352,6 +353,7 @@ with mock.patch('tkinter.messagebox.askyesno', return_value=False):
     tt.new()
 new_floor = tt.row['id']
 pt = tt.paint('floors', False, 'Picture')
+assert pt.palette.kind.get() == 'Floors', 'a floor opens on the floors'
 pump()
 assert pt.opaque                                      # floors have no see-through pixels
 pt.tool.set('rect')

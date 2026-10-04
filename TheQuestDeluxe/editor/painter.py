@@ -68,12 +68,12 @@ def to_surface(cells) -> pygame.Surface:
 
 
 class Painter(tk.Toplevel):
-    def __init__(self, master, title: str, surface, on_save, opaque: bool = False, templates=None, project=None):
+    def __init__(self, master, title: str, surface, on_save, opaque: bool = False, templates=None, project=None, folder=None):
         """opaque: every pixel has a colour (floors, bag cells); otherwise transparent is a colour too.
         templates: [(name, function returning a picture)] the painter can start from."""
         super().__init__(master)
         self.templates = list(templates or [])
-        self.project = project                  # its pictures fill the palette
+        self.project, self.folder = project, folder      # its pictures fill the palette, opening on this folder's kind
         self.selection = None                   # (x0, y0, x1, y1) of the Select tool's box
         self.last_cell = None
         self.title(title)
@@ -237,7 +237,7 @@ class Painter(tk.Toplevel):
         self.palette = None
         if self.project is not None:
             from .palette import PicturePalette
-            self.palette = PicturePalette(right, self.project, self.drop, self.start_from)
+            self.palette = PicturePalette(right, self.project, self.drop, self.start_from, self.folder)
             self.palette.pack(fill='x', pady=6)
         ttk.Button(right, text='How to paint...', command=self.help).pack(anchor='w')
 
