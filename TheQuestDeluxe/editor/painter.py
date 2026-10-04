@@ -1,8 +1,10 @@
 """The picture painter: 40 x 40 pictures in the game's 16 EGA colours (and transparent, for pictures
 drawn over the floor).
 
-Pencil: paint pixels (drag to draw)
-Eraser: make pixels see-through
+Pencil: left button paints, right button
+   undoes a pixel (puts back what it was)
+Eraser: right button deletes a pixel,
+   left button undoes it
 Dither: paint a chequer of both colours
 Line: drag from one end to the other
 Rectangle, Oval: drag a shape (Filled box: solid or outline)
@@ -16,8 +18,9 @@ Pictures from the palette: drag one onto
    the picture to stamp it, double-click to
    start from it.
 
-Left button paints the left colour,
-right button the right colour.
+Left button paints the left colour (Line,
+Rectangle, Oval, Fill ...: the right button
+paints the right colour).
 Mirror paints both halves at once.
 Ctrl+Z / Ctrl+Y undo and redo.
 """
@@ -83,7 +86,7 @@ class Painter(tk.Toplevel):
         self.tool = tk.StringVar(value='pencil')
         self.zoom = 12
         self.background = tk.StringVar(value=BACKGROUNDS[0][0])     # behind the see-through pixels
-        self.grid_mode = tk.StringVar(value=GRIDS[1])
+        self.grid_mode = tk.StringVar(value=GRIDS[0])
         self.filled = tk.BooleanVar(value=True)
         self.mirror = tk.BooleanVar(value=False)
         self.ghost = tk.BooleanVar(value=False)                     # the picture as it was, faintly, where it is clear
@@ -95,7 +98,8 @@ class Painter(tk.Toplevel):
         self._build()
         from .tips import apply as apply_tips
         apply_tips(self)
-        tip(self.canvas, 'Left button paints the left colour, right button the right colour. '
+        tip(self.canvas, 'Pencil: the left button paints, the right button undoes the pixel. Eraser: the right button '
+                         'deletes, the left undoes. Other tools: left and right paint the two colours. '
                          'Alt+click picks the colour under the pointer. Ctrl+Z / Ctrl+Y undo and redo.')
         self.redraw()
         self.bind('<Control-z>', lambda e: self.undo())
@@ -348,13 +352,25 @@ class Painter(tk.Toplevel):
                 self.cells[px][y] = c
                 self._paint_rect(px, y)
 
-    def _ink(self, tool, x, y, colour):
-        """The colour a freehand tool puts on pixel (x, y)."""
+    def _ink(self, tool, x, y, colour, which='left'):
+        """The colour a freehand tool puts on pixel (x, y). The pencil: the left button paints, the right button
+        undoes the pixel (puts back what the picture had when this window opened). The eraser: the right button
+        deletes the pixel, the left button undoes it."""
         if tool == 'eraser':
-            return CLEAR
+            return CLEAR if which == 'right' else self.original[x][y]
+        if tool == 'pencil' and which == 'right':
+            return self.original[x][y]
         if tool == 'dither':
             return self.left if (x + y) % 2 == 0 else self.right
         return colour
+
+    def _pen(self, tool, x, y, colour, which):
+        """A freehand tool on pixel (x, y), and on the mirrored one (with its own undo)."""
+        for px in ({x, N - 1 - x} if self.mirror.get() else {x}):
+            c = self._ink(tool, px, y, colour, which)
+            if self.cells[px][y] != c:
+                self.cells[px][y] = c
+                self._paint_rect(px, y)
 
     def _press(self, e, which, alt=False):
         p = self._cell(e)
@@ -373,7 +389,7 @@ class Painter(tk.Toplevel):
         self._remember()
         self.start = p
         if tool in ('pencil', 'eraser', 'dither'):
-            self._set(*p, self._ink(tool, *p, colour))
+            self._pen(tool, p[0], p[1], colour, which)
         elif tool == 'fill':
             self._flood(*p, colour)
             self._commit()
@@ -396,7 +412,7 @@ class Painter(tk.Toplevel):
             return
         if tool in ('pencil', 'eraser', 'dither'):
             for q in _line(self.start, p):
-                self._set(*q, self._ink(tool, *q, colour))
+                self._pen(tool, q[0], q[1], colour, which)
             self.start = p
         elif tool in ('line', 'rect', 'oval'):
             self.cells = [col[:] for col in self.before]

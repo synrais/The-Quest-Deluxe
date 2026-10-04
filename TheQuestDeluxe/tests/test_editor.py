@@ -193,9 +193,20 @@ pd._release(At(3, 5), 'left')
 assert pd.cells[3][5] == 4 and pd.cells[36][5] == 4, 'Mirror paints both sides'
 pd.mirror.set(False)
 pd.tool.set('eraser')
+pd._press(At(3, 5), 'right')
+pd._release(At(3, 5), 'right')
+assert pd.cells[3][5] == -1 and pd.cells[36][5] == 4, 'the eraser deletes with the right button'
 pd._press(At(3, 5), 'left')
 pd._release(At(3, 5), 'left')
-assert pd.cells[3][5] == -1 and pd.cells[36][5] == 4
+assert pd.cells[3][5] == pd.original[3][5], 'and undoes with the left'
+pd.cells[3][5] = 7
+pd.tool.set('pencil')
+pd._press(At(3, 5), 'right')
+pd._release(At(3, 5), 'right')
+assert pd.cells[3][5] == pd.original[3][5], 'the pencil undoes a pixel with the right button'
+pd.tool.set('eraser')
+pd._press(At(3, 5), 'right')
+pd._release(At(3, 5), 'right')
 pd.tool.set('oval')
 pd.filled.set(False)
 pd._press(At(10, 10), 'left')

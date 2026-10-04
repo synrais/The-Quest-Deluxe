@@ -239,7 +239,9 @@ BUTTONS = {
     'Import...': 'Use a picture file (png, gif, bmp). It is scaled to 40 x 40 and its colours are made EGA ones.',
     'New ammo kind...': 'Makes a whole new kind of ammunition: stacks of 1 to 20, each its own item.',
     # the painter
-    'Pencil': 'Paint pixels; drag to draw.', 'Line': 'Drag from one end of a line to the other.',
+    'Pencil': 'Left button paints a pixel in the left colour; drag to draw. Right button undoes a pixel: it puts back '
+              'what the picture had when this window opened.', 'Eraser': 'Right button deletes pixels (makes them see-through); '
+              'left button undoes them (puts back what the picture had).', 'Line': 'Drag from one end of a line to the other.',
     'Clear': 'Empty the whole picture (Undo brings it back).',
     'Left': 'Move the picture one pixel left (or: the left button colour).',
     'Right': 'Move the picture one pixel right (or: the right button colour).',
