@@ -1304,11 +1304,33 @@ def hero_shows_gear():
     g.pack.items[p.bag[SLOT_HELMET]]['show_on_hero'] = False
     assert hero_tile({'show_gear': 'on'}) == plain, 'an item with show_on_hero false is left off'
     g.pack.items[p.bag[SLOT_HELMET]].pop('show_on_hero')
+    # armour gives his cloak its colour; every kind of item has a drawing
+    from engine import worn
+    for item, row in g.pack.items.items():
+        if row.get('type') in ('weapon', 'launcher', 'shield', 'helmet', 'amulet'):
+            slot = {'launcher': 'weapon'}.get(row['type'], row['type'])
+            layer = worn.overlay(slot, row, g.renderer.sprites.bag.get(item))
+            assert layer is not None and layer.get_bounding_rect().width > 0, f'{row.get("name")} has a drawing'
+    assert worn.weapon_style({'name': 'Short Sword'}) == 'sword' and worn.weapon_style({'name': 'Club'}) == 'club'
+    assert worn.weapon_style({'name': 'Pike'}) == 'spear' and worn.weapon_style({'type': 'launcher', 'name': 'Sling'}) == 'sling'
+    assert worn.weapon_style({'name': 'Morning Star'}) == 'mace' and worn.weapon_style({'name': 'Great Staff'}) == 'staff'
+    from engine.state import SLOT_ARMOR
+    cloaks = {}
+    for item in (111, 112, 113, 114):
+        p.bag[SLOT_ARMOR] = item
+        g.renderer.draw(g, present=False)
+        cloaks[item] = g.renderer.cloak(g)
+    assert len(set(cloaks.values())) == 4, cloaks                    # a grey, a blue, a purple and a red cloak
+    g.pack.items[114]['worn_colour'] = 14
+    assert g.renderer.cloak(g) == 14, 'worn_colour is the colour he wears'
+    g.pack.items[114].pop('worn_colour')
+    p.bag[SLOT_ARMOR] = 0
+    assert g.renderer.cloak(g) is None, 'no armour: his own'
     own = pygame.Surface((40, 40), pygame.SRCALPHA)
     own.fill((255, 0, 255, 255), (0, 0, 40, 4))
     g.renderer.sprites.worn[p.bag[SLOT_HELMET]] = own                # its own Worn on the hero picture
     assert hero_tile({'show_gear': 'on'}) not in (plain, helm)
-    print('gear: the hero shows what he wears on the map (its own picture or a small copy), off as it was: ok')
+    print('gear: the hero shows what he wears on the map (drawn like the NPCs, the cloak takes the armour colour, off as it was: ok')
 
 
 def custom_packs_switching():

@@ -178,6 +178,7 @@ FIELDS = {
     'hit_item': 'An item that falls on its square each time the hero hurts it (see the chance).',
     'hit_item_chance': 'The chance, in percent, that the item falls (empty: every time).',
     'light': 'On a dark screen (the map tool Dark) the hero sees this many squares round him while he carries this, worn or in the bag. The best light he has counts; empty: none.',
+    'worn_colour': 'The colour this item has on the hero on the map: armour or a cloak gives his CLOAK this colour (a purple cape: a purple cloak); a helmet, shield, weapon or amulet is drawn in it. Empty: the commonest colour of its bag picture.',
     'show_on_hero': 'The hero shows this on the map while he wears it: its Worn on the hero picture, or a small copy of its map picture where it is worn (weapon in his hand, helmet, armour, amulet, shield). Untick for a ring or anything that should not show.',
     'roof': 'Indoors: the wall picture FPS mode draws overhead.',
     'water': 'Water: a hero wearing something that lets him walk on water crosses it. (A wall that freezes counts '

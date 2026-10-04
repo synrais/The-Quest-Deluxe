@@ -23,6 +23,9 @@ MISSILES = [(None, '(none)'), ('sthit', 'a stone (sthit)'), ('arhit', 'an arrow 
 STATS = ['req_str', 'req_int', 'atk', 'def', 'warm', 'marm', 'str', 'int', 'dex', 'acc', 'power', 'kind']
 
 
+COLOURS = [(None, '(from its bag picture)')] + [(i, f'{i} {n}') for i, n in enumerate((
+    'black', 'blue', 'green', 'cyan', 'red', 'magenta', 'brown', 'light grey', 'dark grey', 'light blue', 'light green',
+    'light cyan', 'light red', 'light magenta', 'yellow', 'white'))]
 STAND_ON = [(None, '(nothing)'), ('blood', 'a pile of blood'), ('deco', 'a decoration (number)'),
             ('floor', 'a floor (number)'), ('item', 'an item lying there')]
 STAND_EFFECTS = [(None, '(nothing)'), ('berserk', 'Berserker rage'), ('heal', 'Heals him'), ('hurt', 'Hurts him'),
@@ -56,7 +59,7 @@ class ItemsTab(TableTab):
              'Ammunition comes in stacks of 1 to 20: each size is its own item (New ammo kind makes all 20).')
 
     GROUPS = [
-        ('Basics', True, 'what it is and what it costs', ['type', 'bag_name', 'price', 'view3d', 'quest', 'show_on_hero']),
+        ('Basics', True, 'what it is and what it costs', ['type', 'bag_name', 'price', 'view3d', 'quest', 'show_on_hero', 'worn_colour']),
         ('Numbers', True, 'what it adds to the hero when worn or wielded',
          ['power', 'kind', 'atk', 'def', 'warm', 'marm', 'req_str', 'req_int']),
         ('Stat bonuses', False, 'added to the hero while worn', ['str', 'int', 'dex', 'acc', 'power_bonus']),
@@ -90,8 +93,7 @@ class ItemsTab(TableTab):
         if img is None and folder == 'worn' and row.get('type') in WORN:
             from engine import worn
             slot = {'launcher': 'weapon'}.get(row['type'], row['type'])
-            img = worn.auto_overlay(slot, self.app.project.picture('items', row['id']),
-                                    self.app.project.picture('bag', row['id']))
+            img = worn.overlay(slot, row, self.app.project.picture('bag', row['id']))
         return img
 
     def ammo_kinds(self):
@@ -148,6 +150,9 @@ class ItemsTab(TableTab):
             Field('key', 'Opens', 'choice', key_choices(self.app.project.quest, {
                 'yellow': 'gold-key doors', 'red': 'red-key doors', 'blue': 'blue-key doors'}), when=is_('key'),
                   hint='yellow, red and blue are the original\'s; more colours are defined on the Quest tab'),
+            Field('worn_colour', 'Colour on the hero', 'choice', COLOURS, when=is_(*WORN),
+                  hint='armour or a cloak gives his cloak this colour; for other things, their colour on him '
+                       '(empty: the commonest colour of its bag picture)'),
             Field('show_on_hero', 'Shown on the hero', 'bool', default=True, when=is_(*WORN),
                   hint='the hero shows it on the map while he wears it (Worn on the hero picture, or a small copy of its map '
                        'picture)'),

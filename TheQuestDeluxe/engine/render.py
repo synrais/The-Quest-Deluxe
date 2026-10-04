@@ -173,26 +173,45 @@ class Renderer:
             big = pygame.transform.scale(layer, (TILE * 3 // 2, TILE * 3 // 2))
             scr.blit(big, (hx - TILE // 4, hy - TILE // 2))
 
+    GEAR_SLOTS = (('shield', 'offhand'), ('weapon', 'weapon'), ('helmet', 'helmet'), ('amulet', 'amulet'))
+
+    def gear_on(self, game) -> bool:
+        return (getattr(game, 'settings', None) or {}).get('show_gear') == 'on' and game.player.hero.invisible <= 0
+
+    def worn_row(self, game, slot):
+        """(item number, its row) in a slot of the bag, if it is to show on the hero."""
+        item = game.player.bag.get(slot)
+        row = self.pack.item(item) if item else {}
+        return (item, row) if row and row.get('show_on_hero') is not False else (0, {})
+
+    def cloak(self, game):
+        """The colour the hero's cloak takes from the armour he wears (None: his class's own)."""
+        from . import worn
+        from .state import SLOT_ARMOR
+        item, row = self.worn_row(game, SLOT_ARMOR)
+        return worn.cloak_colour(row, self.sprites.bag.get(item)) if row else None
+
     def gear(self, game, scr, hx, hy):
-        """settings.ini show_gear = on: what the hero wears, laid over him (engine.worn)."""
+        """settings.ini show_gear = on: what the hero wears, drawn on him (engine.worn): a weapon upright in his hand, a
+        shield on his arm, a helmet, an amulet; an item with a picture of its own (sprites/worn) shows that instead."""
         from . import worn
         from .state import SLOT_WEAPON, SLOT_OFFHAND, SLOT_HELMET, SLOT_ARMOR, SLOT_AMULET
-        p = game.player
-        slots = {'weapon': SLOT_WEAPON, 'launcher': SLOT_WEAPON, 'shield': SLOT_OFFHAND, 'helmet': SLOT_HELMET,
-                 'armour': SLOT_ARMOR, 'amulet': SLOT_AMULET}
-        allowed = {'weapon': ('weapon', 'launcher'), 'shield': ('shield', 'weapon', 'launcher')}
-        for kind in worn.ORDER:
-            item = p.bag.get(slots[kind])
-            row = self.pack.item(item) if item else {}
-            if not row or row.get('show_on_hero') is False or row.get('type') not in allowed.get(kind, (kind,)):
+        slots = {'shield': SLOT_OFFHAND, 'weapon': SLOT_WEAPON, 'helmet': SLOT_HELMET, 'amulet': SLOT_AMULET}
+        for place, how in self.GEAR_SLOTS:
+            item, row = self.worn_row(game, slots[place])
+            if not row:
                 continue
             layer = self.sprites.worn.get(item)
             if layer is None:
-                if (item, kind) not in self.sprites._worn_auto:
-                    self.sprites._worn_auto[(item, kind)] = worn.auto_overlay(kind, self.sprites.get('object', item), self.sprites.bag.get(item))
-                layer = self.sprites._worn_auto[(item, kind)]
+                key = (item, how)
+                if key not in self.sprites._worn_auto:
+                    self.sprites._worn_auto[key] = worn.overlay(how, row, self.sprites.bag.get(item))
+                layer = self.sprites._worn_auto[key]
             if layer is not None:
                 scr.blit(layer, (hx, hy))
+        item, row = self.worn_row(game, SLOT_ARMOR)                       # armour with a picture of its own, over the cloak
+        if row and item in self.sprites.worn:
+            scr.blit(self.sprites.worn[item], (hx, hy))
 
     def _hero_pixels(self, scr, game, hx, hy):
         """guy2(), ported call for call (engine.anim.draw_guy2), at pixel position (hx, hy)."""
@@ -202,20 +221,28 @@ class Renderer:
             if shape is not None:
                 scr.blit(shape, (hx, hy))
                 return
+        gear = self.gear_on(game)
         painted = self.sprites.hero.get(str(p.hero.type))        # sprites/heroes/<class>.png: a painted hero
         if painted is not None:
             if p.hero.invisible > 0:
                 painted = painted.copy()
                 painted.set_alpha(70)                            # invisible: a ghost of him
             scr.blit(painted, (hx, hy))
-            if (getattr(game, 'settings', None) or {}).get('show_gear') == 'on' and p.hero.invisible <= 0:
+            if gear:
                 self.gear(game, scr, hx, hy)
             return
         self.bgi.s = scr
+        look = self.pack.classes.get(p.hero.type, {}).get('look')
+        if gear:
+            # what he wears replaces the Knight's own sword and shield, and armour gives his cloak its colour
+            look = dict(look) if look is not None else {'colour': anim.HERO_COLOURS.get(p.hero.type, 0)}
+            look['shield_and_sword'] = False
+            cloak = self.cloak(game)
+            if cloak is not None:
+                look['colour'] = cloak
         anim.draw_guy2(self.bgi, hx // TILE + 1, hy // TILE + 1, p.hero.type, p.hero.invisible, p.hero.poisoned,
-                       st.killer, st.powboost, st.Shield, st.fShield,
-                       look=self.pack.classes.get(p.hero.type, {}).get('look'))
-        if (getattr(game, 'settings', None) or {}).get('show_gear') == 'on' and p.hero.invisible <= 0:
+                       st.killer, st.powboost, st.Shield, st.fShield, look=look)
+        if gear:
             self.gear(game, scr, hx, hy)
 
     # ── the original's animations ─────────────────────────────────────────────
