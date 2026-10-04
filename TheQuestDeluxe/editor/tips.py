@@ -178,7 +178,12 @@ FIELDS = {
     'hit_item': 'An item that falls on its square each time the hero hurts it (see the chance).',
     'hit_item_chance': 'The chance, in percent, that the item falls (empty: every time).',
     'light': 'On a dark screen (the map tool Dark) the hero sees this many squares round him while he carries this, worn or in the bag. The best light he has counts; empty: none.',
+    'cape': 'Armour that is a cape (a cloak, a shawl, a robe) is worn BEHIND the hero, pixel for pixel as its inventory picture, centred as his normal cape is; other armour goes on his body. By its name: the name says cape, cloak, shawl, robe or mantle.',
     'worn_colour': 'The colour this item has on the hero on the map: armour or a cloak gives his CLOAK this colour (a purple cape: a purple cloak); a helmet, shield, weapon or amulet is drawn in it. Empty: the commonest colour of its bag picture.',
+    'worn_dx': 'Pixels to slide this item right on the hero when he wears or holds it (negative: left). Easiest: drag it in the hero preview.',
+    'worn_dy': 'Pixels to slide this item down on the hero when he wears or holds it (negative: up). Easiest: drag it in the hero preview.',
+    'worn_flip': 'Mirror this item left to right on the hero (a sword in the other hand, a cape the other way round).',
+    'worn_behind': 'Draw this item behind the hero\'s body instead of in front (a shield on his back, a cloak, a staff held behind him).',
     'show_on_hero': 'The hero shows this on the map while he wears it: its Worn on the hero picture, or a small copy of its map picture where it is worn (weapon in his hand, helmet, armour, amulet, shield). Untick for a ring or anything that should not show.',
     'roof': 'Indoors: the wall picture FPS mode draws overhead.',
     'water': 'Water: a hero wearing something that lets him walk on water crosses it. (A wall that freezes counts '

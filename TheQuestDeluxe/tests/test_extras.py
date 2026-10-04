@@ -1277,60 +1277,81 @@ def respawn_and_kits():
 
 
 def hero_shows_gear():
-    """settings.ini show_gear: what the hero wears is laid over him on the map; a game without settings is as it was."""
+    """settings.ini show_gear: the base hero (wearing nothing) with his cape behind him, what he wears on him: a cape its
+    inventory picture behind him, anything else its picture on the ground; the amulet colours the clasp."""
+    from engine import worn
     from engine.state import SLOT_WEAPON, SLOT_OFFHAND, SLOT_HELMET, SLOT_ARMOR, SLOT_AMULET
     g = with_changes(lambda folder, json: None)
     p = g.player
-    for slot, kind in ((SLOT_WEAPON, 'weapon'), (SLOT_OFFHAND, 'shield'), (SLOT_HELMET, 'helmet'), (SLOT_ARMOR, 'armour'),
-                       (SLOT_AMULET, 'amulet')):
-        p.bag[slot] = next(i for i, r in g.pack.items.items() if r.get('type') == kind)
+    slots = (SLOT_WEAPON, SLOT_OFFHAND, SLOT_HELMET, SLOT_ARMOR, SLOT_AMULET)
     ox, oy = g.world.origin
     area = ((p.X - ox) * 40, (p.Y - oy) * 40, 40, 40)
 
     def hero_tile(settings):
         g.settings = settings
+        g.renderer.sprites._worn_auto.clear()
         g.renderer.draw(g, present=False)
         return pygame.image.tobytes(g.renderer.screen.subsurface(area), 'RGB')
+
+    def wear(kinds=None):
+        for slot in slots:
+            p.bag[slot] = 0
+        for slot, kind in (kinds or {}).items():
+            p.bag[slot] = next(i for i, r in g.pack.items.items() if r.get('type') == kind)
+    wear({SLOT_WEAPON: 'weapon'})
     plain = hero_tile(None)
     assert hero_tile({'show_gear': 'off'}) == plain, 'off: as it was'
-    worn_on = hero_tile({'show_gear': 'on'})
-    assert worn_on != plain, 'on: the gear shows on him'
-    for slot in (SLOT_WEAPON, SLOT_OFFHAND, SLOT_HELMET, SLOT_ARMOR, SLOT_AMULET):
-        p.bag[slot] = 0
-    assert hero_tile({'show_gear': 'on'}) == plain, 'nothing worn: nothing shows'
+    wear()
+    bare = hero_tile({'show_gear': 'on'})
+    assert bare != plain, 'on: the base hero, not the old drawing'
+    wear({SLOT_WEAPON: 'weapon', SLOT_OFFHAND: 'shield', SLOT_HELMET: 'helmet', SLOT_AMULET: 'amulet'})
+    kitted = hero_tile({'show_gear': 'on'})
+    assert kitted != bare, 'on: the gear shows on him'
+    p.bag[SLOT_HELMET] = 0
+    p.bag[SLOT_WEAPON] = 0
+    p.bag[SLOT_OFFHAND] = 0
+    just_amulet = hero_tile({'show_gear': 'on'})
+    assert just_amulet != bare, 'an amulet alone colours the clasp'
+    p.bag[SLOT_AMULET] = 0
     p.bag[SLOT_HELMET] = next(i for i, r in g.pack.items.items() if r.get('type') == 'helmet')
     helm = hero_tile({'show_gear': 'on'})
-    assert helm != plain
+    assert helm != bare
     g.pack.items[p.bag[SLOT_HELMET]]['show_on_hero'] = False
-    assert hero_tile({'show_gear': 'on'}) == plain, 'an item with show_on_hero false is left off'
+    assert hero_tile({'show_gear': 'on'}) == bare, 'an item with show_on_hero false is left off'
     g.pack.items[p.bag[SLOT_HELMET]].pop('show_on_hero')
-    # armour gives his cloak its colour; every kind of item has a drawing
-    from engine import worn
-    for item, row in g.pack.items.items():
-        if row.get('type') in ('weapon', 'launcher', 'shield', 'helmet', 'amulet'):
-            slot = {'launcher': 'weapon'}.get(row['type'], row['type'])
-            layer = worn.overlay(slot, row, g.renderer.sprites.bag.get(item))
-            assert layer is not None and layer.get_bounding_rect().width > 0, f'{row.get("name")} has a drawing'
-    assert worn.weapon_style({'name': 'Short Sword'}) == 'sword' and worn.weapon_style({'name': 'Club'}) == 'club'
-    assert worn.weapon_style({'name': 'Pike'}) == 'spear' and worn.weapon_style({'type': 'launcher', 'name': 'Sling'}) == 'sling'
-    assert worn.weapon_style({'name': 'Morning Star'}) == 'mace' and worn.weapon_style({'name': 'Great Staff'}) == 'staff'
-    from engine.state import SLOT_ARMOR
-    cloaks = {}
-    for item in (111, 112, 113, 114):
-        p.bag[SLOT_ARMOR] = item
-        g.renderer.draw(g, present=False)
-        cloaks[item] = g.renderer.cloak(g)
-    assert len(set(cloaks.values())) == 4, cloaks                    # a grey, a blue, a purple and a red cloak
-    g.pack.items[114]['worn_colour'] = 14
-    assert g.renderer.cloak(g) == 14, 'worn_colour is the colour he wears'
-    g.pack.items[114].pop('worn_colour')
-    p.bag[SLOT_ARMOR] = 0
-    assert g.renderer.cloak(g) is None, 'no armour: his own'
     own = pygame.Surface((40, 40), pygame.SRCALPHA)
     own.fill((255, 0, 255, 255), (0, 0, 40, 4))
     g.renderer.sprites.worn[p.bag[SLOT_HELMET]] = own                # its own Worn on the hero picture
-    assert hero_tile({'show_gear': 'on'}) not in (plain, helm)
-    print('gear: the hero shows what he wears on the map (drawn like the NPCs, the cloak takes the armour colour, off as it was: ok')
+    assert hero_tile({'show_gear': 'on'}) not in (bare, helm)
+    g.renderer.sprites.worn.clear()
+    # capes: the inventory picture, kept behind him; his class's cape until he puts one on
+    p.bag[SLOT_HELMET] = 0
+    capes = {}
+    for item in (111, 112, 113, 114):
+        assert worn.is_cape(g.pack.item(item)), item
+        p.bag[SLOT_ARMOR] = item
+        capes[item] = hero_tile({'show_gear': 'on'})
+    assert len(set(capes.values())) == 4 and bare not in capes.values(), 'each cape looks as its picture'
+    keyed = worn.keyed(g.renderer.sprites.bag[113])
+    behind, front = worn.layers(5, {'armour': (113, g.pack.item(113))}, lambda i: (g.renderer.sprites.bag.get(i), None))
+    assert behind and behind[0].get_size() == (40, 40) and not front
+    assert pygame.image.tobytes(behind[0], 'RGBA') == pygame.image.tobytes(keyed, 'RGBA'), 'pixel for pixel: the bag picture'
+    p.bag[SLOT_ARMOR] = next(i for i, r in g.pack.items.items() if r.get('type') == 'armour' and not worn.is_cape(r))
+    mail = hero_tile({'show_gear': 'on'})
+    assert mail != bare and mail not in capes.values(), 'armour goes on his body, his own cape stays behind'
+    # a worn item with a picture on the ground puts that picture on him; without any, a drawing is made
+    row = {'name': 'Mystery Blade', 'type': 'weapon'}
+    ground = pygame.Surface((40, 40), pygame.SRCALPHA)
+    ground.fill((255, 0, 0, 255), (5, 5, 3, 3))
+    assert pygame.image.tobytes(worn.overlay('weapon', row, None, ground), 'RGBA') == pygame.image.tobytes(ground, 'RGBA')
+    assert worn.overlay('weapon', row, None, None).get_bounding_rect().width > 0
+    clasp = worn.overlay('amulet', {'type': 'amulet', 'worn_colour': 12}, None, ground)
+    assert clasp.get_bounding_rect() == pygame.Rect(worn.CLASP[0], worn.CLASP[1], 1, 1), 'an amulet is one pixel'
+    # the base hero, recoloured for the class
+    for colour in (5, 4, 8, 15):
+        base = worn.base_hero(colour)
+        assert (*worn.EGA[colour], 255) in {tuple(base.get_at((x, y))) for x in range(40) for y in range(40)}
+    print('gear: the base hero, capes behind him from their inventory pictures, the rest from the ground, amulets on the clasp: ok')
 
 
 def custom_packs_switching():

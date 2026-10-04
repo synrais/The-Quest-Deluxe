@@ -970,6 +970,49 @@ def draw_guy2(g, x, y, htype, invisible, poisoned, killer, powboost, shield, fsh
             g.arc(i + 20, ii + 20, 0, 360, r)
 
 
+def draw_cape(g, i, ii, c):
+    """The hero's cloak alone, as guy2() draws it in colour c, with its square's top left at (i, ii): the layer a CAPE item
+    puts behind the hero (the body and the sword and shield come on top of it)."""
+    g.setfillstyle(1, 7)
+    g.setcolor(7)
+    for col in (7, c):
+        if col == c:
+            g.setcolor(c)
+        g.line(i + 16, ii + 10, i + 24, ii + 10)
+        g.line(i + 16, ii + 10, i + 5, ii + 38)
+        g.line(i + 24, ii + 10, i + 35, ii + 38)
+        g.ellipse(i + 20, ii + 38, 0, 180, 15, 4)
+        if col == c:
+            g.setfillstyle(1, c)
+        g.floodfill(i + 20, ii + 20, col)
+    g.setcolor(c)
+    for a, b in ((7, 34), (7, 35), (6, 36), (6, 37), (33, 34), (33, 35), (34, 36), (34, 37)):
+        g.putpixel(i + a, ii + b, c)
+
+
+def draw_hero_effects(g, x, y, invisible, poisoned, killer, powboost, shield, fshield):
+    """guy2()'s last part alone: the eyes (green when poisoned, dark red with the killer switch on, light red under a
+    Berserker potion) and the Shield spell's yellow rings and Shield of Fire's red ones, over a hero drawn another way."""
+    i, ii = (x - 1) * 40, y * 40 - 39
+    eye = 15
+    if poisoned > 0 and invisible == -1:
+        eye = 2
+    elif killer == 1:
+        eye = 4
+    elif powboost > 0:
+        eye = 12
+    for a in (18, 19, 21, 22):
+        g.putpixel(i + a, ii + 7, eye)
+    if shield > 0:
+        for r in (18, 17, 16):
+            g.setcolor(14)
+            g.arc(i + 20, ii + 20, 0, 360, r)
+    if fshield > 0:
+        for r in (18, 16, 17):
+            g.setcolor(4)
+            g.arc(i + 20, ii + 20, 0, 360, r)
+
+
 def guy2(h, x, y, *state):
     """draw_guy2() as an animation step (for the verifier)."""
     draw_guy2(h.g, x, y, *state)

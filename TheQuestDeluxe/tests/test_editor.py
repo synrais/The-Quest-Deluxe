@@ -344,6 +344,58 @@ assert all(pj.constant(lv, k) is None for k in ('RESPAWN', 'RESPAWN_LIFE', 'RESP
                                               'UNDERWORLD_STRIP')), 'cleared'
 dw.destroy()
 print('map: Death and respawn... sets the respawn and the Underworld of a level: ok')
+# the hero to try an item on, and dressing him with other items
+from editor import hero_preview
+itab = app.items_tab
+app.tabs.select(itab)
+pump()
+itab.select(206)
+pump()
+previews = [w for w in itab.pics.winfo_children() if isinstance(w, hero_preview.HeroPreview)]
+assert previews, 'the Items tab shows a hero'
+box = previews[0]
+before = box.parts()
+assert before['weapon'] == 206, 'the item being made is on him'
+box.dress_with('helmet', 407)
+box.dress_with('armour', 114)
+assert box.parts()['helmet'] == 407 and box.parts()['armour'] == 114 and box.parts()['weapon'] == 206
+box.hero.set('Mage')
+box.chose_class()
+itab.select(111)                                   # a cape: it takes the armour place whatever he was dressed with
+pump()
+box = [w for w in itab.pics.winfo_children() if isinstance(w, hero_preview.HeroPreview)][0]
+assert box.parts()['armour'] == 111 and box.parts()['helmet'] == 407, 'the dressing is kept from item to item'
+maker = itab.hero_dress('worn', itab.row)
+assert maker is not None and len(maker(pygame.Surface((40, 40), pygame.SRCALPHA))) == 4, 'one hero a class'
+assert itab.hero_dress('items', itab.row) is None
+pw = itab.paint('worn', False, 'Worn on the hero')
+pump()
+assert len(pw.small) == 4 and len(pw.big) == 4, 'the painter shows the item on the four heroes, live'
+pw._preview()
+pw.dirty = False
+pw.destroy()
+# place the item on the hero: drag, flip, front / behind, reset
+itab.select(206)
+pump()
+box = [w for w in itab.pics.winfo_children() if isinstance(w, hero_preview.HeroPreview)][0]
+row = itab.row
+class Ev:
+    def __init__(s, x, y): s.x, s.y = x, y
+flat = pygame.image.tostring(box.refresh() or hero_preview.dressed(app.project, 5, box.parts()), 'RGBA')
+box.grab(Ev(10, 10)); box.drag(Ev(10 + 8, 10 + 4)); box.drop(Ev(18, 14))
+box = [w for w in itab.pics.winfo_children() if isinstance(w, hero_preview.HeroPreview)][0]
+row = itab.row
+assert (row.get('worn_dx'), row.get('worn_dy')) == (2, 1), 'dragging moves it a pixel per step'
+box.flip(); assert itab.row.get('worn_flip') is True
+box = [w for w in itab.pics.winfo_children() if isinstance(w, hero_preview.HeroPreview)][0]
+box.layer(True); assert itab.row.get('worn_behind') is True
+moved = pygame.image.tostring(hero_preview.dressed(app.project, 5, box.parts()), 'RGBA')
+assert moved != flat, 'the hero is drawn with it placed'
+box = [w for w in itab.pics.winfo_children() if isinstance(w, hero_preview.HeroPreview)][0]
+box.reset()
+assert not any(itab.row.get(k) for k in ('worn_dx', 'worn_dy', 'worn_flip', 'worn_behind')), 'reset puts it back'
+print('items: drag, flip, in front / behind and reset place the item on the hero: ok')
+print('items: a hero to try each item on, dressed with others, live in the painter too: ok')
 # Play from here: the game gets the real video driver (the editor's own SDL_VIDEODRIVER=dummy made it run with no window)
 from editor.app import game_env
 os.environ['SDL_VIDEODRIVER'] = 'dummy'

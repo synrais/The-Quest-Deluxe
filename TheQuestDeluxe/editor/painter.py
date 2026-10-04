@@ -73,12 +73,13 @@ def to_surface(cells) -> pygame.Surface:
 
 
 class Painter(tk.Toplevel):
-    def __init__(self, master, title: str, surface, on_save, opaque: bool = False, templates=None, project=None, folder=None):
+    def __init__(self, master, title: str, surface, on_save, opaque: bool = False, templates=None, project=None, folder=None, hero_dress=None):
         """opaque: every pixel has a colour (floors, bag cells); otherwise transparent is a colour too.
         templates: [(name, function returning a picture)] the painter can start from."""
         super().__init__(master)
         self.templates = list(templates or [])
         self.project, self.folder = project, folder      # its pictures fill the palette, opening on this folder's kind
+        self.hero_dress = hero_dress            # Worn on the hero: layer -> the hero in each class wearing it, live
         self.selection = None                   # (x0, y0, x1, y1) of the Select tool's box
         self.last_cell = None
         self.title(title)
@@ -222,7 +223,8 @@ class Painter(tk.Toplevel):
         mid = ttk.Frame(self, padding=6)
         mid.pack(side='left', anchor='n')
         self.mid = mid
-        strip = ttk.LabelFrame(mid, text='On the pack\'s floors (live): click one to change its floor', padding=3)
+        strip = ttk.LabelFrame(mid, text='On a hero (live)' if self.hero_dress else
+                               'On the pack\'s floors (live): click one to change its floor', padding=3)
         strip.pack(fill='x', pady=(0, 6))
         words = ('How the picture looks standing on each floor, as you paint. Click one to choose which floor it '
                  'stands on (or black). A picture with no see-through pixels is shown tiled instead, to check its '
@@ -235,7 +237,7 @@ class Painter(tk.Toplevel):
         else:
             row = ttk.Frame(strip)
             row.pack(anchor='w')
-            for i in range(SLOTS):
+            for i in range(4 if self.hero_dress else SLOTS):
                 lab = ttk.Label(row, cursor='hand2')
                 lab.grid(row=0, column=i, padx=1)
                 lab.bind('<Button-1>', lambda e, i=i: self._slot_menu(i, e))
@@ -254,7 +256,7 @@ class Painter(tk.Toplevel):
         if not self.opaque:
             self.bigs = ttk.LabelFrame(mid, text='Bigger', padding=3)
             self.bigs.pack(fill='x', pady=(6, 0))
-            for i in range(SLOTS):
+            for i in range(4 if self.hero_dress else SLOTS):
                 lab = ttk.Label(self.bigs, cursor='hand2')
                 lab.grid(row=i // 5, column=i % 5, padx=1, pady=1)
                 lab.bind('<Button-1>', lambda e, i=i: self._slot_menu(i, e))
@@ -394,6 +396,18 @@ class Painter(tk.Toplevel):
             sheet.blit(img, (86, 3))
             self._pimg = photo(sheet)
             self.previews.config(image=self._pimg)
+            return
+        if self.hero_dress:                                       # the item on each hero, as the game draws him
+            self._imgs = []
+            for i, hero in enumerate(self.hero_dress(img)):
+                tile = pygame.Surface((40, 40))
+                tile.fill((0, 168, 0))
+                tile.blit(hero, (0, 0))
+                a = photo(pygame.transform.scale(tile, (80, 80)))
+                b = photo(pygame.transform.scale(tile, (120, 120)))
+                self._imgs += [a, b]
+                self.small[i].config(image=a)
+                self.big[i].config(image=b)
             return
         floors = self._floors()
         self._imgs = []

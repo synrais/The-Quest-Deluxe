@@ -59,7 +59,7 @@ class ItemsTab(TableTab):
              'Ammunition comes in stacks of 1 to 20: each size is its own item (New ammo kind makes all 20).')
 
     GROUPS = [
-        ('Basics', True, 'what it is and what it costs', ['type', 'bag_name', 'price', 'view3d', 'quest', 'show_on_hero', 'worn_colour']),
+        ('Basics', True, 'what it is and what it costs', ['type', 'bag_name', 'price', 'view3d', 'quest', 'show_on_hero', 'worn_colour', 'cape', 'worn_dx', 'worn_dy', 'worn_flip', 'worn_behind']),
         ('Numbers', True, 'what it adds to the hero when worn or wielded',
          ['power', 'kind', 'atk', 'def', 'warm', 'marm', 'req_str', 'req_int']),
         ('Stat bonuses', False, 'added to the hero while worn', ['str', 'int', 'dex', 'acc', 'power_bonus']),
@@ -84,6 +84,47 @@ class ItemsTab(TableTab):
         from tkinter import ttk
         ttk.Button(self.buttons, text='New ammo kind...', command=self.new_ammo_kind).pack(side='left', padx=2)
 
+    def hero_parts(self, row):
+        """What the hero tried on here wears: what was chosen to dress him, and the item being looked at."""
+        from .hero_preview import place_of
+        dress = self.__dict__.setdefault('_dress', {'class': 1})
+        parts = {p: dress.get(p, 0) for p in ('armour', 'helmet', 'amulet', 'weapon', 'shield')}
+        if row is not None and place_of(row):
+            parts[place_of(row)] = row['id']
+        return dress, parts
+
+    def extra_previews(self, parent, column):
+        """The hero to try the item on, and boxes to dress him with other items."""
+        from .hero_preview import HeroPreview
+        dress, _ = self.hero_parts(self.row)
+        box = HeroPreview(parent, self.app.project, dress, self.place_on_hero)
+        box.grid(row=0, column=column, sticky='n')
+        box.show(self.row)
+
+    def place_on_hero(self, key, value, final=True):
+        """The hero preview moved, flipped or turned the item: keep it on the item (0 / off leaves the key out)."""
+        row = self.row
+        if row is None:
+            return
+        if value in (0, False, None):
+            self.drop(row, key)
+        else:
+            self.put(row, key, value)
+        self.app.project.touch(self.TABLE)
+        self.app.changed()
+        if final:
+            self._show(row)
+
+    def hero_dress(self, folder, row):
+        """For the painter of Worn on the hero: the item being painted on each of the four heroes (and what else is on him)."""
+        if folder != 'worn':
+            return None
+        from .hero_preview import class_colour, dressed
+        project = self.app.project
+        dress, parts = self.hero_parts(row)
+        classes = sorted(c['id'] for c in project.tables['classes'])[:4]
+        return lambda layer: [dressed(project, class_colour(project, c), parts, replace={row['id']: layer}) for c in classes]
+
     def has_picture_kind(self, folder, row):
         return folder != 'worn' or row.get('type') in WORN
 
@@ -92,8 +133,9 @@ class ItemsTab(TableTab):
         img = super().shown_picture(folder, row)
         if img is None and folder == 'worn' and row.get('type') in WORN:
             from engine import worn
-            slot = {'launcher': 'weapon'}.get(row['type'], row['type'])
-            img = worn.overlay(slot, row, self.app.project.picture('bag', row['id']))
+            slot = worn.slot_of(row)
+            img = worn.overlay(slot, row, self.app.project.picture('bag', row['id']),
+                               self.app.project.picture('items', row['id']))
         return img
 
     def ammo_kinds(self):
@@ -153,6 +195,17 @@ class ItemsTab(TableTab):
             Field('worn_colour', 'Colour on the hero', 'choice', COLOURS, when=is_(*WORN),
                   hint='armour or a cloak gives his cloak this colour; for other things, their colour on him '
                        '(empty: the commonest colour of its bag picture)'),
+            Field('cape', 'Is a cape', 'choice', [(None, '(by its name)'), (True, 'a cape: worn behind him'),
+                                                   (False, 'armour: worn on his body')], when=is_('armour'),
+                  hint='a cape shows its inventory picture behind the hero; armour goes on his body'),
+            Field('worn_dx', 'Slide on hero: right', 'int', when=is_(*WORN),
+                  hint='pixels to slide it right on the hero (negative: left); drag it in the hero preview'),
+            Field('worn_dy', 'Slide on hero: down', 'int', when=is_(*WORN),
+                  hint='pixels to slide it down on the hero (negative: up); drag it in the hero preview'),
+            Field('worn_flip', 'Flipped on hero', 'bool', when=is_(*WORN),
+                  hint='mirrored left to right where he wears or holds it'),
+            Field('worn_behind', 'Behind the hero', 'bool', when=is_(*WORN),
+                  hint='drawn behind his body instead of in front'),
             Field('show_on_hero', 'Shown on the hero', 'bool', default=True, when=is_(*WORN),
                   hint='the hero shows it on the map while he wears it (Worn on the hero picture, or a small copy of its map '
                        'picture)'),

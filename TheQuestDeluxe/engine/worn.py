@@ -1,29 +1,75 @@
-"""What the hero wears, drawn on him on the map, in the style of the people and creatures that carry weapons.
+"""What the hero wears, drawn on him on the map, pixel by pixel.
 
-The hero is the cloaked figure drawn by anim.draw_guy2 (a 40 x 40 square: hood and face at the top, his cloak widening
-to the ground, the Knight's sword held upright at the screen's left and his round shield on the right). Worn things
-are drawn in the same places, pixel by pixel:
+The hero is a base picture (engine/assets/hero_base.png, or sprites/hero_base.png in a pack): a hooded figure wearing
+nothing, 40 x 40, its hood in the colour of his class. On top of it:
 
-  armour, a cloak, a robe   the hero's CLOAK takes the colour of the item (a purple cape: a purple cloak)
-  a weapon                  upright in his right hand (the screen's left), as the Knight's sword: a sword, dagger,
-                            rapier, club, staff, spear, pike, mace, axe or bow, by its name and kind
-  a shield                  on his left arm (the screen's right), round, small or tall, in the item's colour
-  a helmet                  over his hood, in the item's colour
-  an amulet                 a pendant on a chain at his neck
+  a CAPE (an item marked as one in the Items tab, or named cape, cloak, shawl or robe) is drawn BEHIND him, centred as the
+    normal cape is; the heroes wear a cape in their class's colour until they put one on. A pixel-perfect copy of the
+    normal cape in the item's colour, unless the item has a drawing of its own (sprites/worn/<item number>.png)
+  armour and helmets go directly on his body and head
+  an amulet colours the pixel under his chin that is yellow on the clasp
+  a weapon is held upright in his right hand (the screen's left) and a shield on his left arm (the screen's right), a sword,
+    dagger, rapier, club, staff, spear, mace, axe, bow or sling by its name, in the way the Knight and the NPCs hold theirs
 
-The colour of an item is its `worn_colour` (an EGA colour, 0-15) or else the commonest colour of its bag picture. An item
-can have a picture of its own, sprites/worn/<item number>.png (40 x 40, see-through, laid over the hero), which is used
-instead; `show_on_hero: false` leaves an item off. No tkinter here: the editor shows the same drawings."""
+The colour of an item is its `worn_colour` (an EGA colour, 0-15) or else the commonest colour of its bag picture. Any
+item's drawing of its own, sprites/worn/<item number>.png (40 x 40, see-through), is used instead of the drawing made here,
+and `show_on_hero: false` leaves an item off. No tkinter here: the editor shows the same drawings."""
 from __future__ import annotations
 
+import os
 from collections import Counter
 
 import pygame
 
-from .bgi import EGA
+from .bgi import BGI, EGA
 
 TILE = 40
-ORDER = ('shield', 'weapon', 'helmet', 'amulet')                 # drawn in this order; armour is the cloak's colour
+HERE = os.path.dirname(os.path.abspath(__file__))
+BASE_COLOUR = (168, 0, 168)                                      # the base picture's hood: the Knight's purple
+CLASP = (20, 12)                                                 # the yellow pixel of the clasp under his chin
+ORDER = ('armour', 'helmet', 'amulet', 'weapon', 'shield')       # drawn on the base in this order
+_base_cache: dict = {}
+
+
+def base_hero(colour: int, path: str | None = None) -> pygame.Surface:
+    """The hero wearing nothing (40 x 40, see-through), his hood in an EGA colour. path: a pack's own base picture."""
+    key = (colour, path)
+    if key not in _base_cache:
+        src = pygame.image.load(path if path and os.path.exists(path) else os.path.join(HERE, 'assets', 'hero_base.png'))
+        src = src.convert_alpha() if pygame.display.get_surface() else src
+        layer = pygame.Surface(src.get_size(), pygame.SRCALPHA)
+        layer.blit(src, (0, 0))
+        for x in range(layer.get_width()):
+            for y in range(layer.get_height()):
+                if tuple(layer.get_at((x, y)))[:3] == BASE_COLOUR:
+                    layer.set_at((x, y), (*EGA[colour], 255))
+        _base_cache[key] = layer
+    return _base_cache[key]
+
+
+def cape_layer(colour: int) -> pygame.Surface:
+    """The normal cape, drawn by the same calls as the original hero's (anim.draw_cape), in this colour: the 40 x 40
+    layer that goes behind the hero."""
+    from . import anim
+    key = ('cape', colour)
+    if key not in _base_cache:
+        back = 2 if colour != 2 else 1                             # a colour the cape is not, to key out
+        tmp = pygame.Surface((TILE, TILE))
+        tmp.fill(EGA[back])
+        anim.draw_cape(BGI(tmp), 0, 1, colour)                      # (the hero's square (1, 1) has its top at ii = 1)
+        tmp.set_colorkey(EGA[back])
+        layer = pygame.Surface((TILE, TILE), pygame.SRCALPHA)
+        layer.blit(tmp, (0, 0))
+        _base_cache[key] = layer
+    return _base_cache[key]
+
+
+def is_cape(row: dict) -> bool:
+    """An armour-slot item that is a cape: marked `cape` in the Items tab, else by its name."""
+    if row.get('cape') is not None:
+        return bool(row['cape'])
+    name = f'{row.get("name", "")} {row.get("bag_name", "")}'.lower()
+    return row.get('type') == 'armour' and has(name, 'cape', 'cloak', 'shawl', 'robe', 'mantle')
 
 
 def ega_index(rgb) -> int:
@@ -165,50 +211,111 @@ def draw_shield(layer, row: dict, c: int):
 
 
 def draw_helmet(layer, row: dict, c: int):
+    """Directly on his head: over the hood's top down to his brow (his eyes are on row 8), in the item's colour."""
     name = f'{row.get("name", "")} {row.get("bag_name", "")}'.lower()
     if has(name, 'halo'):
-        pygame.draw.ellipse(layer, EGA[14], (15, 0, 12, 5), 1)                       # a ring over his head
+        pygame.draw.ellipse(layer, EGA[14], (15, 0, 11, 5), 1)                       # a ring over his head
         return
     c = c if c != 0 else 8
-    pygame.draw.ellipse(layer, EGA[c], (16, 1, 10, 6))                               # the dome over his hood
-    rect(layer, c, 16, 4, 10, 3)                                                     # down to his brow, above his eyes
-    rect(layer, 8 if c != 8 else 0, 16, 6, 10, 1)                                    # the rim
-    rect(layer, 15 if c != 15 else 7, 18, 2, 3, 1)                                   # a shine
-    rect(layer, 8 if c != 8 else 0, 20, 4, 2, 2)                                     # a ridge down the front
+    dark = 8 if c != 8 else 0
+    pygame.draw.ellipse(layer, EGA[c], (16, 2, 9, 7))                                # the dome over his hood
+    rect(layer, c, 16, 5, 9, 2)                                                      # down to his brow
+    rect(layer, dark, 16, 7, 9, 1)                                                   # the rim, above his eyes
+    rect(layer, c, 17, 8, 1, 4)                                                      # cheek guards down the sides of his face
+    rect(layer, c, 23, 8, 1, 4)
+    rect(layer, 15 if c != 15 else 7, 18, 3, 3, 1)                                   # a shine
     if has(name, 'sheep', 'wool'):
-        for px, py in ((16, 3), (19, 2), (22, 2), (25, 3), (17, 5), (24, 5)):
+        for px, py in ((17, 4), (20, 2), (23, 4), (18, 6), (22, 6)):
             layer.set_at((px, py), EGA[15])
 
 
 def draw_amulet(layer, row: dict, c: int):
-    """A pendant on a chain from the clasp at his neck."""
+    """The yellow pixel of the clasp under his chin takes the amulet's colour."""
+    layer.set_at(CLASP, (*EGA[c if c != 0 else 8], 255))
+
+
+def draw_armour(layer, row: dict, c: int):
+    """Directly on his body: his chest, shoulders and belt in the item's colour, plain, or a mesh for mail, or stitched leather."""
+    name = f'{row.get("name", "")} {row.get("bag_name", "")}'.lower()
     c = c if c != 0 else 8
-    chain = 14 if c != 14 else 7
-    for px, py in ((17, 12), (18, 13), (19, 14), (22, 14), (23, 13), (24, 12), (20, 15), (21, 15)):
-        layer.set_at((px, py), EGA[chain])
-    rect(layer, c, 19, 16, 3, 3)
-    layer.set_at((20, 16), EGA[15 if c != 15 else 7])
+    dark = 8 if c != 8 else 0
+    light = 15 if c not in (15, 7) else 7
+    rect(layer, c, 16, 13, 9, 2)                                                     # across his shoulders
+    rect(layer, c, 17, 15, 7, 10)                                                    # his chest and belly
+    rect(layer, dark, 17, 25, 7, 1)                                                  # a belt
+    rect(layer, c, 17, 26, 7, 2)                                                     # down to his hips
+    for y in (13, 14):
+        layer.set_at((15, y), EGA[c])                                                # pauldrons
+        layer.set_at((25, y), EGA[c])
+    if has(name, 'chain', 'mail', 'ring'):
+        for y in range(15, 25):                                                      # a mesh
+            for x in range(17, 24):
+                if (x + y) % 2:
+                    layer.set_at((x, y), EGA[dark])
+    elif has(name, 'leather'):
+        rect(layer, dark, 20, 15, 1, 10)                                             # a seam down the front
+        for y in (17, 20, 23):
+            rect(layer, dark, 18, y, 2, 1)
+            rect(layer, dark, 21, y, 2, 1)
+    else:                                                                            # plate: a bright edge and a ridge
+        rect(layer, light, 18, 15, 1, 9)
+        rect(layer, dark, 20, 15, 1, 10)
 
 
 def cloak_colour(armour_row, bag_picture):
-    """The colour of the hero's cloak while he wears this armour (None: his own)."""
-    return None if not armour_row else colour_of(armour_row, bag_picture)
+    """The colour of a cape item (None if the item is not one)."""
+    return None if not armour_row or not is_cape(armour_row) else colour_of(armour_row, bag_picture)
 
 
-def overlay(slot: str, row: dict, bag_picture) -> pygame.Surface | None:
-    """The 40 x 40 layer for an item worn in a place ('weapon', 'offhand', 'shield', 'helmet', 'amulet'), or None. The editor
-    starts a Worn on the hero picture from this."""
+def keyed(bag_picture) -> pygame.Surface:
+    """A bag picture (a 40 x 40 cell: a one pixel frame round a plain background) with the frame and the background
+    see-through, the background being the colour just inside the frame."""
+    pic = bag_picture.convert_alpha() if pygame.display.get_surface() else bag_picture.copy()
+    back = pic.get_at((4, 4))
+    layer = pygame.Surface(pic.get_size(), pygame.SRCALPHA)
+    layer.blit(pic, (0, 0))
+    w, h = pic.get_size()
+    for x in range(w):
+        for y in range(h):
+            if x in (0, w - 1) or y in (0, h - 1) or layer.get_at((x, y))[:3] == back[:3]:
+                layer.set_at((x, y), (0, 0, 0, 0))
+    return layer
+
+
+def picture_layer(slot: str, bag_picture, ground_picture) -> pygame.Surface | None:
+    """An item's own pictures laid on the hero pixel for pixel: a CAPE takes its inventory (bag) picture, anything else its
+    picture on the ground. None if it has none (or it is an amulet, which only colours the clasp)."""
+    if slot == 'cape':
+        return keyed(bag_picture) if bag_picture is not None else None
+    if slot == 'amulet' or ground_picture is None:
+        return None
+    layer = pygame.Surface(ground_picture.get_size(), pygame.SRCALPHA)
+    layer.blit(ground_picture, (0, 0))
+    return layer
+
+
+def overlay(slot: str, row: dict, bag_picture, ground_picture=None) -> pygame.Surface | None:
+    """The 40 x 40 layer for an item in a place ('cape', 'armour', 'helmet', 'amulet', 'weapon', 'offhand', 'shield'), or
+    None: the item's own pictures laid on pixel for pixel (a cape its inventory picture, anything else its picture on the
+    ground), or where it has none a drawing made here (the weapon and the shield where the Knight's sword and shield are,
+    one row down: the original hero's drawing starts at row 1). The editor starts a Worn on the hero picture from this."""
+    own = picture_layer('shield' if slot == 'offhand' and row.get('type') == 'shield' else slot, bag_picture, ground_picture)
+    if own is not None:
+        return own
     layer = pygame.Surface((TILE, TILE), pygame.SRCALPHA)
     c = colour_of(row, bag_picture)
-    if slot == 'weapon':
-        draw_weapon(layer, row, c)
-    elif slot == 'offhand':
-        if row.get('type') in ('weapon', 'launcher'):
-            draw_weapon(layer, row, c, dx=15)
+    if slot == 'cape':
+        return cape_layer(c)
+    if slot in ('weapon', 'offhand', 'shield'):
+        hands = pygame.Surface((TILE, TILE), pygame.SRCALPHA)
+        if slot == 'weapon' or (slot == 'offhand' and row.get('type') in ('weapon', 'launcher')):
+            draw_weapon(hands, row, c, dx=15 if slot == 'offhand' else 0)
         else:
-            draw_shield(layer, row, c)
-    elif slot == 'shield':
-        draw_shield(layer, row, c)
+            draw_shield(hands, row, c)
+        layer.blit(hands, (0, 1))
+        return layer
+    if slot == 'armour':
+        draw_armour(layer, row, c)
     elif slot == 'helmet':
         draw_helmet(layer, row, c)
     elif slot == 'amulet':
@@ -218,7 +325,69 @@ def overlay(slot: str, row: dict, bag_picture) -> pygame.Surface | None:
     return layer
 
 
-def auto_overlay(kind: str, picture=None, bag_picture=None, row: dict | None = None):
-    """Compatibility for the editor: the layer for an item type's place from its row."""
-    slot = {'launcher': 'weapon'}.get(kind, kind)
-    return overlay(slot, row or {'type': kind}, bag_picture)
+def slot_of(row: dict) -> str | None:
+    """The place an item is worn, by its type: 'cape', 'armour', 'helmet', 'amulet', 'weapon', 'shield' (or None)."""
+    kind = row.get('type')
+    if kind == 'armour':
+        return 'cape' if is_cape(row) else 'armour'
+    return {'launcher': 'weapon'}.get(kind, kind) if kind in ('weapon', 'launcher', 'shield', 'helmet', 'amulet') else None
+
+
+PLACES = ('armour', 'helmet', 'amulet', 'weapon', 'shield')        # where an item can be worn (an offhand weapon: 'shield')
+
+
+def placed(layer, row: dict):
+    """A layer moved as the item says: `worn_flip` mirrors it across the hero (left hand for right), then `worn_dx` and
+    `worn_dy` slide it that many pixels (right and down). Untouched when the item says nothing."""
+    if layer is None:
+        return None
+    dx, dy = int(row.get('worn_dx') or 0), int(row.get('worn_dy') or 0)
+    flip = bool(row.get('worn_flip'))
+    if not (dx or dy or flip):
+        return layer
+    size = layer.get_size()
+    src = pygame.transform.flip(layer, True, False) if flip else layer
+    out = pygame.Surface(size, pygame.SRCALPHA)
+    out.blit(src, (dx, dy))
+    return out
+
+
+def layers(colour: int, parts: dict, picture_of, own_of=lambda item: None):
+    """What goes on the hero, as (behind, front) lists of 40 x 40 layers. parts: {'armour': (item, row), 'helmet': ...,
+    'amulet': ..., 'weapon': ..., 'shield': ...} for what he wears (an armour-slot item may be a cape). picture_of(item)
+    gives (bag picture, ground picture); own_of(item) an item's own Worn on the hero picture, if it has one. Behind him
+    goes his cape (the one he wears, or the cape of his class's colour), in front of him his armour, helmet, the clasp, his
+    weapon and his shield."""
+    def layer(item, row, place):
+        own = own_of(item)
+        if own is None:
+            bag, ground = picture_of(item)
+            own = overlay(place, row, bag, ground)
+        return placed(own, row)
+    behind, front = [], []
+    item, row = parts.get('armour', (0, {}))
+    place = slot_of(row) if row else None
+    if place == 'cape':
+        behind.append(layer(item, row, 'cape'))
+    else:
+        behind.append(cape_layer(colour))                          # nothing on: the cape of his class
+        if place == 'armour':
+            (behind if row.get('worn_behind') else front).append(layer(item, row, 'armour'))
+    for name in ('helmet', 'amulet', 'weapon', 'shield'):
+        item, row = parts.get(name, (0, {}))
+        if row:
+            one = layer(item, row, ('shield' if row.get('type') == 'shield' else 'offhand') if name == 'shield' else name)
+            (behind if row.get('worn_behind') else front).append(one)
+    return [b for b in behind if b is not None], [f for f in front if f is not None]
+
+
+def dress(colour: int, parts: dict, picture_of, own_of=lambda item: None, base_path=None) -> pygame.Surface:
+    """The whole hero wearing parts (see layers): a 40 x 40 picture, see-through round him. The editor's previews use it."""
+    behind, front = layers(colour, parts, picture_of, own_of)
+    out = pygame.Surface((TILE, TILE), pygame.SRCALPHA)
+    for layer in behind:
+        out.blit(layer, (0, 0))
+    out.blit(base_hero(colour, base_path), (0, 0))
+    for layer in front:
+        out.blit(layer, (0, 0))
+    return out

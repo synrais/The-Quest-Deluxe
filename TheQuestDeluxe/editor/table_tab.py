@@ -382,6 +382,7 @@ class TableTab(ttk.Frame):
             ttk.Button(box, text='Import...', command=lambda f=folder, b=is_bag: self.import_picture(f, b)).pack(
                 fill='x')
             self.after_idle(self._picture_tips)
+        self.extra_previews(self.pics, len(self.PICTURES) + 1)
 
     def _picture_tips(self):
         apply_tips(self.pics)
@@ -397,7 +398,15 @@ class TableTab(ttk.Frame):
                 self.select(row['id'])
             self.set_picture(folder, surface, is_bag)
         return Painter(self, f'{label}: {self.label(row)}', self.start_picture(folder, row), keep,
-                       opaque=opaque, templates=self.templates(folder, row), project=self.app.project, folder=folder)
+                       opaque=opaque, templates=self.templates(folder, row), project=self.app.project, folder=folder,
+                       hero_dress=self.hero_dress(folder, row))
+
+    def hero_dress(self, folder, row):
+        """For the painter: a function from the picture being painted to the hero wearing it (None: no hero to show)."""
+        return None
+
+    def extra_previews(self, parent, column):
+        """More to show beside an entry's pictures (the Items tab puts a hero there to try it on)."""
 
     def has_picture_kind(self, folder, row) -> bool:
         """Does this entry have this kind of picture at all? (an item only wears something if it can be worn)"""
