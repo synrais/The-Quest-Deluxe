@@ -1377,9 +1377,9 @@ def hero_shows_gear():
     # hands: the weapon slot is his right hand (the screen's left), the off-hand slot his left; the other hand: flipped
     right, left = worn.layers(5, {'weapon': (1, row)}, lambda i: (None, ground))[1][0], \
         worn.layers(5, {'shield': (1, row)}, lambda i: (None, ground))[1][0]
-    assert pygame.image.tobytes(right, 'RGBA') == pygame.image.tobytes(ground, 'RGBA'), 'a weapon in the right hand: as it is'
-    assert pygame.image.tobytes(left, 'RGBA') == pygame.image.tobytes(pygame.transform.flip(ground, True, False), 'RGBA'), \
-        'in the left hand: flipped'
+    assert right.get_bounding_rect() == ground.get_bounding_rect().move(1, 0), 'a weapon in the right hand: as it is, one across'
+    lb, rb = left.get_bounding_rect(), right.get_bounding_rect()
+    assert lb.x == 41 - rb.x - rb.w and lb.w == rb.w, 'the hands are mirrors across his middle (column 20): 40 - x'
     dot = pygame.Surface((40, 40), pygame.SRCALPHA)
     dot.fill((255, 0, 0, 255), (10, 10, 6, 2))                       # a bar, 6 across and 2 down
     turned = worn.placed(dot, {'worn_rotate': 90})

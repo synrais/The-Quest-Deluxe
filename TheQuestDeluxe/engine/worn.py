@@ -248,6 +248,13 @@ def mirrored(row: dict, place: str) -> bool:
     return place in HANDS and natural_hand(row) is not None and natural_hand(row) != HANDS[place]
 
 
+def slid(layer, dx: int):
+    """A layer moved dx pixels across."""
+    out = pygame.Surface(layer.get_size(), pygame.SRCALPHA)
+    out.blit(layer, (dx, 0))
+    return out
+
+
 def placed(layer, row: dict):
     """A layer moved as the item says: `worn_rotate` (a multiple of 45 degrees, clockwise) turns the picture about its own
     middle, then `worn_dx` and `worn_dy` slide it that many pixels (right and down). Untouched when the item says nothing."""
@@ -293,6 +300,9 @@ def layers(colour: int, parts: dict, picture_of, own_of=lambda item: None):
             one = layer(item, row, ('shield' if row.get('type') == 'shield' else 'offhand') if name == 'shield' else name)
             if one is not None and mirrored(row, name):
                 one = pygame.transform.flip(one, True, False)      # in the other hand: the same, the other way round
+            if one is not None and name == 'weapon':
+                one = slid(one, 1)       # his body is 7 wide around column 20: the two hands are mirrors across 40 - x, a flip
+                                         # alone is 39 - x, so the right hand (the weapon slot) stands one pixel nearer the middle
             (behind if behind_of(row) else front).append(one)
     return [b for b in behind if b is not None], [f for f in front if f is not None]
 
