@@ -116,8 +116,8 @@ class FpsPreview(ttk.LabelFrame):
         return self.row is not None and self.row.get('type') in ('weapon', 'launcher', 'shield')
 
     def mirror(self):
-        """-1 for a weapon in the off hand (its sideways moves are the mirror), else 1."""
-        return -1 if self.mine() and self.box.subject_slot() == 'shield' and self.row.get('type') != 'shield' else 1
+        """The weapon is shown in the main hand and a shield in the other, as the game does: moves are as they look."""
+        return 1
 
     def show(self, row):
         self.row = row
@@ -128,12 +128,12 @@ class FpsPreview(ttk.LabelFrame):
         self.refresh()
 
     def frame(self, now):
-        parts = self.box.parts()
-        game = _Game({SLOT_WEAPON: parts.get('weapon', 0), SLOT_OFFHAND: parts.get('shield', 0)})
+        shield = self.row is not None and self.row.get('type') == 'shield'
+        item = self.row['id'] if self.row is not None else 0
+        game = _Game({SLOT_WEAPON: 0 if shield else item, SLOT_OFFHAND: item if shield else 0})
         if self.attacking:
             kind, t0 = self.attacking
             game.swing = (kind, t0, False)
-            game.swing_hand = 'left' if self.box.subject_slot() == 'shield' else 'right'
         view = pygame.Surface((VIEW, VIEW))
         view.fill((70, 70, 84), (0, 0, VIEW, VIEW // 2))
         view.fill((96, 76, 56), (0, VIEW // 2, VIEW, VIEW // 2))

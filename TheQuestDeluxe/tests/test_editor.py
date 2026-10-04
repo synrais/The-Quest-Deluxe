@@ -346,6 +346,7 @@ dw.destroy()
 print('map: Death and respawn... sets the respawn and the Underworld of a level: ok')
 # the hero to try an item on, and dressing him with other items
 from editor import hero_preview
+from engine import worn
 itab = app.items_tab
 app.tabs.select(itab)
 pump()
@@ -355,10 +356,10 @@ previews = [w for w in itab.pics.winfo_children() if isinstance(w, hero_preview.
 assert previews, 'the Items tab shows a hero'
 box = previews[0]
 before = box.parts()
-assert before['weapon'] == 206, 'the item being made is on him'
+assert before['shield'] == 206, 'the item being made is on him, in his left hand'
 box.dress_with('helmet', 407)
 box.dress_with('armour', 114)
-assert box.parts()['helmet'] == 407 and box.parts()['armour'] == 114 and box.parts()['weapon'] == 206
+assert box.parts()['helmet'] == 407 and box.parts()['armour'] == 114 and box.parts()['shield'] == 206
 box.hero.set('Mage')
 box.chose_class()
 itab.select(111)                                   # a cape: it takes the armour place whatever he was dressed with
@@ -394,25 +395,22 @@ box.carry('helmet', Pt(centre('helmet')[0] + 60, centre('helmet')[1] + 200))
 box.put_down('helmet', Pt(centre('helmet')[0] + 60, centre('helmet')[1] + 200))
 assert box.dress['helmet'] == 0, 'dragged a bit off: taken away'
 sword = next(r['id'] for r in app.project.tables['items'] if r.get('type') == 'weapon')
-box.dress_with('weapon', sword)
-box.pick_up('weapon', Pt(*centre('weapon')))
-box.carry('weapon', Pt(centre('shield')[0], centre('shield')[1]))
-box.put_down('weapon', Pt(*centre('shield')))
-assert box.dress['weapon'] == 0 and box.dress['shield'] == sword, 'a weapon moved to the left hand'
-assert [c for _, c, _, _, _ in hero_preview.SLOTS if 'hand' in c] == ['RIGHT hand', 'LEFT hand']
+assert [p for p, _, _, _, _ in hero_preview.SLOTS] == ['helmet', 'armour', 'amulet'], 'no hand slots: held things go on the left arm'
 itab.select(sword)
 pump()
 box = [w for w in itab.pics.winfo_children() if isinstance(w, hero_preview.HeroPreview)][0]
-assert box.subject_slot() == 'weapon' and box.mirror() == 1, 'a weapon starts in his right hand'
-box.hand.set('left'); box.chose_hand()
-assert box.subject_slot() == 'shield' and box.mirror() == -1 and box.parts()['shield'] == sword, 'the left hand view: flipped'
+assert box.subject_slot() == 'shield' and box.parts()['shield'] == sword and 'weapon' not in box.parts(), 'held in his left hand'
+assert not hasattr(box, 'hand'), 'no choice of hand'
 itab.row.pop('worn_dx', None)
 box.nudge(1, 0)
-assert itab.row.get('worn_dx') == -1, 'in the mirrored view, right is the other way'
+assert itab.row.get('worn_dx') == 1, 'right is right'
 box.reset()
+base = worn.base_hero(5)
+armless = worn.without_right_arm(base)
+assert armless.get_at((14, 17))[3] == 0 and base.get_at((14, 17))[3] != 0 and armless.get_at((26, 17))[3] != 0, \
+    'the preview leaves out his right arm (the screen\'s left) and keeps the left'
 # FPS mode: the weapon in his hand, its attack, turn and place
 from editor import fps_preview
-itab._dress['hand'] = 'right'
 itab.select(sword)
 pump()
 fp = [w for w in itab.pics.winfo_children() if isinstance(w, fps_preview.FpsPreview)][0]

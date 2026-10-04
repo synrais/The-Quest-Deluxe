@@ -1374,12 +1374,15 @@ def hero_shows_gear():
     ground.fill((255, 0, 0, 255), (5, 5, 3, 3))
     assert pygame.image.tobytes(worn.overlay('weapon', row, None, ground), 'RGBA') == pygame.image.tobytes(ground, 'RGBA')
     assert worn.overlay('weapon', row, None, None) is None, 'nothing is drawn for him: items have pictures'
-    # hands: the weapon slot is his right hand (the screen's left), the off-hand slot his left; the other hand: flipped
+    # hands: a held item is placed once, for his LEFT hand (the off-hand slot); in the weapon slot (his right) it is the mirror
     right, left = worn.layers(5, {'weapon': (1, row)}, lambda i: (None, ground))[1][0], \
         worn.layers(5, {'shield': (1, row)}, lambda i: (None, ground))[1][0]
-    assert right.get_bounding_rect() == ground.get_bounding_rect().move(1, 0), 'a weapon in the right hand: as it is, one across'
+    assert pygame.image.tobytes(left, 'RGBA') == pygame.image.tobytes(ground, 'RGBA'), 'in the left hand: as placed'
     lb, rb = left.get_bounding_rect(), right.get_bounding_rect()
-    assert lb.x == 41 - rb.x - rb.w and lb.w == rb.w, 'the hands are mirrors across his middle (column 20): 40 - x'
+    assert rb.x == 41 - lb.x - lb.w and rb.w == lb.w, 'the right hand is the mirror across his middle (column 20): 40 - x'
+    shield = {'name': 'Buckler', 'type': 'shield'}
+    assert worn.mirrored(shield, 'weapon') and worn.mirrored(row, 'weapon') and not worn.mirrored(row, 'shield')
+    assert not worn.mirrored({'type': 'helmet'}, 'weapon')
     dot = pygame.Surface((40, 40), pygame.SRCALPHA)
     dot.fill((255, 0, 0, 255), (10, 10, 6, 2))                       # a bar, 6 across and 2 down
     turned = worn.placed(dot, {'worn_rotate': 90})
@@ -1398,8 +1401,6 @@ def hero_shows_gear():
     assert got.get_at((2, 2))[3] == 0 and got.get_at((20, 20))[3] == 255
     moved = worn.layers(5, {'armour': (9, dict(plain, worn_dx=4))}, lambda i: (None, plate))[1][0]
     assert moved.get_at((20, 20))[3] == 255 and worn.layers(5, {'armour': (9, plain)}, lambda i: (None, plate))[1][0] is not moved
-    shield = {'name': 'Buckler', 'type': 'shield'}
-    assert not worn.mirrored(shield, 'shield') and worn.mirrored(shield, 'weapon') and worn.mirrored(row, 'shield')
     clasp = worn.overlay('amulet', {'type': 'amulet', 'worn_colour': 12}, None, ground)
     assert clasp.get_bounding_rect() == pygame.Rect(worn.CLASP[0], worn.CLASP[1], 1, 1), 'an amulet is one pixel'
     # the base hero, recoloured for the class

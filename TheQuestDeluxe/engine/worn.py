@@ -3,9 +3,8 @@
 The hero is a base picture (engine/assets/hero_base.png, or a class's sprites/heroes/<class number>.png): a hooded figure
 wearing nothing, 40 x 40. On top of it, each item's own picture (the one in the bag or the one on the map, `worn_from`),
 laid on pixel for pixel (armour, which rarely fits, shows only where it touches his armour area: his body from chin to groin, arms left out), moved as the item says (`worn_dx`, `worn_dy`, `worn_rotate`), behind him or in front (`worn_behind`,
-a cape is behind). A weapon is in his RIGHT hand when it is in the weapon slot (the screen's left, as the inventory shows
-it) and in his LEFT hand in the off-hand slot (the screen's right); an item in the hand it was not made for is drawn
-flipped. A cape can turn his hood a colour (`hood_colour`). An amulet only colours the yellow pixel of the clasp under his
+a cape is behind). A held item is placed once, for his LEFT hand (the off-hand slot, the screen's right); in the weapon slot (his RIGHT
+hand, the screen's left) it is drawn as the mirror of that. A cape can turn his hood a colour (`hood_colour`). An amulet only colours the yellow pixel of the clasp under his
 chin. An item's own Worn on the hero picture, sprites/worn/<item number>.png (40 x 40, see-through), is used instead of
 its pictures, and `show_on_hero: false` leaves an item off. No tkinter here: the editor shows the same drawings."""
 from __future__ import annotations
@@ -234,18 +233,18 @@ def slot_of(row: dict) -> str | None:
 PLACES = ('armour', 'helmet', 'amulet', 'weapon', 'shield')        # where an item can be worn (an offhand weapon: 'shield')
 
 
-HANDS = {'weapon': 'right', 'shield': 'left'}      # the bag slots: the weapon slot is his RIGHT hand (the screen's left, where
-                                                     # the inventory shows it), the off-hand slot his LEFT hand (the screen's right)
+HELD = ('weapon', 'launcher', 'shield')
 
 
-def natural_hand(row: dict) -> str | None:
-    """The hand an item is made for: a weapon or launcher the right, a shield the left (None: not held)."""
-    return {'weapon': 'right', 'launcher': 'right', 'shield': 'left'}.get(row.get('type'))
+def held(row: dict) -> bool:
+    """Is it something held in a hand (a weapon, a launcher, a shield)?"""
+    return row.get('type') in HELD
 
 
 def mirrored(row: dict, place: str) -> bool:
-    """Is the item in the other hand from the one it is made for? Then it is drawn flipped, where it was."""
-    return place in HANDS and natural_hand(row) is not None and natural_hand(row) != HANDS[place]
+    """A held item is placed once, for his LEFT hand (the screen's right, the off-hand slot, where the editor shows it). In
+    his right hand (the weapon slot, the screen's left) it is the mirror of that, drawn flipped."""
+    return place == 'weapon' and held(row)
 
 
 def slid(layer, dx: int):
@@ -305,6 +304,16 @@ def layers(colour: int, parts: dict, picture_of, own_of=lambda item: None):
                                          # alone is 39 - x, so the right hand (the weapon slot) stands one pixel nearer the middle
             (behind if behind_of(row) else front).append(one)
     return [b for b in behind if b is not None], [f for f in front if f is not None]
+
+
+def without_right_arm(base):
+    """His picture without the arm on the screen's left (his right), for the editor's previews: held things are placed on the
+    left one."""
+    out = base.copy()
+    for x in range(12, 17):
+        for y in range(14, 25):
+            out.set_at((x, y), (0, 0, 0, 0))
+    return out
 
 
 def dress(colour: int, parts: dict, picture_of, own_of=lambda item: None, base_path=None, base=None) -> pygame.Surface:

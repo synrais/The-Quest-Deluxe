@@ -14,12 +14,11 @@ from .uikit import tip
 
 SCALE = 4
 DEFAULT_COLOURS = {1: 5, 2: 4, 3: 8, 4: 15}                       # the four heroes: purple, red, grey, white
-# the inventory's layout: (place, caption, what fits, grid row, grid column). The weapon slot is on the screen's left: his
-# RIGHT hand; the off-hand slot on the screen's right: his LEFT hand.
-SLOTS = [('helmet', 'Helmet', ('helmet',), 0, 1),
-         ('weapon', 'RIGHT hand', ('weapon', 'launcher'), 1, 0), ('armour', 'Cape or armour', ('armour',), 1, 1),
-         ('shield', 'LEFT hand', ('shield', 'weapon', 'launcher'), 1, 2),
-         ('amulet', 'Amulet', ('amulet',), 2, 1)]
+# the inventory's layout: (place, caption, what fits, grid row, grid column). No hands: a held item is placed once, for his
+# left hand (the arm on the screen's right), and the game mirrors it for the right.
+SLOTS = [('helmet', 'Helmet', ('helmet',), 0, 0),
+         ('armour', 'Cape or armour', ('armour',), 1, 0),
+         ('amulet', 'Amulet', ('amulet',), 2, 0)]
 PLACES = [(p, c, t) for p, c, t, _, _ in SLOTS]
 
 
@@ -64,7 +63,7 @@ def pictures_of(project):
     return picture_of, own_of
 
 
-def dressed(project, colour: int, parts: dict, replace=None, cls=None) -> pygame.Surface:
+def dressed(project, colour: int, parts: dict, replace=None, cls=None, one_arm=True) -> pygame.Surface:
     """The hero in a colour wearing parts {place: item number}. replace: {item number: a picture} to use instead of the
     stored Worn on the hero picture (the painter's work in progress)."""
     picture_of, own_of = pictures_of(project)
@@ -73,6 +72,8 @@ def dressed(project, colour: int, parts: dict, replace=None, cls=None) -> pygame
         flat = pygame.Surface(base.get_size(), pygame.SRCALPHA)
         flat.blit(base, (0, 0))
         base = flat
+    if one_arm:                                  # held things are placed on his left arm: the right one is left out
+        base = worn.without_right_arm(base if base is not None else worn.base_hero(colour))
     by_id = {r['id']: r for r in project.tables['items']}
     rows = {p: (i, by_id[i]) for p, i in parts.items() if i and i in by_id}
     return worn.dress(colour, rows, picture_of, (lambda item: replace[item] if replace and item in replace else own_of(item)),
@@ -87,13 +88,11 @@ def place_of(row: dict):
 
 
 def slot_for(row: dict, dress: dict):
-    """Where the item being looked at is put on him: its own place, or for a weapon or shield the hand chosen to see it in."""
+    """Where the item being looked at is put on him: its own place; a weapon or shield in his left hand (the off-hand slot),
+    where held things are placed (the game mirrors them for the right)."""
     if row is None:
         return None
-    if worn.natural_hand(row):
-        hand = dress.get('hand') if dress.get('hand_for') == row['id'] else worn.natural_hand(row)
-        return 'weapon' if hand == 'right' else 'shield'
-    return place_of(row)
+    return 'shield' if worn.held(row) else place_of(row)
 
 
 class HeroPreview(ttk.LabelFrame):
@@ -105,7 +104,6 @@ class HeroPreview(ttk.LabelFrame):
         self.project, self.dress, self.row, self.place = project, dress, None, place
         self.classes = [(c['id'], c.get('name', str(c['id']))) for c in sorted(project.tables['classes'], key=lambda c: c['id'])]
         self.source = tk.StringVar(value='')
-        self.hand = tk.StringVar(value='right')
         self.ghost = None
         self.slots = {}
         self.listeners = []                         # (the FPS preview) told when what he wears changes
@@ -117,14 +115,6 @@ class HeroPreview(ttk.LabelFrame):
                                       ('ground', 'Map picture', 'The picture it has lying on the map, laid on the hero pixel for pixel.'),
                                       ('bag', 'Bag picture', 'The picture it has in the bag (inventory), laid on the hero pixel for pixel.')):
                 b = ttk.Radiobutton(pick, text=text, value=value, variable=self.source, command=self.chose_source)
-                b.pack(side='left', padx=4)
-                tip(b, hint)
-            self.hands = ttk.Frame(self)
-            self.hands.pack(anchor='w', pady=(0, 4))
-            ttk.Label(self.hands, text='Show it in his:').pack(side='left')
-            for value, text, hint in (('right', 'RIGHT hand (screen left)', 'The weapon slot: the hand on the left of the screen, as the inventory shows it.'),
-                                      ('left', 'LEFT hand (screen right)', 'The off-hand slot: the hand on the right of the screen. The item is the same, flipped.')):
-                b = ttk.Radiobutton(self.hands, text=text, value=value, variable=self.hand, command=self.chose_hand)
                 b.pack(side='left', padx=4)
                 tip(b, hint)
         top = ttk.Frame(self)
@@ -149,7 +139,7 @@ class HeroPreview(ttk.LabelFrame):
         for slot, caption, types, r, c in SLOTS:
             unit = ttk.Frame(grid)
             unit.grid(row=r, column=c, padx=4, pady=2)
-            ttk.Label(unit, text=caption, font=('TkDefaultFont', 8, 'bold' if 'hand' in caption else 'normal')).pack()
+            ttk.Label(unit, text=caption, font=('TkDefaultFont', 8, 'normal')).pack()
             cv = tk.Canvas(unit, width=48, height=48, bg='#3a3a3a', highlightthickness=2, highlightbackground='#777777')
             cv.pack()
             cv.bind('<ButtonPress-1>', lambda e, s=slot: self.pick_up(s, e))
@@ -270,9 +260,8 @@ class HeroPreview(ttk.LabelFrame):
         return self.place is not None and self.row is not None and place_of(self.row) is not None
 
     def mirror(self) -> int:
-        """-1 when the item is shown in the hand it is not made for (its sideways moves are mirrored), else 1."""
-        slot = self.subject_slot()
-        return -1 if slot and worn.mirrored(self.row, slot) else 1
+        """Moves across are as they look: held things are placed in his left hand, which is what is shown."""
+        return 1
 
     def grab(self, event):
         if self.mine():
@@ -310,11 +299,6 @@ class HeroPreview(ttk.LabelFrame):
         if self.mine():
             self.place('worn_from', self.source.get() or None)
 
-    def chose_hand(self):
-        if self.row is not None:
-            self.dress['hand'], self.dress['hand_for'] = self.hand.get(), self.row['id']
-            self.refresh()
-
     def reset(self):
         if self.mine():
             for key in ('worn_dx', 'worn_dy', 'worn_rotate', 'worn_behind', 'worn_from'):
@@ -332,11 +316,6 @@ class HeroPreview(ttk.LabelFrame):
     def show(self, row):
         self.row = row
         self.source.set((row or {}).get('worn_from') or '')
-        if row is not None and worn.natural_hand(row):
-            self.hand.set('left' if slot_for(row, self.dress) == 'shield' else 'right')
-            self.hands.pack(anchor='w', pady=(0, 4)) if self.place else None
-        elif self.place:
-            self.hands.pack_forget()
         self.refresh()
 
     def parts(self) -> dict:
