@@ -1,0 +1,12 @@
+{"_comment": "Skills and faults, in creation()'s order. What each does is part of the engine (docs/QUEST_PACKS.md); story = the line story 1 prints about it. only_free: it can only come free with a class, and is only listed for that class.",
+ "skills": [
+ {"id": "bar", "name": "Bargaining", "kind": "skill", "story": "You are good at bargaining."},
+ {"id": "amb", "name": "Ambidexterity", "kind": "skill", "story": "You are ambidextrous."},
+ {"id": "mem", "name": "Memorization", "kind": "skill", "story": "You excel at spell memorization."},
+ {"id": "mar", "name": "Marksmanship", "kind": "skill", "story": "You excel at marksmanship.", "only_free": true},
+ {"id": "sch", "name": "Scholar", "kind": "skill", "story": "You are a scholar."},
+ {"id": "cow", "name": "Cowardice", "kind": "fault", "story": "You are a coward."},
+ {"id": "ras", "name": "Rashness", "kind": "fault", "story": "You are often very rash."},
+ {"id": "hon", "name": "Honor", "kind": "fault", "story": "You are extremely honorable."}
+ ]
+}

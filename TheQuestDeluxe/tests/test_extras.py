@@ -1324,7 +1324,7 @@ def custom_packs_switching():
     pack_mod.CUSTOM_DIR = game_mod.CUSTOM_DIR = maps
     window = pygame.display.get_surface()
     try:
-        g = game_mod.Game(window)
+        g = game_mod.Game(window, settings={'fixes': 'on'})
         assert g.pack_choices() == [('The Quest', pack_mod.DEFAULT_PACK), ('Bro Pack', os.path.join(maps, 'Bro Pack'))]
         assert g.pack_name() == 'The Quest' and g.slots.dir.endswith(os.path.join('saves', 'TheQuest')), 'the locked game first'
         assert g.next_pack is None
@@ -1333,7 +1333,7 @@ def custom_packs_switching():
         assert g.next_pack == os.path.join(maps, 'Bro Pack') and not g.running and g.reopen_load, 'P on the load list'
         os.environ['QUEST_PACK'] = g.next_pack
         pack_mod._default = None
-        other = game_mod.Game(window, data=GameData.load())
+        other = game_mod.Game(window, data=GameData.load(), settings={'fixes': 'on'})
         assert other.pack_name() == 'Bro Pack'
         assert other.slots.dir.endswith(os.path.join('saves', 'Custom Maps', 'Bro Pack')), other.slots.dir
         other.overlay = ui.TitleScreen()

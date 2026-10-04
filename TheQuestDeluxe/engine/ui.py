@@ -179,7 +179,7 @@ class TitleScreen(Overlay):
         if ev.key in (pygame.K_UP, pygame.K_DOWN):          # title(): the sword wraps around
             self.i = (self.i + (-1 if ev.key == pygame.K_UP else 1)) % 4
             g.tones((400, 50), (300, 50))
-        elif ev.key == pygame.K_p and len(g.pack_choices()) > 1:
+        elif ev.key == pygame.K_p and g.settings and len(g.pack_choices()) > 1:
             g.tones((600, 50), (700, 50))
             g.switch_pack()                                  # P: the next pack (Custom Maps), see pack_label
         elif ev.key in CONFIRM:
@@ -245,7 +245,7 @@ class TitleScreen(Overlay):
 def pack_label(r, scr):
     """Bottom right, when there are Custom Maps: which pack is in play, and P to change."""
     g = getattr(r, 'game', None)
-    if g is None or len(g.pack_choices()) < 2:
+    if g is None or not g.settings or len(g.pack_choices()) < 2:     # (a game made without settings, as the tests do, is as it was)
         return
     b = bgi_on(r, scr)
     b.settextstyle(0, 0, 1)
@@ -276,7 +276,7 @@ class LoadScreen(Overlay):
             g.status.level = 0                        # no 'Want to load?' from here
             g.status.saveslot = self.games[self.i - 1][0]
             g.load_game()
-        elif ev.key == pygame.K_p and len(g.pack_choices()) > 1:
+        elif ev.key == pygame.K_p and g.settings and len(g.pack_choices()) > 1:
             g.tones((600, 50), (700, 50))
             g.switch_pack()                          # the saves of the next pack: the load list opens again there
             g.reopen_load = True
