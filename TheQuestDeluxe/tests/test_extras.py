@@ -1387,6 +1387,13 @@ def hero_shows_gear():
         'a quarter turn about its own middle'
     assert worn.placed(dot, {'worn_rotate': 180}).get_bounding_rect().size == (6, 2)
     assert worn.placed(dot, {'worn_dx': 3}).get_bounding_rect().x == 13 and worn.placed(dot, {}) is dot
+    plate = pygame.Surface((40, 40), pygame.SRCALPHA)
+    plate.fill((200, 0, 0, 255), (3, 20, 5, 5))                          # armour drawn anywhere in its picture, any size
+    tex = worn.overlay('armour', {'type': 'armour', 'name': 'Plate'}, None, plate)
+    box = tex.get_bounding_rect()
+    assert worn.TORSO.contains(box) and box.height >= 13, 'armour is a texture over his torso, chin to groin'
+    assert all(tuple(tex.get_at((x, y)))[:3] == (200, 0, 0) for x, y in worn.body_mask()), 'on his body, arms and all'
+    assert (20, 12) not in worn.body_mask() and (20, 29) not in worn.body_mask() and (20, 8) not in worn.body_mask()
     shield = {'name': 'Buckler', 'type': 'shield'}
     assert not worn.mirrored(shield, 'shield') and worn.mirrored(shield, 'weapon') and worn.mirrored(row, 'shield')
     clasp = worn.overlay('amulet', {'type': 'amulet', 'worn_colour': 12}, None, ground)
