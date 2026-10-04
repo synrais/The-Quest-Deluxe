@@ -72,7 +72,7 @@ class ItemsTab(TableTab):
         ('Stat bonuses', False, 'added to the hero while worn', ['str', 'int', 'dex', 'acc']),
         ('Launchers and ammunition', True, 'what a bow fires, and what its arrows add',
          ['fires', 'missile_anim', 'no_ammo_bonus', 'ammo', 'count', 'power_x2', 'power_bonus']),
-        ('In FPS mode', False, 'how it looks on the ground and how a weapon swings', ['view3d', 'fps_attack', 'fps_turn']),
+        ('In FPS mode', False, 'how it looks on the ground and how a weapon swings', ['view3d', 'fps_attack', 'fps_turn', 'fps_dx', 'fps_dy']),
         ('Potion or key', True, '', ['potion', 'key']),
         ('Light', False, 'lights up a dark screen while he carries it', ['light']),
         ('Powers while worn', False, 'healing, sight, thorns, walking on water ...',
@@ -107,9 +107,14 @@ class ItemsTab(TableTab):
         from .hero_preview import HeroPreview
         dress, _ = self.hero_parts(self.row)
         box = HeroPreview(parent, self.app.project, dress, self.place_on_hero)
-        box.grid(row=0, column=column, sticky='n')
+        box.grid(row=0, column=column, rowspan=2, sticky='n')
         box.show(self.row)
         self.hero_box = box
+        if self.row is not None and self.row.get('type') in ('weapon', 'launcher', 'shield'):
+            from .fps_preview import FpsPreview
+            fps = FpsPreview(parent, self.app.project, box, self.place_on_hero)
+            fps.grid(row=1, column=0, columnspan=column, sticky='nw', pady=(8, 0))
+            fps.show(self.row)
         if not getattr(self, '_drag_bound', False):
             self._drag_bound = True
             self.list.bind('<ButtonPress-1>', self.list_press, add='+')
@@ -156,7 +161,7 @@ class ItemsTab(TableTab):
         row = self.row
         if row is None:
             return
-        if value is None or (key in ('worn_dx', 'worn_dy') and not value) or (key == 'worn_rotate' and not value):
+        if value is None or (key in ('worn_dx', 'worn_dy', 'fps_dx', 'fps_dy') and not value) or (key == 'worn_rotate' and not value):
             self.drop(row, key)
         else:
             self.put(row, key, value)
@@ -224,8 +229,12 @@ class ItemsTab(TableTab):
                                                               ('swing', 'swing'), ('thrust', 'thrust'),
                                                               ('shoot', 'shoot')], when=is_('weapon', 'launcher'),
                   hint='how the weapon in view moves when the hero attacks'),
-            Field('fps_turn', 'FPS mode turn', 'int', when=is_('weapon', 'launcher'),
+            Field('fps_turn', 'FPS mode turn', 'int', when=is_('weapon', 'launcher', 'shield'), spin=(-180, 180),
                   hint='degrees anticlockwise to stand the bag picture up in the hand (the crossbow: 90)'),
+            Field('fps_dx', 'FPS mode position: across', 'int', when=is_('weapon', 'launcher', 'shield'), spin=(-200, 200),
+                  hint='view pixels to move it across in the hand (negative: left); drag it in the FPS preview'),
+            Field('fps_dy', 'FPS mode position: down', 'int', when=is_('weapon', 'launcher', 'shield'), spin=(-200, 200),
+                  hint='view pixels to move it down in the hand (negative: up); drag it in the FPS preview'),
             Field('missile_anim', 'Hit animation', 'choice', MISSILES, when=is_('launcher')),
             Field('no_ammo_bonus', 'No poison bonus', 'bool', when=is_('launcher'),
                   hint="ammunition that doubles a launcher's power doesn't, with this one"),

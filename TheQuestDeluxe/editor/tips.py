@@ -80,6 +80,8 @@ FIELDS = {
     'dex': 'Dexterity it adds while worn.', 'acc': 'Accuracy it adds while worn.',
     'fires': 'The kinds of ammunition this launcher shoots.',
     'fps_attack': "How the weapon in view moves when the hero attacks in FPS mode.",
+    'fps_dx': 'Where the item sits in the hero\'s hand in FPS mode: view pixels across (negative: left). Drag it in the FPS preview.',
+    'fps_dy': 'Where the item sits in the hero\'s hand in FPS mode: view pixels down (negative: up). Drag it in the FPS preview.',
     'fps_turn': 'Degrees to turn its picture so that it stands upright in the hand in FPS mode.',
     'no_ammo_bonus': 'Ammunition that doubles a launcher\'s power (poisoned arrows) does not, with this one.',
     'power_x2': "Doubles the power of the launcher that shoots it (poisoned arrows).",

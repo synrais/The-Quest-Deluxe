@@ -108,6 +108,7 @@ class HeroPreview(ttk.LabelFrame):
         self.hand = tk.StringVar(value='right')
         self.ghost = None
         self.slots = {}
+        self.listeners = []                         # (the FPS preview) told when what he wears changes
         if place:                                   # which picture he wears or holds, right beside the item's pictures
             pick = ttk.Frame(self)
             pick.pack(anchor='w', pady=(0, 2))
@@ -364,3 +365,5 @@ class HeroPreview(ttk.LabelFrame):
         tile.blit(hero, (0, 0))
         self._photo = photo(pygame.transform.scale(tile, (40 * SCALE, 40 * SCALE)))
         self.image.config(image=self._photo)
+        for listener in list(self.listeners):
+            listener()

@@ -10,8 +10,8 @@ bottom). With nothing in hand, nothing shows. The left hand shows a shield, or a
 It moves with the hero: a bob as he steps, and when he attacks a swing (swords, axes, clubs...), a
 thrust (spears, pikes, lances: kind 3) or a draw and release (bows and slings). A miss swings or
 thrusts too far, holds there a moment and comes back. An item's
-"fps_attack" ("swing", "thrust" or "shoot") overrides that. Only the picture moves: the rules don't
-know about it.
+"fps_attack" ("swing", "thrust" or "shoot") overrides that. "fps_dx" and "fps_dy" move where it sits in the hand
+(view pixels). Only the picture moves: the rules don't know about it.
 """
 from __future__ import annotations
 
@@ -174,4 +174,6 @@ class Hands:
         rx, ry = vx * math.cos(a) + vy * math.sin(a), -vx * math.sin(a) + vy * math.cos(a)
         grip = (GRIP_LEFT if off else (GRIP[0] - (40 if shoot else 0), GRIP[1]))
         gx, gy = grip[0] + dx, grip[1] + dy
+        gx += row.get('fps_dx', 0) * (-1 if off and not shield else 1)     # where the item sits in the hand: its own placement
+        gy += row.get('fps_dy', 0)                                         # (an off-hand weapon is its mirror)
         scr.blit(turned, (gx - rx - turned.get_width() / 2, gy - ry - turned.get_height() / 2))

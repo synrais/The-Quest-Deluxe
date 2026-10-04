@@ -410,6 +410,32 @@ itab.row.pop('worn_dx', None)
 box.nudge(1, 0)
 assert itab.row.get('worn_dx') == -1, 'in the mirrored view, right is the other way'
 box.reset()
+# FPS mode: the weapon in his hand, its attack, turn and place
+from editor import fps_preview
+itab._dress['hand'] = 'right'
+itab.select(sword)
+pump()
+fp = [w for w in itab.pics.winfo_children() if isinstance(w, fps_preview.FpsPreview)][0]
+assert fp.frame(0).get_size() == (200, 200)
+empty = pygame.image.tostring(fp.frame(0), 'RGB')
+itab.row.pop('fps_dx', None); itab.row.pop('fps_dy', None)
+fp.nudge(1, 0)
+assert itab.row.get('fps_dx') == 4, 'the arrows move it in his hand'
+assert pygame.image.tostring(fp.frame(0), 'RGB') != empty, 'and the view shows it'
+fp.attack.current(2); fp.attack.event_generate('<<ComboboxSelected>>')
+pump()
+assert itab.row.get('fps_attack') == 'thrust', 'the attack type is chosen here'
+fp = [w for w in itab.pics.winfo_children() if isinstance(w, fps_preview.FpsPreview)][0]
+fp.turn.set(90); fp.turned()
+assert itab.row.get('fps_turn') == 90
+fp = [w for w in itab.pics.winfo_children() if isinstance(w, fps_preview.FpsPreview)][0]
+fp.test_attack(); assert fp.attacking and fp.attacking[0] == 'thrust'
+fp.reset()
+assert not any(k in itab.row for k in ('fps_attack', 'fps_turn', 'fps_dx', 'fps_dy')), 'reset: automatic and the usual place'
+itab.select(1); pump()
+assert not [w for w in itab.pics.winfo_children() if isinstance(w, fps_preview.FpsPreview)], 'only for things held in the hand'
+itab.select(sword); pump()
+box = [w for w in itab.pics.winfo_children() if isinstance(w, hero_preview.HeroPreview)][0]
 # place the item on the hero: drag, flip, front / behind, reset
 itab.select(206)
 pump()
