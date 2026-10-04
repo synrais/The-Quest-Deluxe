@@ -12,7 +12,7 @@ import sys
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox, simpledialog
 
-from engine.pack import PACKS_DIR, DEFAULT_PACK, ROOT
+from engine.pack import ROOT
 from .project import Project
 from .uikit import center, install as install_wheel, on_wheel, scroll_canvas, tip
 from .map_tab import MapTab
@@ -239,10 +239,17 @@ class App:
         from .tips import apply as apply_tips, BUTTONS
         apply_tips(root)
         tip(self.play_class, 'The class of the hero for test play (F5).')
+        self.closed = False
         last = self._settings().get('last')
-        if last and not os.path.exists(os.path.join(last, 'quest.json')):
-            last = None                              # a pack that has moved or gone: start from the default
-        self.open(pack or last or DEFAULT_PACK)
+        if not pack:                                 # which pack? (none yet: name the first one)
+            from .pack_chooser import choose_pack
+            root.update()
+            pack = choose_pack(root, os.path.basename(last) if last else None)
+            if not pack:
+                self.closed = True
+                root.destroy()
+                return
+        self.open(pack)
         self.fit_window()
         root.after(300, self.offer_restore)
 
@@ -332,14 +339,16 @@ class App:
 
     # ── packs ───────────────────────────────────────────────────────────────
     def open(self, path):
+        from . import custom
         if not os.path.isdir(path):
-            path = os.path.join(PACKS_DIR, path)
+            path = custom.pack_dir(path)
+        if custom.is_locked(path):
+            messagebox.showinfo('Locked', 'The first 7 levels of The Quest are locked: they are never edited.\n\n'
+                                'Make a pack of your own (File > New pack): it starts as a copy of them, in Custom Maps.')
+            return
         if not os.path.exists(os.path.join(path, 'quest.json')):
             messagebox.showerror('Open pack', f'{path} is not a quest pack (it has no quest.json).')
-            if self.project is None:
-                path = DEFAULT_PACK
-            else:
-                return
+            return
         self.project = Project(path)
         self.dirty = False
         self._remember(path)
@@ -355,29 +364,19 @@ class App:
     def open_dialog(self):
         if not self._keep_changes():
             return
-        path = filedialog.askdirectory(title='Open a quest pack', initialdir=PACKS_DIR, mustexist=True)
+        from .pack_chooser import choose_pack
+        path = choose_pack(self.root, os.path.basename(self.project.root) if self.project else None)
         if path:
             self.open(path)
 
     def new_pack(self):
+        """A new pack in Custom Maps: a copy of the locked game's 7 levels, in a folder of its own."""
         if not self._keep_changes():
             return
-        name = simpledialog.askstring('New pack', 'A name for the new pack (its folder under packs/):',
-                                      parent=self.root)
-        if not name:
-            return
-        dest = os.path.join(PACKS_DIR, name.strip())
-        if os.path.exists(dest):
-            messagebox.showerror('New pack', f'packs/{name} already exists.')
-            return
-        blank = messagebox.askyesnocancel(
-            'New pack', f'Start from the pack now open ({self.project.name})?\n\n'
-                        'Yes: its items, creatures, spells, classes, tiles and pictures, but one empty level and no '
-                        'story - for a new quest.\nNo: a complete copy of it, levels and story included.')
-        if blank is None:
-            return
-        Project.create(dest, self.project.root, blank=blank)
-        self.open(dest)
+        from .pack_chooser import make_pack
+        dest = make_pack(self.root)
+        if dest:
+            self.open(dest)
 
     def save(self):
         if self.project and self.dirty:
@@ -411,7 +410,7 @@ class App:
             return
         deluxe = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         try:
-            todo = side_save.apply(deluxe, path)
+            todo = side_save.apply(deluxe, path, into=self.project.root)
         except (OSError, ValueError, KeyError) as e:
             messagebox.showerror('Restore', f"Couldn't read {path}: {e}")
             return
@@ -421,7 +420,7 @@ class App:
         shown = '\n'.join(todo[:15]) + (f'\n... and {len(todo) - 15} more' if len(todo) > 15 else '')
         if not messagebox.askyesno('Restore my edits', f'Put back {len(todo)} things from\n{path}?\n\n{shown}'):
             return
-        side_save.apply(deluxe, path, write=True)
+        side_save.apply(deluxe, path, write=True, into=self.project.root)
         self.open(self.project.root)
         self.status(f'Put back {len(todo)} things.')
 
@@ -546,5 +545,6 @@ def main(argv=None):
     ap.add_argument('--pack')
     args = ap.parse_args(argv)
     root = tk.Tk()
-    App(root, args.pack)
-    root.mainloop()
+    app = App(root, args.pack)
+    if not app.closed:
+        root.mainloop()

@@ -25,7 +25,16 @@ import re
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PACKS_DIR = os.path.join(ROOT, 'packs')
-DEFAULT_PACK = os.path.join(PACKS_DIR, 'TheQuest')
+DEFAULT_PACK = os.path.join(PACKS_DIR, 'TheQuest')           # the first 7 levels: locked, never edited
+CUSTOM_DIR = os.path.join(ROOT, 'Custom Maps')               # the editor's packs, one folder each, copies of the above
+
+
+def custom_packs() -> list:
+    """The names of the packs in Custom Maps (folders with a quest.json), in order."""
+    if not os.path.isdir(CUSTOM_DIR):
+        return []
+    return sorted(d for d in os.listdir(CUSTOM_DIR) if os.path.exists(os.path.join(CUSTOM_DIR, d, 'quest.json')))
+
 
 ITEM_COLUMNS = ['req_str', 'req_int', 'atk', 'def', 'warm', 'marm', 'str', 'int', 'power', 'kind', 'dex', 'acc']
 SPELL_COLUMNS = ['req_int', 'mana', 'range', 'power', 'duration']
@@ -36,11 +45,14 @@ _SHOP_FILE = re.compile(r'^s0000(\d)(\d)\.dat$')
 
 
 def pack_path() -> str:
-    """The pack to play: $QUEST_PACK (a folder, or a name under packs/), else packs/TheQuest."""
+    """The pack to play: $QUEST_PACK (a folder, or a name under packs/ or Custom Maps/), else packs/TheQuest."""
     p = os.environ.get('QUEST_PACK')
     if not p:
         return DEFAULT_PACK
-    return p if os.path.isdir(p) else os.path.join(PACKS_DIR, p)
+    if os.path.isdir(p):
+        return p
+    custom = os.path.join(CUSTOM_DIR, p)
+    return custom if os.path.isdir(custom) and not os.path.isdir(os.path.join(PACKS_DIR, p)) else os.path.join(PACKS_DIR, p)
 
 
 _default = None

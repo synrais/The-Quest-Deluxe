@@ -39,6 +39,7 @@ from . import ui
 from . import view3d
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+CUSTOM_DIR = os.path.join(ROOT, 'Custom Maps')
 
 DIRS = {pygame.K_LEFT: (-1, 0), pygame.K_RIGHT: (1, 0), pygame.K_UP: (0, -1), pygame.K_DOWN: (0, 1),
         pygame.K_KP4: (-1, 0), pygame.K_KP6: (1, 0), pygame.K_KP8: (0, -1), pygame.K_KP2: (0, 1)}
@@ -152,7 +153,11 @@ class Game:
         self.renderer = Renderer(window, self.data.src, self.pack)
         self.renderer.smooth = self.settings.get('smooth_scaling') == 'on'
         # saves/<pack>/save01.dat .. save20.dat: the original's format, kept apart from the classic port's
-        self.slots = Slots(os.path.join(ROOT, 'saves', os.path.basename(self.pack.root)))
+        # (a pack of Custom Maps keeps its own: saves/Custom Maps/<name>/)
+        custom = os.path.dirname(self.pack.root) == os.path.abspath(CUSTOM_DIR)
+        self.slots = Slots(os.path.join(ROOT, 'saves', *(['Custom Maps'] if custom else []), os.path.basename(self.pack.root)))
+        self.reopen_load = False
+        self.next_pack = None              # set to a pack folder to leave this game and start the other (switch_pack)
         # scripted runs (tests, the dummy video driver) play animations instantly and silently
         self.fast = os.environ.get('SDL_VIDEODRIVER') == 'dummy'
         sound = self.settings.get('sound')
@@ -1479,6 +1484,24 @@ class Game:
             self.overlay = ui.YesNo('Want to save? (Y)es (N)o', write)
         else:
             write()
+
+    def pack_choices(self) -> list:
+        """The packs the player can play: [(name, folder)], the locked game first, then the Custom Maps."""
+        from .pack import DEFAULT_PACK, CUSTOM_DIR, custom_packs
+        return [('The Quest', DEFAULT_PACK)] + [(n, os.path.join(CUSTOM_DIR, n)) for n in custom_packs()]
+
+    def pack_name(self) -> str:
+        return next((n for n, d in self.pack_choices() if os.path.abspath(d) == os.path.abspath(self.pack.root)),
+                    os.path.basename(self.pack.root))
+
+    def switch_pack(self):
+        """Leave for the next pack of pack_choices (the title and the load list: P). run_deluxe.py starts it."""
+        choices = self.pack_choices()
+        if len(choices) < 2:
+            return
+        here = next((i for i, (n, d) in enumerate(choices) if os.path.abspath(d) == os.path.abspath(self.pack.root)), 0)
+        self.next_pack = choices[(here + 1) % len(choices)][1]
+        self.running = False
 
     def load_game(self, on_no=None):
         """load(): in a game it asks 'Want to load? (Y)es (N)o' (from the title's list it doesn't),

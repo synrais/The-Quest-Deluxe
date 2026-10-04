@@ -701,5 +701,39 @@ from editor import pack_edits as pz
 assert 'A spell that makes it rain' in pz.read_wishes(pack) and '#' not in pz.read_wishes(pack)
 print('wishes: written in the editor, kept with the pack, read by the zip tool: ok')
 print('events: the wizard makes a rule, its words and the script, and the game reads it: ok')
+# Custom Maps: the locked game is never opened; a pack is named, made as a copy of it and chosen from a list
+import engine.pack as engine_pack
+from tkinter import simpledialog
+from editor import custom, pack_chooser
+shown_info = []
+real_info = messagebox.showinfo
+messagebox.showinfo = lambda title, text, **k: shown_info.append(text)
+stay = app.project.root
+app.open(engine_pack.DEFAULT_PACK)
+messagebox.showinfo = real_info
+assert shown_info and 'locked' in shown_info[0] and app.project.root == stay, 'the locked game is not opened'
+maps = os.path.join(tmp, 'Custom Maps')
+saved_dirs = (engine_pack.CUSTOM_DIR, custom.CUSTOM_DIR)
+engine_pack.CUSTOM_DIR = custom.CUSTOM_DIR = maps
+answers = iter(['bad/name', 'Test Pack'])
+real_ask = simpledialog.askstring
+simpledialog.askstring = lambda *a, **k: next(answers)
+try:
+    assert custom.packs() == []
+    made = pack_chooser.choose_pack(root)                      # none yet: straight to naming the first
+    assert made == os.path.join(maps, 'Test Pack') and os.path.exists(os.path.join(made, 'levels', '7', 'map.txt'))
+    assert custom.packs() == ['Test Pack']
+    win = pack_chooser.PackChooser(root, 'Test Pack')
+    pump()
+    assert win.names == ['Test Pack'] and win.box.curselection() == (0,)
+    win.open_chosen()
+    assert win.result == made
+    app.open(made)
+    assert app.project.root == made and app.project.quest['title'] == 'Test Pack'
+finally:
+    simpledialog.askstring = real_ask
+    engine_pack.CUSTOM_DIR, custom.CUSTOM_DIR = saved_dirs
+app.open(stay)
+print('custom maps: the locked game is not opened; a pack is named, copied from it and chosen: ok')
 root.destroy()
 print('all editor checks passed')

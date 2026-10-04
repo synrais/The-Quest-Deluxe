@@ -1311,6 +1311,44 @@ def hero_shows_gear():
     print('gear: the hero shows what he wears on the map (its own picture or a small copy), off as it was: ok')
 
 
+def custom_packs_switching():
+    """The title and the load list play the locked game, with P to switch to a pack of Custom Maps (its own saves)."""
+    import engine.game as game_mod
+    import engine.pack as pack_mod
+    from engine import ui
+    from engine.formats import GameData
+    import tempfile
+    maps = os.path.join(tempfile.mkdtemp(), 'Custom Maps')
+    shutil.copytree(pack_mod.DEFAULT_PACK, os.path.join(maps, 'Bro Pack'))
+    real = pack_mod.CUSTOM_DIR, game_mod.CUSTOM_DIR
+    pack_mod.CUSTOM_DIR = game_mod.CUSTOM_DIR = maps
+    window = pygame.display.get_surface()
+    try:
+        g = game_mod.Game(window)
+        assert g.pack_choices() == [('The Quest', pack_mod.DEFAULT_PACK), ('Bro Pack', os.path.join(maps, 'Bro Pack'))]
+        assert g.pack_name() == 'The Quest' and g.slots.dir.endswith(os.path.join('saves', 'TheQuest')), 'the locked game first'
+        assert g.next_pack is None
+        g.overlay = ui.LoadScreen(g)
+        g.overlay.key(g, pygame.event.Event(pygame.KEYDOWN, key=pygame.K_p, unicode='p', mod=0))
+        assert g.next_pack == os.path.join(maps, 'Bro Pack') and not g.running and g.reopen_load, 'P on the load list'
+        os.environ['QUEST_PACK'] = g.next_pack
+        pack_mod._default = None
+        other = game_mod.Game(window, data=GameData.load())
+        assert other.pack_name() == 'Bro Pack'
+        assert other.slots.dir.endswith(os.path.join('saves', 'Custom Maps', 'Bro Pack')), other.slots.dir
+        other.overlay = ui.TitleScreen()
+        other.overlay.key(other, pygame.event.Event(pygame.KEYDOWN, key=pygame.K_p, unicode='p', mod=0))
+        assert other.next_pack == pack_mod.DEFAULT_PACK, 'P comes round to the locked game'
+        other.overlay.draw(other.renderer, other.renderer.screen)                 # the label is drawn
+        g.overlay = ui.LoadScreen(g)
+        g.overlay.draw(g.renderer, g.renderer.screen)
+    finally:
+        pack_mod.CUSTOM_DIR, game_mod.CUSTOM_DIR = real
+        os.environ.pop('QUEST_PACK', None)
+        pack_mod._default = None
+    print('custom maps: the locked game first, P switches pack on the title and the load list, saves kept apart: ok')
+
+
 def hands_react():
     from engine.game import Game
     from engine.state import SLOT_WEAPON, SLOT_OFFHAND
@@ -1401,6 +1439,7 @@ if __name__ == '__main__':
     underworld()
     respawn_and_kits()
     hero_shows_gear()
+    custom_packs_switching()
     hands_react()
     usable_items()
     behaviour()

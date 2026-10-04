@@ -9,7 +9,7 @@ classes and levels are made with the editor.
 
 ```
 python run_deluxe.py                       a new game of packs/TheQuest
-python run_deluxe.py --pack mypack         another pack (a folder, or a name under packs/)
+python run_deluxe.py --pack mypack         another pack (a folder, or a name under packs/ or Custom Maps/)
 python run_deluxe.py --quick 1 --level 2   start at once with a Knight on level 2 (testing)
 python run_editor.py                       The Quest Deluxe Editor (needs tkinter)
 ```
@@ -43,7 +43,8 @@ The original's keys all work as in [the classic edition](../TheQuestClassic/READ
 | `run_deluxe.py`, `run_editor.py` | Start the game and the editor. |
 | `engine/` | The Quest Deluxe's code (a fork of the classic port's engine, reading everything from a pack). |
 | `editor/` | The editor (tkinter). |
-| `packs/TheQuest/` | The original quest as a pack. |
+| `packs/TheQuest/` | The original quest as a pack: the first 7 levels, **locked**. The game plays it, and the editor never opens it. |
+| `Custom Maps/` | The packs made in the editor, a folder each (made the first time the editor runs). Every one starts as a copy of `packs/TheQuest`, and everything changed in the editor (levels, stats, pictures) stays in its own folder. On the game's title and load screens, **P** switches between The Quest and these packs; each pack has its own saves. |
 | `docs/QUEST_PACKS.md` | Every file of a pack, and every field. |
 | `docs/EVENTS.md` | The level scripts: the language, the handlers and the functions they can call. |
 | `tools/make_pack.py` | Rebuilds `packs/TheQuest` from the original (the only thing here that reads `../TheQuestClassic`). |

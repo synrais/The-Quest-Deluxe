@@ -46,13 +46,26 @@ def main():
     for key in ('fixes', 'sound'):
         if getattr(args, key):
             settings[key] = getattr(args, key)
-    game = Game(window, start_level=args.level or 1, settings=settings)
-    title = game.pack.quest.get('title', 'The Quest')
-    pygame.display.set_caption('The Quest Deluxe' if title == 'The Quest' else f'{title} - The Quest Deluxe')
-    if args.quick:
-        at = tuple(int(v) for v in args.at.split(',')) if args.at else None
-        game.quick_start(args.quick, args.level or game.pack.quest.get('first_level', 1), at)
-    game.run()
+    from engine import pack as pack_mod
+    from engine.formats import GameData
+    from engine import ui
+    reopen = False
+    while True:
+        game = Game(window, data=GameData.load(), start_level=args.level or 1, settings=settings)
+        title = game.pack.quest.get('title', 'The Quest')
+        pygame.display.set_caption('The Quest Deluxe' if title == 'The Quest' else f'{title} - The Quest Deluxe')
+        if args.quick:
+            at = tuple(int(v) for v in args.at.split(',')) if args.at else None
+            game.quick_start(args.quick, args.level or game.pack.quest.get('first_level', 1), at)
+        elif reopen:
+            game.overlay = ui.LoadScreen(game)             # P on the load list: the saves of the pack switched to
+        game.run()
+        if not game.next_pack:                             # P on the title or the load list: play the next pack
+            break
+        reopen = bool(getattr(game, 'reopen_load', False))
+        os.environ['QUEST_PACK'] = game.next_pack
+        pack_mod._default = None
+        args.quick = None
     pygame.quit()
 
 

@@ -30,8 +30,9 @@ or hand it to Claude to build the features he asked for.
 
 ## Keeping the additions safe when the game is updated
 
-The editor saves his work inside the game folder (`TheQuestDeluxe/packs/TheQuest/`), so a new version of the game dragged
-over it replaces his tables (`creatures.json`, `items.json`, ...). To stop that costing him anything:
+The editor saves his work in his own pack, `TheQuestDeluxe/Custom Maps/<name>/` (a copy of the locked `packs/TheQuest`, which the editor
+never opens), so a new game dragged over his old one leaves it alone. Edits made before Custom Maps existed (in `packs/TheQuest`)
+were replaced by such an update. To make sure nothing is ever lost:
 
 - **Every Save** in the editor makes another zip, `QuestEdits_<date>_<time>.zip`, in `QuestDeluxeEdits` in his home folder
   (outside the game folder): a copy of the same additions Send my edits sends, plus the changed table rows by number.

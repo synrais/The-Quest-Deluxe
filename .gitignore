@@ -2,6 +2,8 @@ __pycache__/
 *.pyc
 # made when playing: The Quest Deluxe's saves (TheQuestDeluxe/saves/)
 saves/
+# made in the editor: the player's own packs (TheQuestDeluxe/Custom Maps/)
+Custom Maps/
 # the reverse-engineering tools' output, and test output
 TheQuestClassic/tools/re/out/
 **/tests/out/

@@ -37,6 +37,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))              # TheQuestDeluxe/
 DELUXE = os.path.dirname(HERE)                                 # TheQuestDeluxe
 ROOT = os.path.dirname(DELUXE)                                 # the main folder (the zip is made there)
 PREFIX = 'TheQuestDeluxe'                                      # the zip's paths start here, so it unzips in place
+CUSTOM = 'Custom Maps'                                         # the editor's packs: copies of the shipped one, edited
 SHIPPED = 'TheQuest'                                           # the pack that ships with the game
 BASELINE = os.path.join(HERE, 'pack_baseline.json')
 TEXT = ('.json', '.txt', '.qs', '.md', '.ini')                 # compared without their line endings (Windows adds CRs)
@@ -194,30 +195,33 @@ def gather(deluxe: str = DELUXE, include_all: bool = False, when: float | None =
     packs = os.path.join(deluxe, 'packs')
     if not os.path.isdir(packs):
         return [], f'There is no packs folder in {deluxe}. Run this from the game folder.'
+    folders = [('packs', name, os.path.join(packs, name)) for name in sorted(os.listdir(packs))]
+    custom = os.path.join(deluxe, CUSTOM)
+    if os.path.isdir(custom):
+        folders += [(CUSTOM, name, os.path.join(custom, name)) for name in sorted(os.listdir(custom))]
     stamp = time.localtime(when)
     lines = [f'Quest edits, made {time.strftime("%Y-%m-%d %H:%M", stamp)}', '']
     if note.strip():
         lines += ['NOTE FROM WHOEVER MADE THIS:', note.strip(), '']
-    for name in sorted(os.listdir(packs)):                      # what was written in the editor's Wishes window
-        wished = read_wishes(os.path.join(packs, name))
+    for group, name, folder in folders:                         # what was written in the editor's Wishes window
+        wished = read_wishes(folder)
         if wished:
-            lines += [f'WISHES (packs/{name}/WISHES.txt):', wished, '']
+            lines += [f'WISHES ({group}/{name}/WISHES.txt):', wished, '']
     files = []
     base = read_baseline(baseline) if os.path.exists(baseline) else None
     if base is None and not include_all:
         lines += ['!! editor/pack_baseline.json is missing, so there is nothing to compare packs/TheQuest with: all of',
                   '!! it is sent. (Get the latest game folder, which has that file, for a list of only what changed.)', '']
-    for name in sorted(os.listdir(packs)):
-        folder = os.path.join(packs, name)
+    for group, name, folder in folders:
         if not os.path.isdir(folder) or name.startswith('.'):
             continue
         now = scan(folder)
-        if name == SHIPPED and base is not None and not include_all:
+        if (name == SHIPPED or group == CUSTOM) and base is not None and not include_all:
             added, changed, removed = compare(now, base)
-            lines.append(f'packs/{name} (the shipped pack): {len(added)} new, {len(changed)} changed, '
-                         f'{len(removed)} removed files')
-            for label, group in (('new', added), ('changed', changed), ('removed', removed)):
-                lines += [f'    {label}: {f}' for f in group]
+            lines.append(f'{group}/{name} ({"a copy of the shipped pack" if group == CUSTOM else "the shipped pack"}): '
+                         f'{len(added)} new, {len(changed)} changed, {len(removed)} removed files')
+            for label, listed in (('new', added), ('changed', changed), ('removed', removed)):
+                lines += [f'    {label}: {f}' for f in listed]
             tables = diff_tables(read_baseline_tables(baseline), read_tables(folder))
             if tables:
                 lines += ['', 'What changed in the tables:'] + tables
@@ -226,12 +230,12 @@ def gather(deluxe: str = DELUXE, include_all: bool = False, when: float | None =
                 lines += ['', 'The new and changed pictures:'] + pictures
             lines.append('')
             for f in added + changed:
-                files.append((os.path.join(folder, *f.split('/')), f'{PREFIX}/packs/{name}/{f}'))
+                files.append((os.path.join(folder, *f.split('/')), f'{PREFIX}/{group}/{name}/{f}'))
         else:
-            lines.append(f'packs/{name}: {"a pack of its own" if name != SHIPPED else "everything"}, '
+            lines.append(f'{group}/{name}: {"a pack of its own" if name != SHIPPED else "everything"}, '
                          f'{len(now)} files')
             for f in sorted(now):
-                files.append((os.path.join(folder, *f.split('/')), f'{PREFIX}/packs/{name}/{f}'))
+                files.append((os.path.join(folder, *f.split('/')), f'{PREFIX}/{group}/{name}/{f}'))
     if not files:
         return [], 'Nothing has been added or changed since the game came: there is nothing to pack.'
     lines += ['', f'{len(files)} files in all.']

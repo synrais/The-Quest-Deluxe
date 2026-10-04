@@ -15,7 +15,7 @@ import time
 import zipfile
 
 from . import pack_edits
-from .pack_edits import DELUXE, PREFIX, SHIPPED, TABLES
+from .pack_edits import CUSTOM, DELUXE, PREFIX, SHIPPED, TABLES
 
 
 
@@ -69,11 +69,14 @@ def save_zip(deluxe: str = DELUXE, root: str | None = None, baseline: str = pack
     if not files:
         return None, report
     complete = os.path.exists(baseline)
-    shipped = os.path.join(deluxe, 'packs', SHIPPED)
-    now = pack_edits.read_tables(shipped)
-    delta = table_delta(pack_edits.read_baseline_tables(baseline) if complete else {}, now)
-    meta = {'made': time.strftime('%Y-%m-%d %H:%M', time.localtime(when)), 'complete': complete, 'delta': delta,
-            'digest': digest(delta, files)}
+    base = pack_edits.read_baseline_tables(baseline) if complete else {}
+    custom = os.path.join(deluxe, CUSTOM)
+    packs = {n: os.path.join(custom, n) for n in sorted(os.listdir(custom)) if os.path.isdir(os.path.join(custom, n))} \
+        if os.path.isdir(custom) else {}
+    now = {n: pack_edits.read_tables(folder) for n, folder in packs.items()}
+    delta = {n: d for n in packs if (d := table_delta(base, now[n]))}
+    meta = {'made': time.strftime('%Y-%m-%d %H:%M', time.localtime(when)), 'format': 2, 'complete': complete,
+            'delta': delta, 'digest': digest(delta, files)}
     os.makedirs(root, exist_ok=True)
     zips = saved_zips(root)
     old = read_meta(zips[0]) if zips else None
@@ -91,8 +94,9 @@ def save_zip(deluxe: str = DELUXE, root: str | None = None, baseline: str = pack
             z.writestr('NOTES.txt', note.strip() + '\n')
         for disk, arc in files:
             z.write(disk, arc)
-        for name in now:                                                   # the whole tables too, to read by hand
-            z.write(os.path.join(shipped, name), f'tables_full/{name}')
+        for n, tables in now.items():                                      # the whole tables too, to read by hand
+            for name in tables:
+                z.write(os.path.join(packs[n], name), f'tables_full/{n}/{name}')
     return out, report
 
 
@@ -128,68 +132,104 @@ def table_writer(name: str, data: dict, path: str):
             packio.write_table(path, key, data[key], data.get('_comment', ''))
 
 
-def apply(deluxe: str, zip_path: str, write: bool = False):
-    """Put a saved zip's edits into the game: its rows go into the shipped pack's tables by number (his rows win; with
-    an incomplete zip, which could not tell his edits from the game's, only rows that are missing are added), and
-    its other files are copied back. Returns the list of what it does (or would do, with write=False)."""
+def merge_tables(folder: str, delta: dict, complete: bool, write: bool, label: str) -> list:
+    """Put saved table rows into the pack at folder, by number (his rows win; with an incomplete zip only rows that are
+    missing are added). Returns what it does."""
     from engine import packio
     changes = []
+    for name, keys in delta.items():
+        path = os.path.join(folder, name)
+        if not os.path.exists(path):
+            continue
+        data = packio.read_json(path)
+        touched = False
+        for key, change in keys.items():
+            if 'rows' in change:
+                have = {r['id']: i for i, r in enumerate(data.get(key) or []) if isinstance(r, dict)}
+                for row in change['rows']:
+                    what = f'{label}{name}: {key} {row["id"]} {row.get("name", "")}'.rstrip()
+                    if row['id'] not in have:
+                        data.setdefault(key, []).append(row)
+                        changes.append(what + ' (put back)')
+                        touched = True
+                    elif complete and data[key][have[row['id']]] != row:
+                        data[key][have[row['id']]] = row
+                        changes.append(what + ' (his version)')
+                        touched = True
+            elif key not in data or (complete and data[key] != change['value']):
+                data[key] = change['value']
+                changes.append(f'{label}{name}: {key} (his)')
+                touched = True
+        if touched and write:
+            table_writer(name, data, path)
+    return changes
+
+
+def apply(deluxe: str, zip_path: str, write: bool = False, into: str | None = None):
+    """Put a saved zip's edits into the game. A zip made in a Custom Maps pack goes back into that pack (made as a copy
+    of the locked game if it is not there). Edits from before Custom Maps, made in packs/TheQuest, go into the pack
+    folder `into`, if one is given (otherwise they are left). Table rows are merged by number; his other files
+    (pictures, maps, scripts, text) are copied back. Returns the list of what it does (or would do, with write=False)."""
+    from engine import packio
+    changes = []
+    custom = os.path.join(deluxe, CUSTOM)
+    shipped = os.path.join(deluxe, 'packs', SHIPPED)
     with zipfile.ZipFile(zip_path) as z:
-        if 'side_save.json' in z.namelist():
+        names = z.namelist()
+        if 'side_save.json' in names:
             meta = json.loads(z.read('side_save.json').decode('utf-8'))
         else:                                  # a zip from "Make Edits Zip" or Make zip: its whole tables, rows to add
             meta = {'complete': False, 'delta': {}}
+            legacy = {}
             for name in TABLES:
                 arc = f'{PREFIX}/packs/{SHIPPED}/{name}'
-                if arc in z.namelist():
+                if arc in names:
                     try:
                         table = json.loads(z.read(arc).decode('utf-8'))
                     except ValueError:
                         continue
                     for key, value in table.items():
                         if is_rows(value):
-                            meta['delta'].setdefault(name, {})[key] = {'rows': value}
-        shipped = os.path.join(deluxe, 'packs', SHIPPED)
-        for name, keys in meta.get('delta', {}).items():
-            path = os.path.join(shipped, name)
-            if not os.path.exists(path):
+                            legacy.setdefault(name, {})[key] = {'rows': value}
+            meta['delta'] = legacy
+        complete = bool(meta.get('complete'))
+        delta = meta.get('delta') or {}
+        # format 2: {pack: {table file: ...}} for the packs of Custom Maps; before it, one flat {table file: ...} of
+        # packs/TheQuest, which goes into the pack named by `into`
+        deltas = delta if meta.get('format') == 2 else ({'': delta} if delta else {})
+        for pack, delta in deltas.items():
+            folder = into if pack == '' else os.path.join(custom, pack)
+            if folder is None:
                 continue
-            data = packio.read_json(path)
-            touched = False
-            for key, change in keys.items():
-                if 'rows' in change:
-                    have = {r['id']: i for i, r in enumerate(data.get(key) or []) if isinstance(r, dict)}
-                    for row in change['rows']:
-                        if row['id'] not in have:
-                            data.setdefault(key, []).append(row)
-                            changes.append(f'{name}: {key} {row["id"]} {row.get("name", "")}'.rstrip() + ' (put back)')
-                            touched = True
-                        elif meta.get('complete') and data[key][have[row['id']]] != row:
-                            data[key][have[row['id']]] = row
-                            changes.append(f'{name}: {key} {row["id"]} {row.get("name", "")}'.rstrip() + ' (his version)')
-                            touched = True
-                elif key not in data or (meta.get('complete') and data[key] != change['value']):
-                    data[key] = change['value']
-                    changes.append(f'{name}: {key} (his)')
-                    touched = True
-            if touched and write:
-                table_writer(name, data, path)
-        for arc in z.namelist():
-            if not arc.startswith(f'{PREFIX}/packs/'):
+            if pack and not os.path.isdir(folder) and write:
+                shutil.copytree(shipped, folder)
+            reading = folder if os.path.isdir(folder) else shipped      # a pack still to be made: what it would be
+            if os.path.isdir(reading):
+                changes += merge_tables(reading, delta, complete, write and reading == folder,
+                                        f'{pack + ": " if pack else ""}')
+        for arc in names:
+            parts = arc.split('/')
+            if len(parts) < 4 or parts[0] != PREFIX:
                 continue
-            rel = arc[len(PREFIX) + 1:]
-            target = os.path.join(deluxe, *rel.split('/'))
-            parts = rel.split('/')
-            if len(parts) == 3 and parts[1] == SHIPPED and parts[2] in TABLES:
-                continue                                                  # tables were merged above
+            if parts[1] == CUSTOM:
+                folder, rel = os.path.join(custom, parts[2]), '/'.join(parts[3:])
+            elif parts[1] == 'packs' and parts[2] == SHIPPED and into is not None:
+                folder, rel = into, '/'.join(parts[3:])
+            else:
+                continue
+            if '/' not in rel and rel in TABLES:
+                continue                                              # tables were merged above
+            target = os.path.join(folder, *rel.split('/'))
             data = z.read(arc)
             if os.path.exists(target):
                 with open(target, 'rb') as fh:
                     here = fh.read()
                 if here.replace(b'\r\n', b'\n') == data.replace(b'\r\n', b'\n'):
                     continue
-            changes.append(f'{rel}')
+            changes.append(f'{os.path.basename(folder)}: {rel}')
             if write:
+                if not os.path.isdir(folder):
+                    shutil.copytree(shipped, folder)
                 os.makedirs(os.path.dirname(target), exist_ok=True)
                 with open(target, 'wb') as fh:
                     fh.write(data)

@@ -179,6 +179,9 @@ class TitleScreen(Overlay):
         if ev.key in (pygame.K_UP, pygame.K_DOWN):          # title(): the sword wraps around
             self.i = (self.i + (-1 if ev.key == pygame.K_UP else 1)) % 4
             g.tones((400, 50), (300, 50))
+        elif ev.key == pygame.K_p and len(g.pack_choices()) > 1:
+            g.tones((600, 50), (700, 50))
+            g.switch_pack()                                  # P: the next pack (Custom Maps), see pack_label
         elif ev.key in CONFIRM:
             g.tones((400, 50), (300, 50), (600, 50), (700, 50), (500, 50), (400, 50))
             self.close(g)
@@ -235,7 +238,19 @@ class TitleScreen(Overlay):
             g.settextstyle(0, 0, 1)
             g.setcolor(15)
             g.outtextxy(4, 470, f'Bug fixes: {fixes}')
+        pack_label(r, scr)
         _title_cursor(bgi_on(r, scr), self.i)
+
+
+def pack_label(r, scr):
+    """Bottom right, when there are Custom Maps: which pack is in play, and P to change."""
+    g = getattr(r, 'game', None)
+    if g is None or len(g.pack_choices()) < 2:
+        return
+    b = bgi_on(r, scr)
+    b.settextstyle(0, 0, 1)
+    b.setcolor(14)
+    b.outtextxy(380, 470, f'Pack: {g.pack_name()}   (P: change pack)')
 
 
 class LoadScreen(Overlay):
@@ -261,6 +276,10 @@ class LoadScreen(Overlay):
             g.status.level = 0                        # no 'Want to load?' from here
             g.status.saveslot = self.games[self.i - 1][0]
             g.load_game()
+        elif ev.key == pygame.K_p and len(g.pack_choices()) > 1:
+            g.tones((600, 50), (700, 50))
+            g.switch_pack()                          # the saves of the next pack: the load list opens again there
+            g.reopen_load = True
         elif ev.key == pygame.K_ESCAPE:
             g.overlay = TitleScreen()
 
@@ -271,6 +290,7 @@ class LoadScreen(Overlay):
         g.setcolor(15)
         g.settextstyle(4, 0, 4)
         g.outtextxy(180, 0, 'Available Games')
+        pack_label(r, scr)
         g.setcolor(9)
         g.settextstyle(6, 0, 2)
         for k, (n, level, htype) in enumerate(self.games, start=1):
