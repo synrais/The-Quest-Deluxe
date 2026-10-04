@@ -1393,7 +1393,8 @@ def hero_shows_gear():
     plate.fill((200, 0, 0, 255), (0, 0, 40, 40))                         # armour a size too big for him
     plain = {'type': 'armour', 'name': 'Plate'}
     got = worn.layers(5, {'armour': (9, plain)}, lambda i: (None, plate))[1][0]
-    assert got.get_bounding_rect() == worn.silhouette().get_bounding_rect(), 'only where it touches the hero'
+    assert worn.TORSO.contains(got.get_bounding_rect()) and got.get_bounding_rect().height >= 13, 'only his armour area'
+    assert got.get_at((20, 8))[3] == 0 and got.get_at((18, 34))[3] == 0, 'not his head or legs'
     assert got.get_at((2, 2))[3] == 0 and got.get_at((20, 20))[3] == 255
     moved = worn.layers(5, {'armour': (9, dict(plain, worn_dx=4))}, lambda i: (None, plate))[1][0]
     assert moved.get_at((20, 20))[3] == 255 and worn.layers(5, {'armour': (9, plain)}, lambda i: (None, plate))[1][0] is not moved
