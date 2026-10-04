@@ -65,10 +65,41 @@ def cape_layer(colour: int) -> pygame.Surface:
 
 
 def cape_like(row: dict) -> bool:
-    """An armour item named like a cape (cape, cloak, shawl, robe, mantle): it starts out behind the hero, shown by its
-    bag picture. (Nothing is marked: where an item sits is chosen in the Items tab's hero preview.)"""
+    """An armour item that is a cape: marked `cape` true or false in the Items tab, else by its name (cape, cloak, shawl,
+    robe, mantle). It starts out behind the hero, shown by its bag picture."""
+    if row.get('cape') is not None:
+        return row.get('type') == 'armour' and bool(row['cape'])
     name = f'{row.get("name", "")} {row.get("bag_name", "")}'.lower()
     return row.get('type') == 'armour' and has(name, 'cape', 'cloak', 'shawl', 'robe', 'mantle')
+
+
+def hood_colour(row) -> int | None:
+    """The colour a cape turns the hero's hood (`hood_colour`, 0-15), or None: his own."""
+    if row and cape_like(row) and row.get('hood_colour') is not None:
+        return int(row['hood_colour']) % 16
+    return None
+
+
+_hood = []
+
+
+def hood_mask():
+    """Where the hood is: the pixels of the base picture in the hood's colour."""
+    if not _hood:
+        src = pygame.image.load(os.path.join(HERE, 'assets', 'hero_base.png'))
+        _hood.extend((x, y) for x in range(src.get_width()) for y in range(src.get_height())
+                     if tuple(src.get_at((x, y)))[:3] == BASE_COLOUR)
+    return _hood
+
+
+def with_hood(picture, colour: int):
+    """A copy of a hero's picture (painted, any class) with its hood in an EGA colour."""
+    out = pygame.Surface(picture.get_size(), pygame.SRCALPHA)
+    out.blit(picture, (0, 0))
+    for x, y in hood_mask():
+        if x < out.get_width() and y < out.get_height() and out.get_at((x, y))[3]:
+            out.set_at((x, y), (*EGA[colour], 255))
+    return out
 
 
 def source_of(row: dict) -> str:
@@ -412,6 +443,12 @@ def layers(colour: int, parts: dict, picture_of, own_of=lambda item: None):
 def dress(colour: int, parts: dict, picture_of, own_of=lambda item: None, base_path=None, base=None) -> pygame.Surface:
     """The whole hero wearing parts (see layers): a 40 x 40 picture, see-through round him. The editor's previews use it."""
     behind, front = layers(colour, parts, picture_of, own_of)
+    hood = hood_colour(parts.get('armour', (0, {}))[1])
+    if hood is not None:
+        if base is not None:
+            base = with_hood(base, hood)
+        else:
+            colour = hood
     out = pygame.Surface((TILE, TILE), pygame.SRCALPHA)
     for layer in behind:
         out.blit(layer, (0, 0))

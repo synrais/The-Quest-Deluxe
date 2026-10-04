@@ -230,11 +230,13 @@ class Renderer:
         if painted is not None:
             if gear:                                             # he wears what he carries (nothing: nothing shows)
                 from . import worn
+                from .state import SLOT_ARMOR
                 behind, front = self.gear_layers(game, 0)
                 tile = pygame.Surface((TILE, TILE), pygame.SRCALPHA)
                 for layer in behind:
                     tile.blit(layer, (0, 0))
-                tile.blit(painted, (0, 0))
+                hood = worn.hood_colour(self.worn_row(game, SLOT_ARMOR)[1])
+                tile.blit(painted if hood is None else worn.with_hood(painted, hood), (0, 0))
                 for layer in front:
                     tile.blit(layer, (0, 0))
                 self.clasp(game, tile, 0, 0)
@@ -252,6 +254,9 @@ class Renderer:
             # wears on him; the eyes and the Shield spell's rings come last, as guy2() draws them
             from . import worn
             colour = (look or {}).get('colour', anim.HERO_COLOURS.get(p.hero.type, 0))
+            from .state import SLOT_ARMOR
+            hood = worn.hood_colour(self.worn_row(game, SLOT_ARMOR)[1])      # a cape that turns his hood a colour
+            colour = colour if hood is None else hood
             behind, front = self.gear_layers(game, colour)
             for layer in behind:
                 scr.blit(layer, (hx, hy))

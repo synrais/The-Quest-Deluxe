@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from tkinter import simpledialog, messagebox
 
+from engine import worn
 from .table_tab import TableTab, Field
 from .tiles_tab import key_choices
 
@@ -59,7 +60,7 @@ class ItemsTab(TableTab):
              'Ammunition comes in stacks of 1 to 20: each size is its own item (New ammo kind makes all 20).')
 
     GROUPS = [
-        ('Basics', True, 'what it is and what it costs', ['type', 'bag_name', 'price', 'view3d', 'quest', 'show_on_hero', 'worn_colour', 'worn_dx', 'worn_dy', 'worn_flip', 'worn_behind', 'worn_from',
+        ('Basics', True, 'what it is and what it costs', ['type', 'bag_name', 'price', 'view3d', 'quest', 'show_on_hero', 'worn_colour', 'cape', 'hood_colour', 'worn_dx', 'worn_dy', 'worn_flip', 'worn_behind', 'worn_from',
                                                                'clasp_colour', 'clasp_when', 'clasp_alt', 'clasp_mode']),
         ('Numbers', True, 'what it adds to the hero when worn or wielded',
          ['power', 'kind', 'atk', 'def', 'warm', 'marm', 'req_str', 'req_int']),
@@ -196,6 +197,12 @@ class ItemsTab(TableTab):
             Field('worn_colour', 'Colour on the hero', 'choice', COLOURS, when=is_(*WORN),
                   hint='armour or a cloak gives his cloak this colour; for other things, their colour on him '
                        '(empty: the commonest colour of its bag picture)'),
+            Field('cape', 'Is a cape', 'choice', [(None, '(by its name)'), (True, 'a cape: worn behind him'),
+                                                   (False, 'armour: worn on his body')], when=is_('armour'),
+                  hint='a cape shows its inventory picture behind the hero; armour goes on his body'),
+            Field('hood_colour', 'Hood colour', 'choice', [(None, '(his own colour)')] + COLOURS[1:],
+                  when=lambda row: row.get('type') == 'armour' and worn.cape_like(row),
+                  hint='the colour his hood turns while he wears this cape, one of the 16'),
             Field('clasp_colour', 'Clasp colour', 'choice', COLOURS, when=is_('amulet'),
                   hint='the colour of the pixel under his chin while he wears it (empty: the amulet\'s colour on the hero)'),
             Field('clasp_when', 'Clasp changes when', 'choice',

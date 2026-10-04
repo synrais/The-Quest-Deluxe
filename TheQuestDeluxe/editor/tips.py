@@ -178,6 +178,8 @@ FIELDS = {
     'hit_item': 'An item that falls on its square each time the hero hurts it (see the chance).',
     'hit_item_chance': 'The chance, in percent, that the item falls (empty: every time).',
     'light': 'On a dark screen (the map tool Dark) the hero sees this many squares round him while he carries this, worn or in the bag. The best light he has counts; empty: none.',
+    'cape': 'Armour that is a cape (a cloak, a shawl, a robe) is worn BEHIND the hero, pixel for pixel as its inventory picture, centred as his normal cape is; other armour goes on his body. Not set: by its name (cape, cloak, shawl, robe or mantle).',
+    'hood_colour': 'A cape can turn the hero\'s hood one of the 16 colours while he wears it. Empty: his hood stays his own colour.',
     'worn_colour': 'The colour this item has on the hero on the map: armour or a cloak gives his CLOAK this colour (a purple cape: a purple cloak); a helmet, shield, weapon or amulet is drawn in it. Empty: the commonest colour of its bag picture.',
     'clasp_colour': 'The colour of the pixel under the hero\'s chin (the clasp) while he wears this amulet. Empty: the amulet\'s colour on the hero.',
     'clasp_when': 'When the clasp changes colour: always, when his life is low or he is hurt, poisoned, shielded, invisible or powered up by a potion. Needs the colour in "Clasp then".',

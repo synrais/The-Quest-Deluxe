@@ -1293,6 +1293,15 @@ def clasp_and_nothing():
     cloak = {'type': 'armour', 'name': 'Red Cloak'}
     assert worn.source_of(cloak) == 'bag' and worn.behind_of(cloak) and not worn.behind_of(dict(cloak, worn_behind=False))
     assert worn.behind_of(dict(sword, worn_behind=True)) and not worn.behind_of(sword)
+    assert not worn.cape_like(dict(cloak, cape=False)) and worn.cape_like({'type': 'armour', 'name': 'Tunic', 'cape': True})
+    assert worn.hood_colour(dict(cloak, hood_colour=14)) == 14 and worn.hood_colour(dict(cloak, cape=False, hood_colour=14)) is None
+    assert worn.hood_colour(cloak) is None
+    hero = worn.dress(5, {'armour': (9, dict(cloak, hood_colour=14))}, lambda item: (None, None))
+    plain = worn.dress(5, {'armour': (9, cloak)}, lambda item: (None, None))
+    x, y = worn.hood_mask()[0]
+    assert tuple(hero.get_at((x, y)))[:3] == worn.EGA[14] and tuple(plain.get_at((x, y)))[:3] == worn.EGA[5], 'the hood changes'
+    painted = worn.with_hood(worn.base_hero(4), 11)
+    assert tuple(painted.get_at((x, y)))[:3] == worn.EGA[11], 'a painted hero (any class) changes too'
     print('amulet clasp: a colour of its own, flashing or changing; nothing worn shows nothing: ok')
 
 
