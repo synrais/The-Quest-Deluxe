@@ -37,6 +37,8 @@ from .uikit import tip
 N = 40
 ZOOMS = (8, 12, 16)
 CLEAR = -1
+SLOTS = 10                                       # floors the previews stand on
+FLOOR_PICKS: list = []                           # which floor each preview slot shows (0: black), kept between windows
 GRIDS = ['No lines', 'Every 10 pixels', 'Every pixel']
 CLIPBOARD: dict = {'cells': None}              # what Copy took, shared by every painter window
 # what shows behind the see-through pixels: (label, colour as '#rrggbb' or None for the chequer)
@@ -220,12 +222,25 @@ class Painter(tk.Toplevel):
         mid = ttk.Frame(self, padding=6)
         mid.pack(side='left', anchor='n')
         self.mid = mid
-        strip = ttk.LabelFrame(mid, text='On the pack\'s floors (live)', padding=3)
+        strip = ttk.LabelFrame(mid, text='On the pack\'s floors (live): click one to change its floor', padding=3)
         strip.pack(fill='x', pady=(0, 6))
-        self.previews = ttk.Label(strip)
-        self.previews.pack(anchor='w')
-        tip(self.previews, 'How the picture looks standing on each floor of the pack (and on black), as you paint. '
-                           'A picture with no see-through pixels is shown tiled instead, to check its edges meet.')
+        words = ('How the picture looks standing on each floor, as you paint. Click one to choose which floor it '
+                 'stands on (or black). A picture with no see-through pixels is shown tiled instead, to check its '
+                 'edges meet.')
+        self.small, self.big, self.shots_img = [], [], {}
+        if self.opaque:
+            self.previews = ttk.Label(strip)
+            self.previews.pack(anchor='w')
+            tip(self.previews, words)
+        else:
+            row = ttk.Frame(strip)
+            row.pack(anchor='w')
+            for i in range(SLOTS):
+                lab = ttk.Label(row, cursor='hand2')
+                lab.grid(row=0, column=i, padx=1)
+                lab.bind('<Button-1>', lambda e, i=i: self._slot_menu(i, e))
+                tip(lab, words)
+                self.small.append(lab)
         self.canvas = tk.Canvas(mid, highlightthickness=0, background='#333')
         self.canvas.pack()
         self._make_canvas()
@@ -236,6 +251,15 @@ class Painter(tk.Toplevel):
             self.canvas.bind(f'<Alt-ButtonPress-{b}>', lambda e, w=which: self._press(e, w, alt=True))
             self.canvas.bind(f'<B{b}-Motion>', lambda e, w=which: self._drag(e, w))
             self.canvas.bind(f'<ButtonRelease-{b}>', lambda e, w=which: self._release(e, w))
+        if not self.opaque:
+            self.bigs = ttk.LabelFrame(mid, text='Bigger', padding=3)
+            self.bigs.pack(fill='x', pady=(6, 0))
+            for i in range(SLOTS):
+                lab = ttk.Label(self.bigs, cursor='hand2')
+                lab.grid(row=i // 5, column=i % 5, padx=1, pady=1)
+                lab.bind('<Button-1>', lambda e, i=i: self._slot_menu(i, e))
+                tip(lab, words)
+                self.big.append(lab)
         foot = ttk.Frame(mid)
         foot.pack(fill='x')
         self.status = ttk.Label(foot, text='')
@@ -321,51 +345,81 @@ class Painter(tk.Toplevel):
             fill = '#%02x%02x%02x' % tuple((a + b) // 2 for a, b in zip(now, was))
         self.canvas.itemconfig(self.rects[x][y], fill=fill)
 
-    PER_ROW = 12
-
     def _floors(self):
-        """The pack's floor pictures (40 x 40), read once: [(number, surface)]."""
+        """The pack's floor pictures (40 x 40), read once: {number: surface}."""
         if getattr(self, '_floor_cache', None) is None:
-            out = []
+            out = {}
             if self.project is not None:
-                for v in self.project.picture_ids('floors')[:36]:
+                for v in self.project.picture_ids('floors'):
                     img = self.project.picture('floors', v)
                     if img is not None:
-                        out.append((v, img if img.get_size() == (40, 40) else pygame.transform.scale(img, (40, 40))))
+                        out[v] = img if img.get_size() == (40, 40) else pygame.transform.scale(img, (40, 40))
             self._floor_cache = out
         return self._floor_cache
 
+    def _picks(self):
+        """The floor of each preview slot: black first, then the pack's first floors, until a person changes one."""
+        if not FLOOR_PICKS:
+            FLOOR_PICKS.extend(([0] + sorted(self._floors()))[:SLOTS])
+        while len(FLOOR_PICKS) < SLOTS:
+            FLOOR_PICKS.append(0)
+        return FLOOR_PICKS
+
+    def _slot_menu(self, i, event):
+        """The list of floors to change preview slot i to."""
+        names = {t['id']: t.get('name', '') for t in (self.project.tiles.get('floors', []) if self.project else [])}
+        menu = tk.Menu(self, tearoff=False)
+        choices = [0] + sorted(self._floors())
+        for k, v in enumerate(choices):
+            menu.add_command(label='Black' if v == 0 else f'{v}  {names.get(v, "")}', columnbreak=bool(k and k % 14 == 0),
+                             command=lambda v=v: self._pick_floor(i, v))
+        menu.tk_popup(event.x_root, event.y_root)
+
+    def _pick_floor(self, i, v):
+        self._picks()[i] = v
+        self._preview()
+
     def _preview(self):
-        """The strip above the picture: it standing on every floor of the pack (and black), live. A picture with no
-        see-through pixels (a floor, a bag cell) is shown tiled 2 x 2 and on its own instead."""
+        """The previews of the picture standing on floors, live: above it (small) and below it (4 times the area). A
+        picture with no see-through pixels (a floor, a bag cell) is shown tiled 2 x 2 and on its own instead."""
         img = to_surface(self.cells)
-        shots = []
         if self.opaque:
             tile = pygame.Surface((80, 80))
             for i in range(2):
                 for j in range(2):
                     tile.blit(img, (i * 40, j * 40))
-            shots = [tile, img]
-        else:
-            black = pygame.Surface((40, 40))
-            for floor in [None] + [f for _, f in self._floors()]:
-                tile = pygame.Surface((40, 40))
-                if floor is None:
-                    tile.fill((0, 0, 0))
+            sheet = pygame.Surface((80 + 40 + 9, 86))
+            sheet.fill((80, 80, 80))
+            sheet.blit(tile, (3, 3))
+            sheet.blit(img, (86, 3))
+            self._pimg = photo(sheet)
+            self.previews.config(image=self._pimg)
+            return
+        floors = self._floors()
+        self._imgs = []
+        shown = min(SLOTS, 1 + len(floors))                       # no more previews than there are floors (and black)
+        for i, v in enumerate(self._picks()):
+            for lab in (self.small[i], self.big[i]):
+                if i >= shown:
+                    lab.grid_remove()
                 else:
-                    tile.blit(floor, (0, 0))
-                tile.blit(img, (0, 0))
-                shots.append(tile)
-        per = min(self.PER_ROW, len(shots)) or 1
-        rows = (len(shots) + per - 1) // per
-        wide = max(s.get_width() for s in shots)
-        high = max(s.get_height() for s in shots)
-        sheet = pygame.Surface((per * (wide + 3) + 3, rows * (high + 3) + 3))
-        sheet.fill((80, 80, 80))
-        for i, shot in enumerate(shots):
-            sheet.blit(shot, (3 + (i % per) * (wide + 3), 3 + (i // per) * (high + 3)))
-        self._pimg = photo(sheet)
-        self.previews.config(image=self._pimg)
+                    lab.grid()
+            if i >= shown:
+                continue
+            tile = pygame.Surface((40, 40))
+            if v in floors:
+                tile.blit(floors[v], (0, 0))
+            tile.blit(img, (0, 0))
+            small = pygame.Surface((46, 46))
+            small.fill((80, 80, 80))
+            small.blit(tile, (3, 3))
+            big = pygame.Surface((86, 86))
+            big.fill((80, 80, 80))
+            big.blit(pygame.transform.scale(tile, (80, 80)), (3, 3))
+            a, b = photo(small), photo(big)
+            self._imgs += [a, b]
+            self.small[i].config(image=a)
+            self.big[i].config(image=b)
 
     # ── editing ─────────────────────────────────────────────────────────────
     def _cell(self, e):

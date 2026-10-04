@@ -275,6 +275,13 @@ other.last_cell = (1, 1)
 other.paste()                                           # what was cut in the first window pastes in another
 other.dirty = False
 other.destroy()
+import editor.painter as painter_mod
+assert len(pd.small) == 10 == len(pd.big), 'ten floors, small above and big below'
+before = painter_mod.FLOOR_PICKS[:]
+floors = sorted(pd._floors())
+pd._pick_floor(2, floors[-1])
+assert painter_mod.FLOOR_PICKS[2] == floors[-1] and pd.small[2].cget('image'), 'a slot changes to the floor chosen'
+painter_mod.FLOOR_PICKS[:] = before
 pd.set_zoom(16)
 assert pd.canvas.winfo_reqwidth() == 640
 pd.background.set('Grass')
