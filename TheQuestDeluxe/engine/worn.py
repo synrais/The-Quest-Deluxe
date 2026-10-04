@@ -2,7 +2,7 @@
 
 The hero is a base picture (engine/assets/hero_base.png, or a class's sprites/heroes/<class number>.png): a hooded figure
 wearing nothing, 40 x 40. On top of it, each item's own picture (the one in the bag or the one on the map, `worn_from`),
-laid on pixel for pixel, moved as the item says (`worn_dx`, `worn_dy`, `worn_flip`), behind him or in front (`worn_behind`,
+laid on pixel for pixel, moved as the item says (`worn_dx`, `worn_dy`, `worn_rotate`), behind him or in front (`worn_behind`,
 a cape is behind). A weapon is in his RIGHT hand when it is in the weapon slot (the screen's left, as the inventory shows
 it) and in his LEFT hand in the off-hand slot (the screen's right); an item in the hand it was not made for is drawn
 flipped. A cape can turn his hood a colour (`hood_colour`). An amulet only colours the yellow pixel of the clasp under his
@@ -215,17 +215,22 @@ def mirrored(row: dict, place: str) -> bool:
 
 
 def placed(layer, row: dict):
-    """A layer moved as the item says: `worn_flip` mirrors it across the hero (left hand for right), then `worn_dx` and
-    `worn_dy` slide it that many pixels (right and down). Untouched when the item says nothing."""
+    """A layer moved as the item says: `worn_rotate` (90, 180 or 270 degrees clockwise) turns the picture about its own
+    middle, then `worn_dx` and `worn_dy` slide it that many pixels (right and down). Untouched when the item says nothing."""
     if layer is None:
         return None
     dx, dy = int(row.get('worn_dx') or 0), int(row.get('worn_dy') or 0)
-    flip = bool(row.get('worn_flip'))
-    if not (dx or dy or flip):
+    turn = int(row.get('worn_rotate') or 0) % 360
+    if not (dx or dy or turn):
         return layer
-    size = layer.get_size()
-    src = pygame.transform.flip(layer, True, False) if flip else layer
-    out = pygame.Surface(size, pygame.SRCALPHA)
+    src = layer
+    if turn:
+        box = layer.get_bounding_rect()
+        if box.width and box.height:
+            part = pygame.transform.rotate(layer.subsurface(box), -turn)        # (pygame turns anticlockwise)
+            src = pygame.Surface(layer.get_size(), pygame.SRCALPHA)
+            src.blit(part, part.get_rect(center=box.center))
+    out = pygame.Surface(layer.get_size(), pygame.SRCALPHA)
     out.blit(src, (dx, dy))
     return out
 

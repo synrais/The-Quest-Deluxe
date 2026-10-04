@@ -422,14 +422,14 @@ box.grab(Ev(10, 10)); box.drag(Ev(10 + 8, 10 + 4)); box.drop(Ev(18, 14))
 box = [w for w in itab.pics.winfo_children() if isinstance(w, hero_preview.HeroPreview)][0]
 row = itab.row
 assert (row.get('worn_dx'), row.get('worn_dy')) == (2, 1), 'dragging moves it a pixel per step'
-box.flip(); assert itab.row.get('worn_flip') is True
+box.rotate(); assert itab.row.get('worn_rotate') == 90
 box = [w for w in itab.pics.winfo_children() if isinstance(w, hero_preview.HeroPreview)][0]
 box.layer(True); assert itab.row.get('worn_behind') is True
 moved = pygame.image.tostring(hero_preview.dressed(app.project, 5, box.parts()), 'RGBA')
 assert moved != flat, 'the hero is drawn with it placed'
 box = [w for w in itab.pics.winfo_children() if isinstance(w, hero_preview.HeroPreview)][0]
 box.reset()
-assert not any(itab.row.get(k) for k in ('worn_dx', 'worn_dy', 'worn_flip', 'worn_behind')), 'reset puts it back'
+assert not any(itab.row.get(k) for k in ('worn_dx', 'worn_dy', 'worn_rotate', 'worn_behind')), 'reset puts it back'
 print('items: drag, flip, in front / behind and reset place the item on the hero: ok')
 print('items: a hero to try each item on, dressed with others, live in the painter too: ok')
 # Play from here: the game gets the real video driver (the editor's own SDL_VIDEODRIVER=dummy made it run with no window)

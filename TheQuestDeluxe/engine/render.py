@@ -195,7 +195,7 @@ class Renderer:
             item, row = self.worn_row(game, slot)
             if row:
                 parts[name] = (item, row)
-        key = (colour, tuple((n, i, r.get('worn_dx'), r.get('worn_dy'), r.get('worn_flip'), r.get('worn_behind'))
+        key = (colour, tuple((n, i, r.get('worn_dx'), r.get('worn_dy'), r.get('worn_rotate'), r.get('worn_behind'))
                              for n, (i, r) in sorted(parts.items())))
         cache = self.sprites._worn_auto
         if key not in cache:

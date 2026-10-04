@@ -62,7 +62,7 @@ class ItemsTab(TableTab):
              'Ammunition comes in stacks of 1 to 20: each size is its own item (New ammo kind makes all 20).')
 
     GROUPS = [
-        ('Basics', True, 'what it is and what it costs', ['type', 'bag_name', 'price', 'view3d', 'quest', 'show_on_hero', 'worn_colour', 'cape', 'hood_colour', 'worn_dx', 'worn_dy', 'worn_flip', 'worn_behind', 'worn_from',
+        ('Basics', True, 'what it is and what it costs', ['type', 'bag_name', 'price', 'view3d', 'quest', 'show_on_hero', 'worn_colour', 'cape', 'hood_colour', 'worn_dx', 'worn_dy', 'worn_rotate', 'worn_behind', 'worn_from',
                                                                'clasp_colour', 'clasp_when', 'clasp_alt', 'clasp_mode']),
         ('Numbers', True, 'what it adds to the hero when worn or wielded',
          ['power', 'kind', 'atk', 'def', 'warm', 'marm', 'req_str', 'req_int']),
@@ -152,7 +152,7 @@ class ItemsTab(TableTab):
         row = self.row
         if row is None:
             return
-        if value is None or (key in ('worn_dx', 'worn_dy') and not value) or (key == 'worn_flip' and not value):
+        if value is None or (key in ('worn_dx', 'worn_dy') and not value) or (key == 'worn_rotate' and not value):
             self.drop(row, key)
         else:
             self.put(row, key, value)
@@ -262,8 +262,9 @@ class ItemsTab(TableTab):
                   hint='pixels across (negative: left); the arrows, or drag it in the hero preview'),
             Field('worn_dy', 'Position on hero: down', 'int', when=is_(*WORN), spin=(-20, 20),
                   hint='pixels down (negative: up); the arrows, or drag it in the hero preview'),
-            Field('worn_flip', 'Flipped on hero', 'bool', when=is_(*WORN),
-                  hint='mirrored left to right where he wears or holds it'),
+            Field('worn_rotate', 'Rotated on hero', 'choice', [(None, 'not turned'), (90, 'a quarter turn clockwise'),
+                                                              (180, 'upside down'), (270, 'a quarter turn anticlockwise')],
+                  when=is_(*WORN), hint='turned about its middle where he wears or holds it; the Rotate button in the hero preview'),
             Field('worn_behind', 'Layer on hero', 'choice', [(None, '(automatic: a cape behind, the rest in front)'),
                                                             (True, 'behind him'), (False, 'in front of him')], when=is_(*WORN),
                   hint='which side of his body it is drawn; the In front / Behind buttons in the hero preview set it'),

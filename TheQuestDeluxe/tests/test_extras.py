@@ -1380,6 +1380,13 @@ def hero_shows_gear():
     assert pygame.image.tobytes(right, 'RGBA') == pygame.image.tobytes(ground, 'RGBA'), 'a weapon in the right hand: as it is'
     assert pygame.image.tobytes(left, 'RGBA') == pygame.image.tobytes(pygame.transform.flip(ground, True, False), 'RGBA'), \
         'in the left hand: flipped'
+    dot = pygame.Surface((40, 40), pygame.SRCALPHA)
+    dot.fill((255, 0, 0, 255), (10, 10, 6, 2))                       # a bar, 6 across and 2 down
+    turned = worn.placed(dot, {'worn_rotate': 90})
+    assert turned.get_bounding_rect().size == (2, 6) and turned.get_bounding_rect().center == dot.get_bounding_rect().center, \
+        'a quarter turn about its own middle'
+    assert worn.placed(dot, {'worn_rotate': 180}).get_bounding_rect().size == (6, 2)
+    assert worn.placed(dot, {'worn_dx': 3}).get_bounding_rect().x == 13 and worn.placed(dot, {}) is dot
     shield = {'name': 'Buckler', 'type': 'shield'}
     assert not worn.mirrored(shield, 'shield') and worn.mirrored(shield, 'weapon') and worn.mirrored(row, 'shield')
     clasp = worn.overlay('amulet', {'type': 'amulet', 'worn_colour': 12}, None, ground)

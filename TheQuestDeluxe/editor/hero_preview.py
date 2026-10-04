@@ -161,7 +161,7 @@ class HeroPreview(ttk.LabelFrame):
         if place:
             bar = ttk.Frame(self)
             bar.pack(anchor='w', pady=(4, 0))
-            for text, cmd, hint in (('Flip', self.flip, 'Mirror the item left to right on the hero.'),
+            for text, cmd, hint in (('Rotate', self.rotate, 'Turn the item a quarter turn clockwise about its middle, each click.'),
                                     ('In front', lambda: self.layer(False), 'Draw the item in front of the hero.'),
                                     ('Behind', lambda: self.layer(True), 'Draw the item behind the hero.'),
                                     ('Reset', self.reset, 'Put the item back where the game puts it.')):
@@ -294,9 +294,10 @@ class HeroPreview(ttk.LabelFrame):
         if self.mine():
             self.moved(int(self.row.get('worn_dx') or 0) + self.mirror() * dx, int(self.row.get('worn_dy') or 0) + dy, final=False)
 
-    def flip(self):
+    def rotate(self):
         if self.mine():
-            self.place('worn_flip', not self.row.get('worn_flip'))
+            turn = int(self.row.get('worn_rotate') or 0)
+            self.place('worn_rotate', (turn + 90 * self.mirror()) % 360 or None)       # (as it looks: clockwise)
 
     def layer(self, behind):
         if self.mine():
@@ -313,7 +314,7 @@ class HeroPreview(ttk.LabelFrame):
 
     def reset(self):
         if self.mine():
-            for key in ('worn_dx', 'worn_dy', 'worn_flip', 'worn_behind', 'worn_from'):
+            for key in ('worn_dx', 'worn_dy', 'worn_rotate', 'worn_behind', 'worn_from'):
                 self.place(key, None, final=False)
             self.place('worn_dx', 0)
 
