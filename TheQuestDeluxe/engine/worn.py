@@ -2,7 +2,7 @@
 
 The hero is a base picture (engine/assets/hero_base.png, or a class's sprites/heroes/<class number>.png): a hooded figure
 wearing nothing, 40 x 40. On top of it, each item's own picture (the one in the bag or the one on the map, `worn_from`),
-laid on pixel for pixel (armour, which rarely fits, shows only where it touches his armour area: his body from chin to groin, arms included), moved as the item says (`worn_dx`, `worn_dy`, `worn_rotate`), behind him or in front (`worn_behind`,
+laid on pixel for pixel (armour, which rarely fits, shows only where it touches his armour area: his body from chin to groin, arms left out), moved as the item says (`worn_dx`, `worn_dy`, `worn_rotate`), behind him or in front (`worn_behind`,
 a cape is behind). A weapon is in his RIGHT hand when it is in the weapon slot (the screen's left, as the inventory shows
 it) and in his LEFT hand in the off-hand slot (the screen's right); an item in the hand it was not made for is drawn
 flipped. A cape can turn his hood a colour (`hood_colour`). An amulet only colours the yellow pixel of the clasp under his
@@ -180,7 +180,7 @@ def picture_layer(slot: str, row: dict, bag_picture, ground_picture) -> pygame.S
     return layer
 
 
-TORSO = pygame.Rect(13, 13, 15, 15)      # the armour area: from his chin (row 13) to his groin (row 27), arms and all
+TORSO = pygame.Rect(16, 13, 9, 15)       # the armour area: from his chin (row 13) to his groin (row 27), the arms left out
 _silhouette = []
 
 
@@ -198,9 +198,12 @@ def silhouette() -> pygame.Surface:
 
 
 def armour_area() -> pygame.Surface:
-    """The hero's armour area: his body pixels from his chin to his groin (arms included), not his head or legs."""
+    """The hero's armour area: his body pixels from his chin to his groin (arms left out), not his head or legs."""
     area = pygame.Surface((TILE, TILE), pygame.SRCALPHA)
     area.blit(silhouette(), TORSO.topleft, TORSO)
+    for y in range(TORSO.top + 1, TORSO.bottom):                 # (below the shoulders his arms hang outside the 7 of his body)
+        for x in list(range(TORSO.left, 17)) + list(range(24, TORSO.right)):
+            area.set_at((x, y), (0, 0, 0, 0))
     return area
 
 
