@@ -486,7 +486,14 @@ assert ct.row['no_skill'] == 'mar'
 print("classes: skills and faults hidden from a class: ok")
 
 assert app.dirty
+from editor import side_save
+kept = []
+real_save_zip = side_save.save_zip
+side_save.save_zip = lambda *a, **k: kept.append(1) or (None, '')
 app.save()
+side_save.save_zip = real_save_zip
+assert kept, 'Save keeps a zip of the additions'
+print('save: also keeps the zip of the additions off to the side: ok')
 assert os.path.exists(os.path.join(pack, 'sprites', 'items', '1001.png'))
 assert os.path.exists(os.path.join(pack, 'sprites', 'bag', '1001.png'))
 assert not os.path.exists(os.path.join(pack, 'sprites', 'items', '201.png'))

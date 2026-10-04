@@ -244,6 +244,7 @@ class App:
             last = None                              # a pack that has moved or gone: start from the default
         self.open(pack or last or DEFAULT_PACK)
         self.fit_window()
+        root.after(300, self.offer_restore)
 
     def send_edits(self):
         """The Send my edits window: what was added or changed goes to the game's repository, or into a zip."""
@@ -282,6 +283,9 @@ class App:
         f.add_separator()
         f.add_command(label='Save', accelerator='Ctrl+S', command=self.save)
         f.add_command(label='Play from here', accelerator='F5', command=self.play)
+        f.add_separator()
+        f.add_command(label='Restore my saved edits...', command=self.restore_edits)
+        f.add_command(label='Recover pictures without entries', command=self.recover_pictures)
         f.add_separator()
         f.add_command(label='Quit', command=self.quit)
         m.add_cascade(label='File', menu=f)
@@ -380,6 +384,78 @@ class App:
             self.project.save()
             self.dirty = False
             self._title()
+        self._side_save()
+
+    def _side_save(self):
+        """Every Save also writes or updates the zip of the additions (what Send my edits sends), off to the side in the
+        home folder, so a newer game dragged over this one cannot take them."""
+        from . import side_save
+        try:
+            path, _ = side_save.save_zip()
+        except Exception as e:                                   # noqa: BLE001 - the pack itself is saved; say so
+            self.status(f'Saved. (The side copy of your additions could not be made: {e})')
+            return
+        if path:
+            self.status(f'Saved. A copy of your additions is kept in {path}')
+
+    def restore_edits(self, path=None):
+        """Put the additions of a saved zip back (after a new game was dragged over this one)."""
+        from . import side_save
+        if not self._keep_changes():
+            return
+        if path is None:
+            start = side_save.home_dir()
+            path = filedialog.askopenfilename(title='A saved zip of your additions', initialdir=start if os.path.isdir(start)
+                                              else None, filetypes=[('Zips', '*.zip')])
+        if not path:
+            return
+        deluxe = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        try:
+            todo = side_save.apply(deluxe, path)
+        except (OSError, ValueError, KeyError) as e:
+            messagebox.showerror('Restore', f"Couldn't read {path}: {e}")
+            return
+        if not todo:
+            messagebox.showinfo('Restore', 'Everything in that zip is already here.')
+            return
+        shown = '\n'.join(todo[:15]) + (f'\n... and {len(todo) - 15} more' if len(todo) > 15 else '')
+        if not messagebox.askyesno('Restore my edits', f'Put back {len(todo)} things from\n{path}?\n\n{shown}'):
+            return
+        side_save.apply(deluxe, path, write=True)
+        self.open(self.project.root)
+        self.status(f'Put back {len(todo)} things.')
+
+    def offer_restore(self):
+        """At the start: a saved zip with additions that this game lacks (it was just updated over) is offered back."""
+        from . import side_save
+        try:
+            zips = side_save.saved_zips()
+            deluxe = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            todo = side_save.apply(deluxe, zips[0]) if zips else []
+        except Exception:                                        # noqa: BLE001 - nothing to offer then
+            return
+        if todo and messagebox.askyesno(
+                'Your saved edits', f'Your additions were saved off to the side, and {len(todo)} of them are not in this '
+                'game (a new version may have been put over the old one).\n\nPut them back now?'):
+            self.restore_edits(zips[0])
+
+    def recover_pictures(self):
+        """Make an entry for every picture that has none (the tables were replaced, the pictures stayed)."""
+        from . import recover
+        found = recover.orphans(self.project)
+        count = sum(len(v) for v in found.values())
+        if not count:
+            messagebox.showinfo('Recover pictures', 'Every picture has an entry already.')
+            return
+        words = ', '.join(f'{len(v)} {k}' for k, v in found.items())
+        if not messagebox.askyesno('Recover pictures', f'{count} pictures have no entry ({words}).\n\nMake a plain entry '
+                                   'for each, called "Recovered ..." with its number, to fill in again?'):
+            return
+        recover.recover(self.project)
+        self.changed()
+        for tab in (self.items_tab, self.creatures_tab, self.classes_tab, self.spells_tab, self.tiles_tab):
+            tab.load()
+        self.status(f'Made {count} entries: look for "Recovered" in the lists.')
 
     def _keep_changes(self) -> bool:
         """Before leaving this pack: save it, drop the changes, or stay."""

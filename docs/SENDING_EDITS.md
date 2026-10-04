@@ -27,3 +27,18 @@ or hand it to Claude to build the features he asked for.
 - Removed files are not sent; only new and changed ones.
 - `editor/pack_baseline.json` records the shipped pack; regenerate it with `python TheQuestDeluxe/editor/pack_edits.py --baseline`
   whenever the shipped pack changes.
+
+## Keeping the additions safe when the game is updated
+
+The editor saves his work inside the game folder (`TheQuestDeluxe/packs/TheQuest/`), so a new version of the game dragged
+over it replaces his tables (`creatures.json`, `items.json`, ...). To stop that costing him anything:
+
+- **Every Save** in the editor also writes or updates `QuestEdits_latest.zip` in `QuestDeluxeEdits` in his home folder
+  (outside the game folder): the same additions Send my edits sends, plus the changed table rows by number. Dated copies
+  of the last 10 different states are kept beside it.
+- **After an update** the editor offers, on start, to put the additions back, merging his rows by number into the new
+  game's tables. **File > Restore my saved edits...** does it by hand, from any of those zips (or an old Make Edits Zip zip:
+  then only rows that are missing come back).
+- **File > Recover pictures without entries** makes a plain "Recovered ..." entry for every picture whose table row is gone,
+  so it can be reached and filled in again.
+- Better still: make his own pack (File > New pack) and work in that; updates never touch `packs/<his pack>`.
