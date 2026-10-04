@@ -12,3 +12,5 @@ dist/
 # the classic port's saves, in the original's data folder as the original keeps them
 TheQuestClassic/packs/TheQuest/data/[sS][aA][vV][eE]*.[dD][aA][tT]
 TheQuestClassic/packs/TheQuest/data/trash*.dat
+# the editor's saved zips of additions (and the last play log)
+TheQuestDeluxe/Custom Maps/zips/

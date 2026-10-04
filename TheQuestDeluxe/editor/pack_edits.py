@@ -198,7 +198,8 @@ def gather(deluxe: str = DELUXE, include_all: bool = False, when: float | None =
     folders = [('packs', name, os.path.join(packs, name)) for name in sorted(os.listdir(packs))]
     custom = os.path.join(deluxe, CUSTOM)
     if os.path.isdir(custom):
-        folders += [(CUSTOM, name, os.path.join(custom, name)) for name in sorted(os.listdir(custom))]
+        folders += [(CUSTOM, name, os.path.join(custom, name)) for name in sorted(os.listdir(custom))
+                    if os.path.exists(os.path.join(custom, name, 'quest.json'))]       # (not the zips folder)
     stamp = time.localtime(when)
     lines = [f'Quest edits, made {time.strftime("%Y-%m-%d %H:%M", stamp)}', '']
     if note.strip():

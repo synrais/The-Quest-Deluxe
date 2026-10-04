@@ -34,8 +34,8 @@ The editor saves his work in his own pack, `TheQuestDeluxe/Custom Maps/<name>/` 
 never opens), so a new game dragged over his old one leaves it alone. Edits made before Custom Maps existed (in `packs/TheQuest`)
 were replaced by such an update. To make sure nothing is ever lost:
 
-- **Every Save** in the editor makes another zip, `QuestEdits_<date>_<time>.zip`, in `QuestDeluxeEdits` in his home folder
-  (outside the game folder): a copy of the same additions Send my edits sends, plus the changed table rows by number.
+- **Every Save** in the editor makes another zip, `QuestEdits_<date>_<time>.zip`, in the folder `zips` inside `Custom Maps`
+  (a new game dragged over the old one leaves `Custom Maps` alone; the first versions used `QuestDeluxeEdits` in the home folder, still read): a copy of the same additions Send my edits sends, plus the changed table rows by number.
   Nothing in the game is moved, and no earlier zip is replaced or deleted (a Save with nothing new makes no new zip).
 - **After an update** the editor offers, on start, to put the additions back, merging his rows by number into the new
   game's tables. **File > Restore my saved edits...** does it by hand, from any of those zips (or an old Make Edits Zip zip:

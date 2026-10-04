@@ -202,7 +202,7 @@ class App:
         self._menus()
         bar = ttk.Frame(root, padding=(6, 4))
         bar.pack(fill='x')
-        ttk.Button(bar, text='Save', command=self.save).pack(side='left')
+        ttk.Button(bar, text='Save', command=lambda: self.save(confirm=True)).pack(side='left')
         ttk.Button(bar, text='Play from here (F5)', command=self.play).pack(side='left', padx=6)
         ttk.Button(bar, text='Send my edits...', command=self.send_edits).pack(side='right')
         ttk.Button(bar, text='Wishes...', command=self.wishes).pack(side='right', padx=6)
@@ -231,7 +231,7 @@ class App:
                           (self.events_tab, 'Events'), (self.text_tab, 'Text files'), (self.quest_tab, 'Quest')):
             self.tabs.add(tab, text=f'  {name}  ')
         self.tabs.bind('<<NotebookTabChanged>>', lambda e: self._tab_changed())
-        root.bind('<Control-s>', lambda e: self.save())
+        root.bind('<Control-s>', lambda e: self.save(confirm=True))
         root.bind('<F5>', lambda e: self.play())
         root.bind('<Control-z>', lambda e: self._undo(False))
         root.bind('<Control-y>', lambda e: self._undo(True))
@@ -288,7 +288,7 @@ class App:
         f.add_command(label='New pack...', command=self.new_pack)
         f.add_command(label='Open pack...', command=self.open_dialog)
         f.add_separator()
-        f.add_command(label='Save', accelerator='Ctrl+S', command=self.save)
+        f.add_command(label='Save', accelerator='Ctrl+S', command=lambda: self.save(confirm=True))
         f.add_command(label='Play from here', accelerator='F5', command=self.play)
         f.add_separator()
         f.add_command(label='Restore my saved edits...', command=self.restore_edits)
@@ -378,24 +378,43 @@ class App:
         if dest:
             self.open(dest)
 
-    def save(self):
+    def save(self, confirm=False):
+        """Write the pack, and the zip of the additions. confirm: say what was made (the Save button, Ctrl+S)."""
         if self.project and self.dirty:
             self.project.save()
             self.dirty = False
             self._title()
-        self._side_save()
+        made = self._side_save()
+        if confirm:
+            self.confirm_saved(made)
+
+    def confirm_saved(self, made):
+        """Tell the person what Save did: the pack is written, and the zip that was made (or why there is none)."""
+        name = self.project.name if self.project else 'the pack'
+        if isinstance(made, str) and made.startswith('!'):
+            messagebox.showwarning('Saved', f'{name} is saved, but the zip of your additions could not be made:\n\n{made[1:]}')
+        elif made:
+            messagebox.showinfo('Saved', f'{name} is saved.\n\nA zip of your additions was made:\n{made}')
+        else:
+            from . import side_save
+            newest = (side_save.saved_zips() or [None])[0]
+            messagebox.showinfo('Saved', f'{name} is saved.\n\n' + (
+                f'Nothing is new since the last zip, so no new one was made:\n{newest}' if newest else
+                'There is nothing added or changed yet, so there is no zip.'))
 
     def _side_save(self):
         """Every Save also writes or updates the zip of the additions (what Send my edits sends), off to the side in the
         home folder, so a newer game dragged over this one cannot take them."""
         from . import side_save
+        before = side_save.saved_zips()
         try:
             path, _ = side_save.save_zip()
         except Exception as e:                                   # noqa: BLE001 - the pack itself is saved; say so
             self.status(f'Saved. (The side copy of your additions could not be made: {e})')
-            return
-        if path:
-            self.status(f'Saved. A copy of your additions is kept in {path}')
+            return f'!{e}'
+        made = path if path and path not in before else None
+        self.status(f'Saved. A zip of your additions was made: {made}' if made else 'Saved.')
+        return made
 
     def restore_edits(self, path=None):
         """Put the additions of a saved zip back (after a new game was dragged over this one)."""
@@ -516,7 +535,7 @@ class App:
         log.write(' '.join(cmd) + '\n\n')
         log.flush()
         self.status('Starting the game... (its window can open behind this one)')
-        self.player = subprocess.Popen(cmd, cwd=ROOT, stdout=log, stderr=subprocess.STDOUT)
+        self.player = subprocess.Popen(cmd, cwd=ROOT, env=game_env(), stdout=log, stderr=subprocess.STDOUT)
         self.root.after(3000, self._played)
 
     def _played(self):
@@ -537,6 +556,17 @@ class App:
     def quit(self):
         if self._keep_changes():
             self.root.destroy()
+
+
+def game_env() -> dict:
+    """The environment the test game runs in. The editor sets SDL_VIDEODRIVER=dummy for itself (it only draws pictures
+    off screen, editor/art.py), and a game started from it inherited that: it ran with no window at all, so Play from
+    here seemed to do nothing. The game gets the real video and sound drivers."""
+    env = dict(os.environ)
+    for name in ('SDL_VIDEODRIVER', 'SDL_AUDIODRIVER'):
+        if env.get(name) == 'dummy':
+            del env[name]
+    return env
 
 
 def main(argv=None):

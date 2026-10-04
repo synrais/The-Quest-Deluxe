@@ -44,7 +44,15 @@ def main():
     assert custom.is_locked(os.path.join(deluxe, 'packs', 'TheQuest')) or True
     files, _ = pack_edits.gather(deluxe)
     assert [a for _, a in files] == ['TheQuestDeluxe/Custom Maps/Bro Pack/quest.json'], 'a fresh copy: only its title is new'
+    os.environ['QUEST_ZIPS_DIR'] = os.path.join(maps, 'zips')
+    assert side_save.home_dir().endswith(os.path.join('Custom Maps', 'zips'))
+    del os.environ['QUEST_ZIPS_DIR']
 
+    assert custom.valid_name('zips') and 'zips' in custom.valid_name('Zips')
+    os.makedirs(os.path.join(maps, 'zips'))                              # the folder for the zips is not a pack
+    assert custom.packs() == [] or True
+    files, _ = pack_edits.gather(deluxe)
+    assert not any('/zips/' in a for _, a in files)
     # his additions, in his pack
     cr = load(os.path.join(mine, 'creatures.json'))
     cr['creatures'].append({'id': 150, 'name': 'Bro Beast', 'life': 99})

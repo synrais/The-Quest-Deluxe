@@ -23,6 +23,8 @@ def valid_name(name: str, folder: str | None = None) -> str | None:
     name = (name or '').strip()
     if not NAME.match(name):
         return 'Use letters, numbers, spaces, - and _ (up to 40), starting with a letter or number.'
+    if name.lower() == 'zips':
+        return '"zips" is the folder the saved zips go in. Pick another name.'
     if name.lower() == 'thequest' or name.lower() in {n.lower() for n in os.listdir(PACKS_DIR)}:
         return f'"{name}" is the name of a game that comes with Quest Deluxe. Pick another.'
     if name.lower() in {n.lower() for n in (os.listdir(folder or CUSTOM_DIR) if os.path.isdir(folder or CUSTOM_DIR) else [])}:

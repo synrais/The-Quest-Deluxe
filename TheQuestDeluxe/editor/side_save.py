@@ -1,5 +1,5 @@
 """Your additions, kept off to the side: every Save in the editor makes another zip of what was added or changed
-since the game came (a copy; nothing is moved or replaced), in QuestDeluxeEdits in your home folder, outside the game folder. A new version of the game can be
+since the game came (a copy; nothing is moved or replaced), in the folder `zips` in Custom Maps (which a new game dragged over this one leaves alone). A new version of the game can be
 dragged over the old one without losing anything: the editor offers to put the zip's edits back (restore).
 
 The zip is the same content "Send my edits..." sends: the new and changed files of the packs, WHAT_CHANGED.txt, and
@@ -20,7 +20,14 @@ from .pack_edits import CUSTOM, DELUXE, PREFIX, SHIPPED, TABLES
 
 
 def home_dir() -> str:
-    """Where the zips are kept: QuestDeluxeEdits in the home folder (looked up when asked, so tests can move it)."""
+    """Where the zips are kept: the folder `zips` in Custom Maps (inside the game folder, so a new game dragged over this
+    one leaves it alone). Looked up when asked, so the tests can move it with QUEST_ZIPS_DIR."""
+    from engine import pack
+    return os.environ.get('QUEST_ZIPS_DIR') or os.path.join(pack.CUSTOM_DIR, 'zips')
+
+
+def old_dir() -> str:
+    """Where the first versions kept them: QuestDeluxeEdits in the home folder (still read, for restoring)."""
     return os.path.join(os.path.expanduser('~'), 'QuestDeluxeEdits')
 
 
@@ -71,8 +78,8 @@ def save_zip(deluxe: str = DELUXE, root: str | None = None, baseline: str = pack
     complete = os.path.exists(baseline)
     base = pack_edits.read_baseline_tables(baseline) if complete else {}
     custom = os.path.join(deluxe, CUSTOM)
-    packs = {n: os.path.join(custom, n) for n in sorted(os.listdir(custom)) if os.path.isdir(os.path.join(custom, n))} \
-        if os.path.isdir(custom) else {}
+    packs = {n: os.path.join(custom, n) for n in sorted(os.listdir(custom))
+             if os.path.exists(os.path.join(custom, n, 'quest.json'))} if os.path.isdir(custom) else {}
     now = {n: pack_edits.read_tables(folder) for n, folder in packs.items()}
     delta = {n: d for n in packs if (d := table_delta(base, now[n]))}
     meta = {'made': time.strftime('%Y-%m-%d %H:%M', time.localtime(when)), 'format': 2, 'complete': complete,
@@ -109,12 +116,14 @@ def read_meta(path: str):
 
 
 def saved_zips(root: str | None = None) -> list:
-    """The saved zips, the newest first."""
-    root = root or home_dir()
-    if not os.path.isdir(root):
-        return []
-    return [os.path.join(root, f) for f in sorted((f for f in os.listdir(root)
-                                                    if f.startswith('QuestEdits_2') and f.endswith('.zip')), reverse=True)]
+    """The saved zips, the newest first: those in the zips folder, and (when no folder is asked for) the ones the first
+    versions left in QuestDeluxeEdits in the home folder."""
+    found = []
+    for folder in ([root] if root else [home_dir(), old_dir()]):
+        if os.path.isdir(folder):
+            found += [(f, os.path.join(folder, f)) for f in os.listdir(folder)
+                      if f.startswith('QuestEdits_2') and f.endswith('.zip')]
+    return [path for _, path in sorted(found, reverse=True)]
 
 
 def table_writer(name: str, data: dict, path: str):

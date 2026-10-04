@@ -21,6 +21,7 @@ except Exception as e:                          # noqa: BLE001
 
 tmp = tempfile.mkdtemp()
 os.environ['HOME'] = tmp                        # the editor remembers the last pack here
+os.environ['QUEST_ZIPS_DIR'] = os.path.join(tmp, 'zips')     # and the saved zips go here, not into the repo
 pack = os.path.join(tmp, 'edpack')
 shutil.copytree(os.path.join(ROOT, 'packs', 'TheQuest'), pack)
 
@@ -343,6 +344,36 @@ assert all(pj.constant(lv, k) is None for k in ('RESPAWN', 'RESPAWN_LIFE', 'RESP
                                               'UNDERWORLD_STRIP')), 'cleared'
 dw.destroy()
 print('map: Death and respawn... sets the respawn and the Underworld of a level: ok')
+# Play from here: the game gets the real video driver (the editor's own SDL_VIDEODRIVER=dummy made it run with no window)
+from editor.app import game_env
+os.environ['SDL_VIDEODRIVER'] = 'dummy'
+os.environ['SDL_AUDIODRIVER'] = 'dummy'
+env = game_env()
+assert 'SDL_VIDEODRIVER' not in env and 'SDL_AUDIODRIVER' not in env, 'the game does not inherit the dummy drivers'
+os.environ['SDL_VIDEODRIVER'] = 'x11'
+assert game_env()['SDL_VIDEODRIVER'] == 'x11', 'a real driver somebody set is kept'
+os.environ['SDL_VIDEODRIVER'] = 'dummy'
+# Save: says what it made, and where the zips are
+from editor import side_save
+assert side_save.home_dir() == os.environ['QUEST_ZIPS_DIR']
+told = []
+real_info, real_warn = messagebox.showinfo, messagebox.showwarning
+messagebox.showinfo = lambda title, text, **k: told.append(text)
+messagebox.showwarning = lambda title, text, **k: told.append(text)
+app.confirm_saved('/somewhere/zips/QuestEdits_x.zip')
+assert 'QuestEdits_x.zip' in told[-1] and 'zip of your additions was made' in told[-1]
+app.confirm_saved(None)
+assert 'no zip' in told[-1] or 'Nothing is new' in told[-1]
+app.confirm_saved('!disk full')
+assert 'could not be made' in told[-1] and 'disk full' in told[-1]
+real_zip = side_save.save_zip
+side_save.save_zip = lambda *a, **k: ('/z/new.zip', '')
+told.clear()
+app.save(confirm=True)
+assert told and '/z/new.zip' in told[-1], 'the Save button confirms the zip'
+side_save.save_zip = real_zip
+messagebox.showinfo, messagebox.showwarning = real_info, real_warn
+print('play and save: the game has the real video driver, Save says the zip was made: ok')
 # Play from here: a game that stops at once is explained, with what it wrote
 import subprocess
 from tkinter import messagebox
