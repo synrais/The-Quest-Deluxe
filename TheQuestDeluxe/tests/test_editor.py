@@ -343,6 +343,21 @@ assert all(pj.constant(lv, k) is None for k in ('RESPAWN', 'RESPAWN_LIFE', 'RESP
                                               'UNDERWORLD_STRIP')), 'cleared'
 dw.destroy()
 print('map: Death and respawn... sets the respawn and the Underworld of a level: ok')
+# Play from here: a game that stops at once is explained, with what it wrote
+import subprocess
+from tkinter import messagebox
+shown = []
+real_error = messagebox.showerror
+messagebox.showerror = lambda title, text, **k: shown.append(text)
+app.play_log = os.path.join(tmp, 'play_log.txt')
+with open(app.play_log, 'w') as logfile:
+    app.player = subprocess.Popen([sys.executable, '-c', 'print("boom: no such thing"); raise SystemExit(3)'],
+                                  stdout=logfile, stderr=subprocess.STDOUT)
+    app.player.wait()
+app._played()
+messagebox.showerror = real_error
+assert shown and 'boom: no such thing' in shown[0] and 'stopped at once' in shown[0], shown
+print('play: a game that stops at once says why: ok')
 # the Classes tab: a new class with a starting kit
 cl = app.classes_tab
 app.tabs.select(cl)

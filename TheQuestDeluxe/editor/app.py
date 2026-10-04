@@ -509,7 +509,31 @@ class App:
                '--quick', str(cls), '--level', str(m.level)]
         if m.selected:
             cmd += ['--at', f'{m.selected[0]},{m.selected[1]}']
-        self.player = subprocess.Popen(cmd, cwd=ROOT)
+        from . import side_save
+        log_dir = side_save.home_dir()
+        os.makedirs(log_dir, exist_ok=True)
+        self.play_log = os.path.join(log_dir, 'play_log.txt')
+        log = open(self.play_log, 'w', encoding='utf-8')
+        log.write(' '.join(cmd) + '\n\n')
+        log.flush()
+        self.status('Starting the game... (its window can open behind this one)')
+        self.player = subprocess.Popen(cmd, cwd=ROOT, stdout=log, stderr=subprocess.STDOUT)
+        self.root.after(3000, self._played)
+
+    def _played(self):
+        """A few seconds after Play from here: if the game has already stopped, say why (what it wrote to play_log.txt)."""
+        code = self.player.poll() if getattr(self, 'player', None) else None
+        if code is None:
+            self.status('The game is running.')
+            return
+        try:
+            with open(self.play_log, encoding='utf-8', errors='replace') as fh:
+                tail = ''.join(fh.readlines()[-14:]).strip()
+        except OSError:
+            tail = ''
+        messagebox.showerror('Play from here', f'The game stopped at once (code {code}).\n\n{tail}\n\n'
+                             f'(All of it is in {self.play_log})' if code else
+                             f'The game closed straight away.\n\n{tail}\n\n(The log: {self.play_log})')
 
     def quit(self):
         if self._keep_changes():
