@@ -422,7 +422,9 @@ box.grab(Ev(10, 10)); box.drag(Ev(10 + 8, 10 + 4)); box.drop(Ev(18, 14))
 box = [w for w in itab.pics.winfo_children() if isinstance(w, hero_preview.HeroPreview)][0]
 row = itab.row
 assert (row.get('worn_dx'), row.get('worn_dy')) == (2, 1), 'dragging moves it a pixel per step'
-box.rotate(); assert itab.row.get('worn_rotate') == 90
+box.rotate(); box.rotate(); assert itab.row.get('worn_rotate') == 90
+box = [w for w in itab.pics.winfo_children() if isinstance(w, hero_preview.HeroPreview)][0]
+box.rotate(-45); assert itab.row.get('worn_rotate') == 45
 box = [w for w in itab.pics.winfo_children() if isinstance(w, hero_preview.HeroPreview)][0]
 box.layer(True); assert itab.row.get('worn_behind') is True
 moved = pygame.image.tostring(hero_preview.dressed(app.project, 5, box.parts()), 'RGBA')

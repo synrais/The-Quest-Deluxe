@@ -248,7 +248,7 @@ def mirrored(row: dict, place: str) -> bool:
 
 
 def placed(layer, row: dict):
-    """A layer moved as the item says: `worn_rotate` (90, 180 or 270 degrees clockwise) turns the picture about its own
+    """A layer moved as the item says: `worn_rotate` (a multiple of 45 degrees, clockwise) turns the picture about its own
     middle, then `worn_dx` and `worn_dy` slide it that many pixels (right and down). Untouched when the item says nothing."""
     if layer is None:
         return None

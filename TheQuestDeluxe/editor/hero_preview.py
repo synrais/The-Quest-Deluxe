@@ -161,12 +161,14 @@ class HeroPreview(ttk.LabelFrame):
         if place:
             bar = ttk.Frame(self)
             bar.pack(anchor='w', pady=(4, 0))
-            for text, cmd, hint in (('Rotate', self.rotate, 'Turn the item a quarter turn clockwise about its middle, each click.'),
+            for text, cmd, hint in (('Rotate', self.rotate, 'Turn the item 45 degrees clockwise about its middle, each click (right-click: the other way).'),
                                     ('In front', lambda: self.layer(False), 'Draw the item in front of the hero.'),
                                     ('Behind', lambda: self.layer(True), 'Draw the item behind the hero.'),
                                     ('Reset', self.reset, 'Put the item back where the game puts it.')):
                 b = ttk.Button(bar, text=text, width=8, command=cmd)
                 b.pack(side='left', padx=2)
+                if text == 'Rotate':
+                    b.bind('<Button-3>', lambda e: self.rotate(-45))
                 tip(b, hint)
             pad = ttk.Frame(self)
             pad.pack(anchor='w', pady=(4, 0))
@@ -294,10 +296,10 @@ class HeroPreview(ttk.LabelFrame):
         if self.mine():
             self.moved(int(self.row.get('worn_dx') or 0) + self.mirror() * dx, int(self.row.get('worn_dy') or 0) + dy, final=False)
 
-    def rotate(self):
+    def rotate(self, step=45):
         if self.mine():
             turn = int(self.row.get('worn_rotate') or 0)
-            self.place('worn_rotate', (turn + 90 * self.mirror()) % 360 or None)       # (as it looks: clockwise)
+            self.place('worn_rotate', (turn + step * self.mirror()) % 360 or None)       # (as it looks: clockwise)
 
     def layer(self, behind):
         if self.mine():

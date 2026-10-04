@@ -1386,6 +1386,8 @@ def hero_shows_gear():
     assert turned.get_bounding_rect().size == (2, 6) and turned.get_bounding_rect().center == dot.get_bounding_rect().center, \
         'a quarter turn about its own middle'
     assert worn.placed(dot, {'worn_rotate': 180}).get_bounding_rect().size == (6, 2)
+    diag = worn.placed(dot, {'worn_rotate': 45}).get_bounding_rect()
+    assert diag.width > 2 and diag.height > 2, 'a diagonal at 45 degrees'
     assert worn.placed(dot, {'worn_dx': 3}).get_bounding_rect().x == 13 and worn.placed(dot, {}) is dot
     plate = pygame.Surface((40, 40), pygame.SRCALPHA)
     plate.fill((200, 0, 0, 255), (3, 20, 5, 5))                          # armour drawn anywhere in its picture, any size
