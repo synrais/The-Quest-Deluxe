@@ -1390,12 +1390,13 @@ def hero_shows_gear():
     assert diag.width > 2 and diag.height > 2, 'a diagonal at 45 degrees'
     assert worn.placed(dot, {'worn_dx': 3}).get_bounding_rect().x == 13 and worn.placed(dot, {}) is dot
     plate = pygame.Surface((40, 40), pygame.SRCALPHA)
-    plate.fill((200, 0, 0, 255), (3, 20, 5, 5))                          # armour drawn anywhere in its picture, any size
-    tex = worn.overlay('armour', {'type': 'armour', 'name': 'Plate'}, None, plate)
-    box = tex.get_bounding_rect()
-    assert worn.TORSO.contains(box) and box.height >= 13, 'armour is a texture over his torso, chin to groin'
-    assert all(tuple(tex.get_at((x, y)))[:3] == (200, 0, 0) for x, y in worn.body_mask()), 'on his body, arms and all'
-    assert (20, 12) not in worn.body_mask() and (20, 29) not in worn.body_mask() and (20, 8) not in worn.body_mask()
+    plate.fill((200, 0, 0, 255), (0, 0, 40, 40))                         # armour a size too big for him
+    plain = {'type': 'armour', 'name': 'Plate'}
+    got = worn.layers(5, {'armour': (9, plain)}, lambda i: (None, plate))[1][0]
+    assert got.get_bounding_rect() == worn.silhouette().get_bounding_rect(), 'only where it touches the hero'
+    assert got.get_at((2, 2))[3] == 0 and got.get_at((20, 20))[3] == 255
+    moved = worn.layers(5, {'armour': (9, dict(plain, worn_dx=4))}, lambda i: (None, plate))[1][0]
+    assert moved.get_at((20, 20))[3] == 255 and worn.layers(5, {'armour': (9, plain)}, lambda i: (None, plate))[1][0] is not moved
     shield = {'name': 'Buckler', 'type': 'shield'}
     assert not worn.mirrored(shield, 'shield') and worn.mirrored(shield, 'weapon') and worn.mirrored(row, 'shield')
     clasp = worn.overlay('amulet', {'type': 'amulet', 'worn_colour': 12}, None, ground)

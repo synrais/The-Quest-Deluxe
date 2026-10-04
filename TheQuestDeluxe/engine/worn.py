@@ -2,7 +2,7 @@
 
 The hero is a base picture (engine/assets/hero_base.png, or a class's sprites/heroes/<class number>.png): a hooded figure
 wearing nothing, 40 x 40. On top of it, each item's own picture (the one in the bag or the one on the map, `worn_from`),
-laid on pixel for pixel (armour, which never fits, is stretched as a texture over his torso, chin to groin, his body only), moved as the item says (`worn_dx`, `worn_dy`, `worn_rotate`), behind him or in front (`worn_behind`,
+laid on pixel for pixel (armour, which rarely fits, shows only where it touches his body), moved as the item says (`worn_dx`, `worn_dy`, `worn_rotate`), behind him or in front (`worn_behind`,
 a cape is behind). A weapon is in his RIGHT hand when it is in the weapon slot (the screen's left, as the inventory shows
 it) and in his LEFT hand in the off-hand slot (the screen's right); an item in the hand it was not made for is drawn
 flipped. A cape can turn his hood a colour (`hood_colour`). An amulet only colours the yellow pixel of the clasp under his
@@ -180,34 +180,27 @@ def picture_layer(slot: str, row: dict, bag_picture, ground_picture) -> pygame.S
     return layer
 
 
-TORSO = pygame.Rect(13, 13, 15, 15)      # from his chin (row 13) to his groin (row 27), arms and all
+_silhouette = []
 
 
-_body = []
-
-
-def body_mask():
-    """The pixels of his body (not the hood, not the legs) in his torso: where armour's texture shows."""
-    if not _body:
+def silhouette() -> pygame.Surface:
+    """Where the hero is: his base picture as a white shape (see-through round him)."""
+    if not _silhouette:
         src = pygame.image.load(os.path.join(HERE, 'assets', 'hero_base.png'))
-        _body.extend((x, y) for x in range(TORSO.left, TORSO.right) for y in range(TORSO.top, TORSO.bottom)
-                     if src.get_at((x, y))[3] and tuple(src.get_at((x, y)))[:3] != BASE_COLOUR)
-    return _body
+        shape = pygame.Surface(src.get_size(), pygame.SRCALPHA)
+        for x in range(src.get_width()):
+            for y in range(src.get_height()):
+                if src.get_at((x, y))[3]:
+                    shape.set_at((x, y), (255, 255, 255, 255))
+        _silhouette.append(shape)
+    return _silhouette[0]
 
 
-def armour_texture(picture) -> pygame.Surface | None:
-    """Armour is a texture, not a fit: its picture (the part that is drawn) is stretched over his torso, from his chin to his
-    groin, and shows only on his body, arms included. Armour pictures never fit the sprite."""
-    box = picture.get_bounding_rect() if picture is not None else pygame.Rect(0, 0, 0, 0)
-    if not box.width or not box.height:
-        return None
-    crop = pygame.Surface(box.size, pygame.SRCALPHA)
-    crop.blit(picture, (0, 0), box)
-    stretched = pygame.transform.scale(crop, TORSO.size)
-    layer = pygame.Surface((TILE, TILE), pygame.SRCALPHA)
-    for x, y in body_mask():
-        layer.set_at((x, y), stretched.get_at((x - TORSO.left, y - TORSO.top)))
-    return layer
+def clip_to_hero(layer):
+    """Armour is laid on him as its picture is and can be moved, but only the pixels that are on the hero show."""
+    out = layer.copy()
+    out.blit(silhouette(), (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+    return out
 
 
 def overlay(slot: str, row: dict, bag_picture, ground_picture=None) -> pygame.Surface | None:
@@ -218,10 +211,7 @@ def overlay(slot: str, row: dict, bag_picture, ground_picture=None) -> pygame.Su
         layer = pygame.Surface((TILE, TILE), pygame.SRCALPHA)
         draw_amulet(layer, row, colour_of(row, bag_picture))
         return layer
-    own = picture_layer(slot, row, bag_picture, ground_picture)
-    if slot == 'armour' and not cape_like(row):
-        return armour_texture(own)
-    return own
+    return picture_layer(slot, row, bag_picture, ground_picture)
 
 
 def slot_of(row: dict) -> str | None:
@@ -279,6 +269,8 @@ def layers(colour: int, parts: dict, picture_of, own_of=lambda item: None):
         if own is None:
             bag, ground = picture_of(item)
             own = overlay(place, row, bag, ground)
+            if own is not None and place == 'armour' and not cape_like(row):
+                return clip_to_hero(placed(own, row))                   # armour: only where it touches him
         return placed(own, row)
     behind, front = [], []
     item, row = parts.get('armour', (0, {}))
