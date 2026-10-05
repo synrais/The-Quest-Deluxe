@@ -907,6 +907,27 @@ finally:
     engine_pack.CUSTOM_DIR, custom.CUSTOM_DIR = saved_dirs
 app.open(stay)
 print('custom maps: the locked game is not opened; a pack is named, copied from it and chosen: ok')
+# the Mods tab: every addition with a check box; unticking one is written to quest.json and ticking it again takes it out
+mt_ = app.mods_tab
+app.tabs.select(mt_)
+pump()
+import engine.mods as engine_mods
+assert set(mt_.vars) == {m.key for m in engine_mods.MODS}
+assert mt_.vars['links'].get() and 'mods' not in app.project.quest
+mt_.vars['links'].set(False)
+mt_._set(engine_mods.BY_KEY['links'])
+assert app.project.quest.get('mods') == {'links': False} and app.dirty
+mt_.vars['elements'].set(False)
+mt_._set(engine_mods.BY_KEY['elements'])
+assert app.project.quest['mods'] == {'links': False, 'elements': False}
+mt_.vars['links'].set(True); mt_._set(engine_mods.BY_KEY['links'])
+mt_.vars['elements'].set(True); mt_._set(engine_mods.BY_KEY['elements'])
+assert 'mods' not in app.project.quest, 'all on again: nothing is written'
+app.project.tables['items'][0]['regen'] = 2
+mt_.load()
+assert 'item' in mt_.used_labels['worn_powers'].cget('text'), 'it says what in the pack uses a mod'
+app.project.tables['items'][0].pop('regen')
+print('mods: the Mods tab switches each addition off and on, and says what uses it: ok')
 # autosave: a change is written to disk by itself a moment later; a failing write is tried again, not fatal
 app.open(stay)
 app.AUTOSAVE_MS = 50

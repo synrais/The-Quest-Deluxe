@@ -98,6 +98,18 @@ class World:
         still alive (ems > 0) the loot lying about is lost: gold on the floor goes back to what the screen
         had on arrival, and an item that is not what the screen had on arrival is wiped (what the hero picked
         up is in his bag; what he dropped, or a creature dropped, is gone). arrival is map[] as it was."""
+        # creatures on the screen's edge squares are moved to a random free square inside, FIRST (the original's goroom2 does
+        # this before its write-back rules, which then see the creatures where they landed)
+        ox, oy = self.origin
+        for x, y in self.room_tiles():
+            q = self.grid[x][y]
+            if q.mon and (x in (ox, ox + ROOM - 1) or y in (oy, oy + ROOM - 1)):
+                for _ in range(200):
+                    nx, ny = ox + 1 + rules.random(8), oy + 1 + rules.random(8)
+                    t = self.grid[nx][ny]
+                    if t.wall == 0 and t.mon == 0:
+                        t.mon, q.mon = q.mon, 0
+                        break
         if ems > 0 and arrival is not None:
             for x, y in self.room_tiles():
                 q, a = self.grid[x][y], arrival.get((x, y))
@@ -115,17 +127,6 @@ class World:
             if q.deco == 1 and q.mon == 0:                 # opened door stays open
                 q.deco = 0
                 q.wall = -1
-        # NPCs standing on the edge are nudged inside so they don't block the doorway
-        ox, oy = self.origin
-        for x, y in self.room_tiles():
-            q = self.grid[x][y]
-            if q.mon and (x in (ox, ox + ROOM - 1) or y in (oy, oy + ROOM - 1)):
-                for _ in range(200):
-                    nx, ny = ox + 1 + rules.random(8), oy + 1 + rules.random(8)
-                    t = self.grid[nx][ny]
-                    if t.wall == 0 and t.mon == 0:
-                        t.mon, q.mon = q.mon, 0
-                        break
 
     def enemy_at(self, x: int, y: int) -> Enemy | None:
         for e in self.enemies:

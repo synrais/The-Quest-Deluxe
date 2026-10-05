@@ -344,6 +344,58 @@ def exits():
     print('exits: each exit of a level can lead to any level, or a square of it; the rest go on: ok')
 
 
+def mods_switch_off():
+    """quest.json's mods: a switched-off mod leaves its fields out of the loaded pack (the files stay), and its engine
+    switches do nothing; everything else is as it was."""
+    from engine import mods
+    import json as _json
+
+    def pack_with(off):
+        def change(folder, json):
+            path = os.path.join(folder, 'items.json')
+            data = json.load(open(path))
+            data['items'].append({'id': 990, 'name': 'Ring of Mending', 'type': 'amulet', 'regen': 3, 'light': 4,
+                                  'element': 'fire', 'show_on_hero': False})
+            json.dump(data, open(path, 'w'))
+            path = os.path.join(folder, 'creatures.json')
+            data = json.load(open(path))
+            data['creatures'][0]['steal_gold'] = {'chance': 30, 'min': 1, 'max': 4}
+            data['creatures'][0]['size'] = 2
+            json.dump(data, open(path, 'w'))
+            path = os.path.join(folder, 'levels', '1', 'script.qs')
+            src = open(path).read()
+            at = src.index('START')
+            open(path, 'w').write(src[:at] + 'LINKS = {(6, 5): (2, 20, 20)}\nPEACEFUL_SCREENS = [(1, 1)]\n' + src[at:])
+            if off:
+                path = os.path.join(folder, 'quest.json')
+                data = json.load(open(path))
+                data['mods'] = {k: False for k in off}
+                json.dump(data, open(path, 'w'))
+        return with_changes(change)
+    on = pack_with([])
+    ring = on.pack.item(990)
+    assert ring.get('regen') == 3 and on.pack.trait(on.pack.creatures[next(iter(on.pack.creatures))]['id'], 'steal_gold')
+    assert on.events.meta(1, 'LINKS') == {(6, 5): (2, 20, 20)} and on.pack.mod('fps_mode')
+    off = pack_with(['worn_powers', 'thieves_and_drops', 'links', 'big_creatures', 'light_and_dark', 'elements', 'fps_mode',
+                     'combat_log'])
+    ring = off.pack.item(990)
+    assert 'regen' not in ring and 'light' not in ring and 'element' not in ring and ring.get('show_on_hero') is False
+    first = off.pack.creatures[next(iter(off.pack.creatures))]
+    assert 'steal_gold' not in first and 'size' not in first
+    assert off.events.meta(1, 'LINKS', 'none') == 'none', 'a switched-off constant reads as if it were not set'
+    assert off.events.meta(1, 'PEACEFUL_SCREENS') == [(1, 1)], 'the others stay'
+    assert not off.pack.mod('fps_mode') and not off.combat_log
+    off.handle(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_f, unicode='f', mod=0))
+    assert not off.view3d, 'F does nothing with FPS mode off'
+    on.handle(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_f, unicode='f', mod=0))
+    assert on.view3d
+    assert mods.off({'mods': {'links': False, 'data_packs': False, 'nonsense': False, 'fps_mode': True}}) == {'links'}, \
+        'only real, switchable mods count'
+    for m in mods.MODS:
+        assert m.title and m.about and m.group
+    print('mods: a pack can switch each addition off: its fields and constants are left out, F and the log stop: ok')
+
+
 def walk_off_screen():
     """The original leaves a screen in two passes, so the creatures get a whole turn while the hero stands at the edge (and
     another on the new screen): a creature chasing him is a step nearer on the screen he left."""
@@ -1649,6 +1701,7 @@ if __name__ == '__main__':
     disguise()
     event_code_text()
     exits()
+    mods_switch_off()
     walk_off_screen()
     links()
     moved_walls()

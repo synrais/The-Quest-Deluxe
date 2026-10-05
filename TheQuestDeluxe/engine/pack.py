@@ -86,11 +86,19 @@ class Pack:
         self.floors = {t['id']: t for t in self.tiles.get('floors', [])}
         self.walls = {t['id']: t for t in self.tiles.get('walls', [])}
         self.decos = {t['id']: t for t in self.tiles.get('decos', [])}
+        from . import mods
+        mods.strip(self)                                  # the mods the pack switches off (quest.json `mods`)
         self._roles = {t['role']: t['id'] for t in self.decos.values() if 'role' in t}
         self._doors = {}
         for t in self.walls.values():
             if 'door' in t:
                 self._doors.setdefault(t['door'], t['id'])
+
+    mods_off: set = frozenset()
+
+    def mod(self, key: str) -> bool:
+        """Is the mod (engine/mods.py) on in this pack? All are, unless quest.json's `mods` switches it off."""
+        return key not in self.mods_off
 
     def path(self, *parts) -> str:
         return os.path.join(self.root, *parts)

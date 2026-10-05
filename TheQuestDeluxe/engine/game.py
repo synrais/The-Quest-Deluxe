@@ -185,7 +185,7 @@ class Game:
         self.minimap = True                # FPS mode: the Map box shows this screen from above (M: the level map)
         # the combat log (Deluxe, D): who hit whom for how much, over the bottom of the map, and the
         # damage rising off whoever took it. Off in scripted runs, which compare screens with classic.
-        self.combat_log = not self.fast
+        self.combat_log = not self.fast and self.pack.mod('combat_log')
         self.log_lines: list = []          # (text, EGA colour, the key it came from)
         self.log_key = 0
         self.floaters: list = []           # damage numbers rising off a square
@@ -498,13 +498,13 @@ class Game:
             self.load_game()
         elif k == pygame.K_ESCAPE:
             self.quit_prompt()
-        elif k == pygame.K_f:
+        elif k == pygame.K_f and self.pack.mod('fps_mode'):
             self.view3d = not self.view3d            # FPS mode (Deluxe)
             if not self.fast and (getattr(self, 'settings', None) or {}).get('fps_transition') != 'off':
                 self.view_fx = (pygame.time.get_ticks(), self.view3d)     # the zoom down and in (Renderer.transition)
         elif k == pygame.K_m and self.view3d:
             self.minimap = not self.minimap          # the Map box: this screen from above, or the level map
-        elif k == pygame.K_d:
+        elif k == pygame.K_d and self.pack.mod('combat_log'):
             self.combat_log = not self.combat_log        # the combat log (Deluxe)
             self.log_lines, self.floaters = [], []
         if acted:

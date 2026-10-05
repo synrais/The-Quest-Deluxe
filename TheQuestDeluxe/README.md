@@ -30,6 +30,7 @@ pygame-ce.
 | **Quest packs** | | Everything the original hardcodes (items, creatures and their traits, classes, spells, tiles, stories, dialogue, shops, level scripts) is data in the pack. |
 | **Bug fixes** | | The original's bugs (the Shield / Ring of Ice swap, the shop memory, questionnaire ties, the item in a tree and more) are fixed: `settings.ini` has them on for every pack, or leaves it to each pack, whose author picks them one by one. `packs/TheQuest` itself keeps them all, so the tests can hold it to the original. |
 | **Past the original's limits** | 9, 0 | More than 20 spells (a spell book with pages), potions 9 and 10, more key colours, and new classes in class changes and the questionnaire. |
+| **Mods** | | Every addition above can be switched off for a pack in the editor's Mods tab, so a pack can play as close to the original as it likes: [docs/MODS.md](docs/MODS.md). |
 | **The editor** | | Maps and level settings, items, creatures, classes, spells, tiles, shops, dialogue, stories and events; a 16-colour painter for every picture; a 3D preview; Play (F5) test-plays from the clicked square; new packs. |
 
 The original's keys all work as in [the classic edition](../TheQuestClassic/README.md#keys).
@@ -46,6 +47,7 @@ The original's keys all work as in [the classic edition](../TheQuestClassic/READ
 | `packs/TheQuest/` | The original quest as a pack: the first 7 levels, **locked**. The game plays it, and the editor never opens it. |
 | `Custom Maps/` | The packs made in the editor, a folder each (made the first time the editor runs). Every one starts as a copy of `packs/TheQuest`, and everything changed in the editor (levels, stats, pictures) stays in its own folder. On the game's title and load screens, **P** switches between The Quest and these packs; each pack has its own saves. |
 | `docs/QUEST_PACKS.md` | Every file of a pack, and every field. |
+| `docs/MODS.md` | Every addition to the original, and the Mods tab that switches each off for a pack. |
 | `docs/EVENTS.md` | The level scripts: the language, the handlers and the functions they can call. |
 | `tools/make_pack.py` | Rebuilds `packs/TheQuest` from the original (the only thing here that reads `../TheQuestClassic`). |
 | `tests/` | `test_packs.py`, `test_limits.py`, `test_fixes.py`, `test_editor.py` (under `xvfb-run` on Linux), and `test_standalone.py`: a copy of this folder alone must play, opening nothing outside itself. |

@@ -170,7 +170,8 @@ class Renderer:
             scr.blit(big, (hx - TILE // 4, hy - TILE // 2))
 
     def gear_on(self, game) -> bool:
-        return (getattr(game, 'settings', None) or {}).get('show_gear') == 'on' and game.player.hero.invisible <= 0
+        return ((getattr(game, 'settings', None) or {}).get('show_gear') == 'on' and game.pack.mod('hero_gear')
+                and game.player.hero.invisible <= 0)
 
     def worn_row(self, game, slot):
         """(item number, its row) in a slot of the bag, if it is to show on the hero."""

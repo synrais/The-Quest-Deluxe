@@ -197,7 +197,18 @@ class Events:
     def meta(self, level: int, name: str, default=None):
         """A setting from the top of a level script (START, SHOPS, STORIES, TELEPORT, ASK_TO_LEAVE)."""
         sc = self.script(level)
-        return sc.constants.get(name, default) if sc is not None else default
+        if sc is None or self.constant_off(name):
+            return default
+        return sc.constants.get(name, default)
+
+    def constant_off(self, name: str) -> bool:
+        """Is this constant of a mod the pack switches off (engine/mods.py)? Then it reads as if the script didn't set it."""
+        from . import mods
+        if self._off_constants is None:
+            self._off_constants = {c for k in self.g.pack.mods_off for c in mods.BY_KEY[k].constants}
+        return name in self._off_constants
+
+    _off_constants = None
 
     def ask(self, handler: str, default=True):
         """The answer of a handler that returns a value (the level's, else common.qs's, else default)."""
