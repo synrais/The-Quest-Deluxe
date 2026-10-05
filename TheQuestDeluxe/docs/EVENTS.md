@@ -50,7 +50,10 @@ DARK_SCREENS = [(2, 3)]        # Deluxe: screens where only the hero shows, and 
 LINKS = {(24, 55): (2, 10, 12), (30, 40): (5,)}  # Deluxe: where a ladder, rope, stairs, hole or jump pad (item types) leads:
                                # (level, x, y), or (level, x, y, "words shown"). An EXIT item (type exit) with an entry
                                # leads there too: (level,) = that level's start, any level; every exit of a level can have
-                               # its own, the rest go on to the next level. The Map tab's Link tool sets it
+                               # its own, the rest go on to the next level. (level, "name") = the entry of that name in that
+                               # level's ENTRIES. The Map tab's Link tool sets it
+ENTRIES = {"cave": (12, 40), "tower": (80, 9)}   # Deluxe: named ways in to this level, as many as you like: an exit (or a
+                               # ladder ...) of any level can link to one by name. The Map tab's Entry tool sets it
 ```
 
 ### Handlers

@@ -224,6 +224,7 @@ BUTTONS = {
     'Death and respawn...': 'What happens on this level when the hero dies: wake again here (life, gold lost, items he starts with), and making this level the Underworld he fights back from.',
     'Dark': 'Click a screen to make it dark: nothing shows but the hero, and what his light reaches (an item\'s Light). Click again to make it light.',
     'Peaceful': "Click a screen to make it one where people and allies leave monsters alone.",
+    'Entry': 'Click a square to make it a named way in to this level (several allowed). Exits, ladders and the like on other levels link to it by name. Click one again to rename it or remove it.',
     'Link': 'Click a ladder, rope, stairs, hole or jump pad (put it on the map first) to say where it leads: a '
             'square on another level. Can make the way back too.',
     'Floor': 'The ground. Every square has one.', 'Wall / door': 'Walls, trees, water and doors.',

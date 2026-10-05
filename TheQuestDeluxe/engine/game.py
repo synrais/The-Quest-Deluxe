@@ -405,14 +405,22 @@ class Game:
         self.events.on_level_start()
         self.events.run('level_start')
 
+    def entry_link(self, link):
+        """A link written (level, "name") is (level, x, y) of the entry of that name in the level's ENTRIES (None: no such)."""
+        if len(link) == 2 and isinstance(link[1], str):
+            sq = (self.events.meta(link[0], 'ENTRIES', {}) or {}).get(link[1]) if 1 <= link[0] <= self.levels else None
+            return (link[0], *sq) if sq else None
+        return link
+
     def take_exit(self, link):
-        """An exit that has its own entry in LINKS: (level,) to arrive at that level's start (its stories first), or
-        (level, x, y) to arrive on that square with the level kept as it was left."""
+        """An exit that has its own entry in LINKS: (level,) to arrive at that level's start (its stories first),
+        (level, "name") at the entry of that name in the level's ENTRIES, or (level, x, y) on that square, the level kept
+        as it was left."""
         level = link[0]
         if not 1 <= level <= self.levels:
             self.report('It leads nowhere.', 7)
-        elif len(link) >= 3:
-            self.take_link()
+        elif len(link) >= 2:
+            self.take_link(link)
         else:
             self.next_level(level)
 
@@ -609,13 +617,14 @@ class Game:
             self.play_at('teleporter2', p.X, p.Y)
         return True
 
-    def take_link(self) -> bool:
+    def take_link(self, link=None) -> bool:
         """A ladder, rope, stairs, hole or jump pad under the hero (the item types in LINK_ITEMS): the level's
         LINKS says where it leads, {(x, y): (level, x, y)} or (level, x, y, "text to show"). The hero lands
         on the other level (kept as he left it), and a pad or a hole at the other end only leads on if it is
         one too: a link is only ever one way unless the other level links back. True if it led somewhere."""
         p, w = self.player, self.world
-        link = (self.events.meta(w.level, 'LINKS', {}) or {}).get((p.X, p.Y))
+        link = link or (self.events.meta(w.level, 'LINKS', {}) or {}).get((p.X, p.Y))
+        link = self.entry_link(link) if link else None
         if not link:
             self.report('It leads nowhere.', 7)
             return False

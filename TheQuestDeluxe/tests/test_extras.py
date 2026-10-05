@@ -306,8 +306,12 @@ def exits():
         path = os.path.join(folder, 'levels', '1', 'script.qs')
         src = open(path).read()
         at = src.index('START')
-        text = 'ASK_TO_LEAVE = False\nLEAVE_JINGLE = False\nLINKS = {(6, 5): (4,), (8, 5): (2, 30, 30)}\n'
+        text = 'ASK_TO_LEAVE = False\nLEAVE_JINGLE = False\nLINKS = {(6, 5): (4,), (8, 5): (2, 30, 30), (10, 5): (3, "cave")}\n'
         open(path, 'w').write(src[:at] + text + src[at:])
+        path = os.path.join(folder, 'levels', '3', 'script.qs')
+        src = open(path).read()
+        at = src.index('START')
+        open(path, 'w').write(src[:at] + 'ENTRIES = {"cave": (30, 40), "tower": (80, 9)}\n' + src[at:])
 
     def step_onto(x):
         g = with_changes(script)
@@ -318,7 +322,7 @@ def exits():
         w.leave_room()
         p.X, p.Y = 5, 5
         w.enter_room(p, g.status)
-        for xx in (6, 8, 10):
+        for xx in (6, 8, 10, 12):
             w.sq(xx, 5).wall = w.sq(xx, 5).mon = 0
             w.sq(xx, 5).item = 1000
         for xx in range(5, x):
@@ -333,7 +337,10 @@ def exits():
     assert step_onto(6).world.level == 4, 'an exit with its own link: any level, skipping the ones between'
     g = step_onto(8)
     assert (g.world.level, g.player.X, g.player.Y) == (2, 30, 30), 'or to a square of a level'
-    assert step_onto(10).world.level == 2, 'an exit with none goes on to the next level, as before'
+    g = step_onto(10)
+    assert (g.world.level, g.player.X, g.player.Y) == (3, 30, 40), 'an exit linked to an entry by name'
+    g = step_onto(12)
+    assert g.world.level == 2, 'an exit with none goes on to the next level, as before'
     print('exits: each exit of a level can lead to any level, or a square of it; the rest go on: ok')
 
 

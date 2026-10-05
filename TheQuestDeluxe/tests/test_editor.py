@@ -735,6 +735,23 @@ mt.LinkDialog = lambda *a, **k: Gone()
 mtab._link_tool(6, 6)
 mtab._link_tool(8, 6)
 assert app.project.constant(1, 'LINKS') is None
+mt.simpledialog.askstring = lambda *a, **k: 'cave'
+mtab._entry_tool(20, 20)
+mt.simpledialog.askstring = lambda *a, **k: 'tower'
+mtab._entry_tool(30, 30)
+assert app.project.constant(1, 'ENTRIES') == {'cave': (20, 20), 'tower': (30, 30)}, 'several named entries on a level'
+class ToEntry:
+    result = (1, 'tower', None, '', False)
+mt.LinkDialog = lambda *a, **k: ToEntry()
+mtab._link_tool(6, 6)
+assert app.project.constant(1, 'LINKS') == {(6, 6): (1, 'tower')}, 'an exit linked to an entry by name'
+mt.LinkDialog = lambda *a, **k: Gone()
+mtab._link_tool(6, 6)
+mt.simpledialog.askstring = lambda *a, **k: ''
+mtab._entry_tool(20, 20)
+assert app.project.constant(1, 'ENTRIES') == {'tower': (30, 30)}, 'an empty name takes an entry away'
+mtab._entry_tool(30, 30)
+assert app.project.constant(1, 'ENTRIES') is None
 print('exits: the Link tool sends an exit to any level (or a square of it), several to a level: ok')
 print('links: the Link tool makes both ends and removes one: ok')
 

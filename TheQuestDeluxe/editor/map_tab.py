@@ -13,6 +13,8 @@ Right: the tools, the layer, and the palette of what can go in that layer.
   Peaceful   screens where people and allies leave monsters alone (PEACEFUL_SCREENS)
   Respawn    where he wakes after dying on this level (RESPAWN; the Death and respawn... button sets the rest)
   Dark       screens where nothing shows but the hero, and what his light reaches (DARK_SCREENS; an item's Light)
+  Entry      a named way in to this level (ENTRIES): click a square and name it; click it again to rename or remove.
+             Exits, ladders and the like link to a level's entry by name.
   Link       where the ladder, rope, stairs, hole, jump pad or exit on the clicked square leads: a square on
              another level (LINKS); an exit can lead to any level's start, and each exit of a level can lead
              somewhere of its own (without a Link an exit goes on to the next level). Put the item on the square first.
@@ -35,7 +37,7 @@ LAYERS = [('floor', 'Floor'), ('wall', 'Wall / door'), ('deco', 'Decoration'), (
           ('mon', 'Creature'), ('gold', 'Gold')]
 SETTINGS_3D = [('SKY_3D', '3D sky colour'), ('FOG_3D', '3D fog colour'), ('RANGE_3D', '3D range')]
 TOOLS = [('paint', 'Paint'), ('rect', 'Rectangle'), ('fill', 'Fill'), ('pick', 'Pick'),
-         ('start', 'Start'), ('shop', 'Shop'), ('peace', 'Peaceful'), ('dark', 'Dark'), ('respawn', 'Respawn'), ('link', 'Link')]
+         ('start', 'Start'), ('shop', 'Shop'), ('peace', 'Peaceful'), ('dark', 'Dark'), ('respawn', 'Respawn'), ('entry', 'Entry'), ('link', 'Link')]
 ZOOMS = {'Large (40)': 40, 'Medium (24)': 24, 'Small (12)': 12}
 
 
@@ -438,6 +440,11 @@ class MapTab(ttk.Frame):
                 px, py = at(lx, ly)
                 pygame.draw.rect(surf, (255, 160, 0), (px + 1, py + 1, s - 2, s - 2), 2)
                 surf.blit(font.render(f'>{link[0]}', True, (255, 160, 0)), (px + 3, py + s // 2))
+        for name, (ex, ey) in (p.constant(self.level, 'ENTRIES', {}) or {}).items():
+            if self.ox <= ex < self.ox + cols and self.oy <= ey < self.oy + rows:
+                px, py = at(ex, ey)
+                pygame.draw.rect(surf, (80, 255, 120), (px + 1, py + 1, s - 2, s - 2), 2)
+                surf.blit(font.render(f'E {name}', True, (80, 255, 120), (0, 60, 20)), (px + 3, py + 2))
         start = p.constant(self.level, 'START', (5, 5))
         px, py = at(*start)
         pygame.draw.rect(surf, (255, 255, 255), (px + 1, py + 1, s - 2, s - 2), 2)
@@ -511,6 +518,8 @@ class MapTab(ttk.Frame):
             self.app.scripts_changed(self.level)
         elif tool in ('shop', 'peace', 'dark'):
             self._screen_tool(tool, (x - 1) // 10 + 1, (y - 1) // 10 + 1)
+        elif tool == 'entry':
+            self._entry_tool(x, y)
         elif tool == 'link':
             self._link_tool(x, y)
         self.redraw()
@@ -613,6 +622,29 @@ class MapTab(ttk.Frame):
 
     LINK_ITEMS = ('ladder', 'rope', 'stairs', 'hole', 'jump_pad')
 
+    def _entry_tool(self, x, y):
+        """A named way in to this level: where an exit, ladder ... of another level can put the hero. Clicking one again
+        renames it (or removes it: an empty name)."""
+        p, n = self.app.project, self.level
+        entries = dict(p.constant(n, 'ENTRIES', {}) or {})
+        here = next((k for k, v in entries.items() if tuple(v) == (x, y)), None)
+        free = next(f'entry {i}' for i in range(1, 1000) if f'entry {i}' not in entries)
+        name = simpledialog.askstring('Entry', f'Name of the way in at ({x}, {y}) on level {n}:\n'
+                                      '(empty: take this entry away)', initialvalue=here or free, parent=self)
+        if name is None:
+            return
+        name = name.strip()
+        if here:
+            entries.pop(here)
+        if name:
+            entries[name] = (x, y)
+        if entries:
+            p.set_constant(n, 'ENTRIES', entries, 'name -> (x, y): a way in other levels can link to')
+        else:
+            p.remove_constant(n, 'ENTRIES')
+        self.app.changed()
+        self.app.scripts_changed(n)
+
     def _link_tool(self, x, y):
         """Where the stairs (ladder, rope, hole, pad) on (x, y) lead. A way back can be made at the same time:
         the link on the other level, with the same item put there if the square has none."""
@@ -632,7 +664,9 @@ class MapTab(ttk.Frame):
             links.pop((x, y), None)
         else:
             level, tx, ty, text, way_back = dlg.result
-            if tx is None:
+            if isinstance(tx, str):
+                links[(x, y)] = (level, tx)                       # to the entry of that name
+            elif tx is None:
                 links[(x, y)] = (level,)                          # an exit to a level's start
             else:
                 links[(x, y)] = (level, tx, ty, text) if text else (level, tx, ty)
@@ -703,6 +737,8 @@ class LinkDialog(simpledialog.Dialog):
     def body(self, master):
         link = self.link or ((1, '', '') if self.is_exit else (1, 5, 5))
         link = tuple(link) + ('', '') if len(link) == 1 else link
+        self.entry_names = self.entries_of(link[0] if isinstance(link[0], int) else 1)
+        link = (link[0], '', '') + tuple(link[2:]) if isinstance(link[1], str) else link
         self.vars = {}
         for i, (key, label, value) in enumerate((('level', 'Leads to level', link[0]),
                                                  ('x', 'at x (1-100)' + (' (empty: its start)' if self.is_exit else ''), link[1]),
@@ -714,9 +750,17 @@ class LinkDialog(simpledialog.Dialog):
             if key == 'level':
                 w = ttk.Combobox(master, textvariable=self.vars[key], state='readonly', width=8,
                                  values=[str(n) for n in range(1, self.levels + 1)])
+                self.level_box = w
             else:
                 w = ttk.Entry(master, textvariable=self.vars[key], width=30 if key == 'text' else 8)
             w.grid(row=i, column=1, sticky='w')
+        row = 4 + (1 if self.two_way else 0)
+        ttk.Label(master, text='or at the entry named').grid(row=row, column=0, sticky='w', pady=2)
+        self.vars['entry'] = tk.StringVar(value=self.link[1] if self.link and len(self.link) == 2 and isinstance(self.link[1], str) else '')
+        self.entry_box = ttk.Combobox(master, textvariable=self.vars['entry'], width=18, values=[''] + self.entry_names)
+        self.entry_box.grid(row=row, column=1, sticky='w')
+        self.level_box.bind('<<ComboboxSelected>>', lambda e: self.entry_box.config(
+            values=[''] + self.entries_of(int(self.vars['level'].get()))))
         self.back = tk.BooleanVar(value=self.two_way and not self.link)
         if self.two_way:
             ttk.Checkbutton(master, text='Also make the way back (the link and the same item at the other end)',
@@ -727,8 +771,18 @@ class LinkDialog(simpledialog.Dialog):
                 row=5, column=0, columnspan=2, sticky='w')
         return None
 
+    def entries_of(self, level):
+        project = getattr(self.master, 'app', None) and self.master.app.project
+        return sorted((project.constant(level, 'ENTRIES', {}) or {}).keys()) if project else []
+
     def validate(self):
         if self.remove.get():
+            return True
+        if self.vars['entry'].get().strip():
+            try:
+                assert 1 <= int(self.vars['level'].get()) <= self.levels
+            except (ValueError, AssertionError):
+                return False
             return True
         try:
             if self.is_exit and not self.vars['x'].get().strip() and not self.vars['y'].get().strip():
@@ -744,6 +798,9 @@ class LinkDialog(simpledialog.Dialog):
     def apply(self):
         if self.remove.get():
             self.result = 'remove'
+            return
+        if self.vars['entry'].get().strip():
+            self.result = (int(self.vars['level'].get()), self.vars['entry'].get().strip(), None, '', False)
             return
         if self.is_exit and not self.vars['x'].get().strip() and not self.vars['y'].get().strip():
             self.result = (int(self.vars['level'].get()), None, None, '', False)
