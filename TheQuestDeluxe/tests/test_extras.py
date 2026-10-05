@@ -431,7 +431,28 @@ def painted_hero():
     px, py = (p.X - ox) * 40, (p.Y - oy) * 40
     assert tuple(g.renderer.screen.get_at((px + 20, py + 20)))[:3] == (255, 0, 255)      # his painted picture
     assert tuple(g.renderer.screen.get_at((px + 2, py + 2)))[:3] != (255, 0, 255)
-    print('a painted hero (sprites/heroes/<class>.png) takes the place of the drawn one: ok')
+    from engine.bgi import EGA
+    def pix(x, y):
+        g.renderer.draw(g, present=False)
+        return tuple(g.renderer.screen.get_at((px + x, py + y)))[:3]
+    st = g.status
+    assert pix(18, 8) == EGA[15] or pix(18, 8) == (255, 0, 255), 'eyes are white'
+    st.killer = 1
+    assert pix(18, 8) == EGA[4] and pix(22, 8) == EGA[4], 'kill mode: dark red eyes on a painted hero too'
+    st.killer = 0
+    st.powboost = 3
+    assert pix(19, 8) == EGA[12], 'Berserker: light red eyes'
+    st.powboost = 0
+    g.player.hero.poisoned = 5
+    assert pix(21, 8) == EGA[2], 'poisoned: green eyes'
+    g.player.hero.poisoned = 0
+    st.Shield = 5
+    assert EGA[14] in (pix(20, 2), pix(20, 3), pix(20, 4)), 'the Shield spell: its yellow rings'
+    st.Shield = 0
+    st.fShield = 5
+    assert EGA[4] in (pix(20, 2), pix(20, 3), pix(20, 4)), 'Shield of Fire: red rings'
+    st.fShield = 0
+    print('a painted hero (sprites/heroes/<class>.png) takes the place of the drawn one, with its eyes and rings: ok')
 
 
 def event_code_text():

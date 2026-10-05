@@ -240,6 +240,10 @@ class Renderer:
             if p.hero.invisible > 0:
                 painted.set_alpha(70)                            # invisible: a ghost of him
             scr.blit(painted, (hx, hy))
+            if gear and p.hero.invisible <= 0:                   # his eyes (poisoned green, killer dark red, Berserker light
+                self.bgi.s = scr                                 # red) and the Shield spells' rings, as guy2() draws them
+                anim.draw_hero_effects(self.bgi, hx // TILE + 1, hy // TILE + 1, p.hero.invisible, p.hero.poisoned,
+                                       st.killer, st.powboost, st.Shield, st.fShield)
             return
         self.bgi.s = scr
         look = self.pack.classes.get(p.hero.type, {}).get('look')
