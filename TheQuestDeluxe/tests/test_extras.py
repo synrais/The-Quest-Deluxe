@@ -299,6 +299,44 @@ def big_creature(shot=None):
           'square, dies on all, drawn once: ok')
 
 
+def exits():
+    """An exit (item type exit) with an entry in its level's LINKS leads to any level; every exit of a level can lead
+    somewhere of its own; without one it goes on to the next level."""
+    def script(folder, json):
+        path = os.path.join(folder, 'levels', '1', 'script.qs')
+        src = open(path).read()
+        at = src.index('START')
+        text = 'ASK_TO_LEAVE = False\nLEAVE_JINGLE = False\nLINKS = {(6, 5): (4,), (8, 5): (2, 30, 30)}\n'
+        open(path, 'w').write(src[:at] + text + src[at:])
+
+    def step_onto(x):
+        g = with_changes(script)
+        p, w = g.player, g.world
+        for e in list(w.enemies):
+            w.sq(e.x, e.y).mon = 0
+        w.enemies.clear()
+        w.leave_room()
+        p.X, p.Y = 5, 5
+        w.enter_room(p, g.status)
+        for xx in (6, 8, 10):
+            w.sq(xx, 5).wall = w.sq(xx, 5).mon = 0
+            w.sq(xx, 5).item = 1000
+        for xx in range(5, x):
+            p.X = xx
+        p.X, p.Y = x - 1, 5
+        g.try_move(1, 0)
+        for _ in range(12):                                    # (the stories of the level it leads to)
+            if not g.overlay:
+                break
+            g.overlay.key(g, pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RETURN, mod=0, unicode='\r'))
+        return g
+    assert step_onto(6).world.level == 4, 'an exit with its own link: any level, skipping the ones between'
+    g = step_onto(8)
+    assert (g.world.level, g.player.X, g.player.Y) == (2, 30, 30), 'or to a square of a level'
+    assert step_onto(10).world.level == 2, 'an exit with none goes on to the next level, as before'
+    print('exits: each exit of a level can lead to any level, or a square of it; the rest go on: ok')
+
+
 def links():
     def stairs(folder, json):
         path = os.path.join(folder, 'items.json')
@@ -1551,6 +1589,7 @@ if __name__ == '__main__':
     sizes_and_worn()
     disguise()
     event_code_text()
+    exits()
     links()
     moved_walls()
     painted_hero()

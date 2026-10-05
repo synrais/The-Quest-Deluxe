@@ -11,9 +11,15 @@ MAP_SIZE = 100
 
 
 def write_text(path: str, text: str):
+    """Written whole or not at all: to a temporary file beside it first, then put in its place (a crash or a full disk in the
+    middle leaves the old file, never half of a new one)."""
     os.makedirs(os.path.dirname(path) or '.', exist_ok=True)
-    with open(path, 'w', encoding='utf-8', newline='\n') as fh:
+    tmp = path + '.tmp'
+    with open(tmp, 'w', encoding='utf-8', newline='\n') as fh:
         fh.write(text)
+        fh.flush()
+        os.fsync(fh.fileno())
+    os.replace(tmp, path)
 
 
 def read_text(path: str) -> str:

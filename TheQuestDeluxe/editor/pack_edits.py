@@ -61,7 +61,7 @@ def scan(folder: str) -> dict:
     for here, dirs, files in os.walk(folder):
         dirs[:] = [d for d in dirs if d not in SKIP_DIRS]
         for f in files:
-            if f in SKIP_FILES or f.endswith('.pyc'):
+            if f in SKIP_FILES or f.endswith(('.pyc', '.tmp')):
                 continue
             full = os.path.join(here, f)
             out[os.path.relpath(full, folder).replace(os.sep, '/')] = file_hash(full)

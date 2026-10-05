@@ -13,8 +13,9 @@ Right: the tools, the layer, and the palette of what can go in that layer.
   Peaceful   screens where people and allies leave monsters alone (PEACEFUL_SCREENS)
   Respawn    where he wakes after dying on this level (RESPAWN; the Death and respawn... button sets the rest)
   Dark       screens where nothing shows but the hero, and what his light reaches (DARK_SCREENS; an item's Light)
-  Link       where the ladder, rope, stairs, hole or jump pad on the clicked square leads: a square on
-             another level (LINKS). Put the item on the square first (Item layer).
+  Link       where the ladder, rope, stairs, hole, jump pad or exit on the clicked square leads: a square on
+             another level (LINKS); an exit can lead to any level's start, and each exit of a level can lead
+             somewhere of its own (without a Link an exit goes on to the next level). Put the item on the square first.
   Mouse wheel scrolls the map up and down, Shift+wheel sideways, Ctrl+wheel zooms in and out round the pointer.
   The Screens and Squares boxes show the lines between screens and round every square.
   Ctrl+Z / Ctrl+Y undo and redo.
@@ -618,19 +619,23 @@ class MapTab(ttk.Frame):
         p, n = self.app.project, self.level
         links = dict(p.constant(n, 'LINKS', {}) or {})
         item = self.grid.get(x, y)[FIELD['item']]
-        if p.item_type(item) not in self.LINK_ITEMS and (x, y) not in links:
-            messagebox.showinfo('Link', 'Put a ladder, rope, stairs, hole or jump pad here first (Item layer; the '
+        if p.item_type(item) not in self.LINK_ITEMS + ('exit',) and (x, y) not in links:
+            messagebox.showinfo('Link', 'Put a ladder, rope, stairs, hole, jump pad or exit here first (Item layer; the '
                                         'Items tab makes them: their Type).')
             return
-        dlg = LinkDialog(self, f'Link at ({x}, {y}) on level {n}', links.get((x, y)), p.levels,
-                         two_way=p.item_type(item) not in ('hole', 'jump_pad'))
+        is_exit = p.item_type(item) == 'exit'
+        dlg = LinkDialog(self, f'{"Exit" if is_exit else "Link"} at ({x}, {y}) on level {n}', links.get((x, y)), p.levels,
+                         two_way=p.item_type(item) not in ('hole', 'jump_pad', 'exit'), is_exit=is_exit)
         if dlg.result is None:
             return
         if dlg.result == 'remove':
             links.pop((x, y), None)
         else:
             level, tx, ty, text, way_back = dlg.result
-            links[(x, y)] = (level, tx, ty, text) if text else (level, tx, ty)
+            if tx is None:
+                links[(x, y)] = (level,)                          # an exit to a level's start
+            else:
+                links[(x, y)] = (level, tx, ty, text) if text else (level, tx, ty)
             if way_back:
                 other = dict(p.constant(level, 'LINKS', {}) or {})
                 other[(tx, ty)] = (n, x, y)
@@ -690,15 +695,17 @@ class MapTab(ttk.Frame):
 class LinkDialog(simpledialog.Dialog):
     """Where a link leads: the level, the square and the words shown; a way back; or remove it."""
 
-    def __init__(self, parent, title, link, levels, two_way=True):
-        self.link, self.levels, self.two_way = link, levels, two_way
+    def __init__(self, parent, title, link, levels, two_way=True, is_exit=False):
+        self.link, self.levels, self.two_way, self.is_exit = link, levels, two_way, is_exit
         self.result = None
         super().__init__(parent, title)
 
     def body(self, master):
-        link = self.link or (1, 5, 5)
+        link = self.link or ((1, '', '') if self.is_exit else (1, 5, 5))
+        link = tuple(link) + ('', '') if len(link) == 1 else link
         self.vars = {}
-        for i, (key, label, value) in enumerate((('level', 'Leads to level', link[0]), ('x', 'at x (1-100)', link[1]),
+        for i, (key, label, value) in enumerate((('level', 'Leads to level', link[0]),
+                                                 ('x', 'at x (1-100)' + (' (empty: its start)' if self.is_exit else ''), link[1]),
                                                  ('y', 'and y (1-100)', link[2]),
                                                  ('text', 'Words shown (empty: the default)',
                                                   link[3] if len(link) > 3 else ''))):
@@ -724,6 +731,9 @@ class LinkDialog(simpledialog.Dialog):
         if self.remove.get():
             return True
         try:
+            if self.is_exit and not self.vars['x'].get().strip() and not self.vars['y'].get().strip():
+                assert 1 <= int(self.vars['level'].get()) <= self.levels
+                return True
             level, x, y = (int(self.vars[k].get()) for k in ('level', 'x', 'y'))
             assert 1 <= level <= self.levels and 1 <= x <= SIZE and 1 <= y <= SIZE
         except (ValueError, AssertionError):
@@ -734,6 +744,9 @@ class LinkDialog(simpledialog.Dialog):
     def apply(self):
         if self.remove.get():
             self.result = 'remove'
+            return
+        if self.is_exit and not self.vars['x'].get().strip() and not self.vars['y'].get().strip():
+            self.result = (int(self.vars['level'].get()), None, None, '', False)
             return
         self.result = (int(self.vars['level'].get()), int(self.vars['x'].get()), int(self.vars['y'].get()),
                        self.vars['text'].get().strip(), self.back.get())

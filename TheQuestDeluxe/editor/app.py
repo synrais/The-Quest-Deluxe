@@ -236,6 +236,9 @@ class App:
         root.bind('<Control-z>', lambda e: self._undo(False))
         root.bind('<Control-y>', lambda e: self._undo(True))
         root.protocol('WM_DELETE_WINDOW', self.quit)
+        root.report_callback_exception = self.crashed
+        self._auto = None
+        self._tick()
         from .tips import apply as apply_tips, BUTTONS
         apply_tips(root)
         tip(self.play_class, 'The class of the hero for test play (F5).')
@@ -486,10 +489,53 @@ class App:
             self.save()
         return True
 
+    AUTOSAVE_MS = 1500          # the pack is written this long after the last change (and every 30 seconds while changes wait)
+
     def changed(self):
+        """Something was edited: the pack is written to disk a moment later, by itself (a crash loses next to nothing)."""
         if not self.dirty:
             self.dirty = True
             self._title()
+        if getattr(self, '_auto', None) is not None:
+            self.root.after_cancel(self._auto)
+        self._auto = self.root.after(self.AUTOSAVE_MS, self.autosave)
+
+    def autosave(self, why=''):
+        """Write the pack now, quietly: no zip, no questions. Failing is said in the status line and tried again."""
+        self._auto = None
+        if not (self.project and self.dirty):
+            return True
+        try:
+            self.project.save()
+        except Exception as e:                                   # noqa: BLE001 - never lose the window over it
+            self.status(f'Could not save automatically ({e}): trying again')
+            self._auto = self.root.after(5000, self.autosave)
+            return False
+        self.dirty = False
+        self._title()
+        import time
+        self.status(f'Saved automatically {time.strftime("%H:%M:%S")}{why}. (Save also makes a zip of your additions.)')
+        return True
+
+    def crashed(self, exc, val, tb):
+        """A callback of the editor failed: write down what happened, save the work, and carry on."""
+        import traceback
+        text = ''.join(traceback.format_exception(exc, val, tb))
+        try:
+            from . import side_save
+            os.makedirs(side_save.home_dir(), exist_ok=True)
+            with open(os.path.join(side_save.home_dir(), 'editor_crash.txt'), 'a', encoding='utf-8') as fh:
+                fh.write(text + '\n')
+        except Exception:                                        # noqa: BLE001
+            pass
+        sys.stderr.write(text)
+        self.autosave(' after an error (it is in editor_crash.txt)')
+
+    def _tick(self):
+        """Every 30 seconds: whatever has not been written yet is."""
+        if self.dirty:
+            self.autosave()
+        self.root.after(30000, self._tick)
 
     def status(self, text):
         self.map_tab.status.config(text=text)

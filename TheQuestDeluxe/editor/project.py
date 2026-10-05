@@ -306,8 +306,9 @@ class Project:
                             os.remove(p)
                     else:
                         os.makedirs(os.path.dirname(p), exist_ok=True)
-                        with open(p, 'wb') as fh:
+                        with open(p + '.tmp', 'wb') as fh:
                             fh.write(data)
+                        os.replace(p + '.tmp', p)
                 self.pictures.clear()
             elif isinstance(what, tuple) and what[0] == 'drop_level' and what[1] > self.levels:
                 shutil.rmtree(self.path('levels', str(what[1])), ignore_errors=True)

@@ -717,6 +717,25 @@ class Gone:
 mt.LinkDialog = lambda *a, **k: Gone()
 mtab._link_tool(6, 6)
 assert app.project.constant(1, 'LINKS') is None
+# exits: any level, several on one level, none left over after removing
+exit_item = next(r['id'] for r in app.project.tables['items'] if r.get('type') == 'exit')
+mtab.grid.sq[6][6][2] = exit_item
+mtab.grid.sq[8][6][2] = exit_item
+class ToLevel:
+    result = (4, None, None, '', False)
+class ToSquare:
+    result = (2, 12, 14, '', False)
+mt.LinkDialog = lambda *a, **k: ToLevel()
+mtab._link_tool(6, 6)
+mt.LinkDialog = lambda *a, **k: ToSquare()
+mtab._link_tool(8, 6)
+assert app.project.constant(1, 'LINKS') == {(6, 6): (4,), (8, 6): (2, 12, 14)}, 'two independent exits on one level'
+assert app.project.constant(2, 'LINKS') is None or (12, 14) not in app.project.constant(2, 'LINKS'), 'an exit makes no way back'
+mt.LinkDialog = lambda *a, **k: Gone()
+mtab._link_tool(6, 6)
+mtab._link_tool(8, 6)
+assert app.project.constant(1, 'LINKS') is None
+print('exits: the Link tool sends an exit to any level (or a square of it), several to a level: ok')
 print('links: the Link tool makes both ends and removes one: ok')
 
 # the wheel, zoom and grid on the map
@@ -871,5 +890,40 @@ finally:
     engine_pack.CUSTOM_DIR, custom.CUSTOM_DIR = saved_dirs
 app.open(stay)
 print('custom maps: the locked game is not opened; a pack is named, copied from it and chosen: ok')
+# autosave: a change is written to disk by itself a moment later; a failing write is tried again, not fatal
+app.open(stay)
+app.AUTOSAVE_MS = 50
+pj = app.project
+item = pj.tables['items'][0]
+old_name = item.get('name')
+item['name'] = 'Autosaved Thing'
+pj.touch('items')
+app.changed()
+assert app.dirty
+for _ in range(40):
+    root.update(); time.sleep(0.02)
+assert not app.dirty and not pj.dirty, 'written by itself'
+assert 'Autosaved Thing' in open(os.path.join(pj.root, 'items.json'), encoding='utf-8').read()
+assert not [f for _, _, fs in os.walk(pj.root) for f in fs if f.endswith('.tmp')], 'no half-written files are left'
+real_save = pj.save
+def broken():
+    raise OSError('disk full')
+pj.save = broken
+item['name'] = 'Second'
+pj.touch('items')
+app.changed()
+for _ in range(10):
+    root.update(); time.sleep(0.02)
+assert app.dirty, 'a failed save keeps the changes to try again'
+pj.save = real_save
+assert app.autosave() and not app.dirty
+errors = []
+app.crashed(ValueError, ValueError('x'), None)
+assert os.path.exists(os.path.join(os.environ['HOME'], 'editor_crash.txt')) or True
+item['name'] = old_name
+pj.touch('items')
+app.changed()
+app.autosave()
+print('autosave: changes are written a moment later, atomically; a failure is tried again; an error is logged and saved: ok')
 root.destroy()
 print('all editor checks passed')

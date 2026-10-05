@@ -47,8 +47,10 @@ RESPAWN_GOLD_LOSS = 50         # ... percent of his gold lost each time (default
 RESPAWN_LIMIT = 3              # ... times a level (default: no limit; after that the Underworld or the real death)
 RESPAWN_KIT = [201]            # ... items handed to him each time
 DARK_SCREENS = [(2, 3)]        # Deluxe: screens where only the hero shows, and what an item's `light` reaches (map tool Dark)
-LINKS = {(24, 55): (2, 10, 12)}  # Deluxe: where a ladder, rope, stairs, hole or jump pad (item types) leads:
-                               # (level, x, y), or (level, x, y, "words shown"). The Map tab's Link tool sets it
+LINKS = {(24, 55): (2, 10, 12), (30, 40): (5,)}  # Deluxe: where a ladder, rope, stairs, hole or jump pad (item types) leads:
+                               # (level, x, y), or (level, x, y, "words shown"). An EXIT item (type exit) with an entry
+                               # leads there too: (level,) = that level's start, any level; every exit of a level can have
+                               # its own, the rest go on to the next level. The Map tab's Link tool sets it
 ```
 
 ### Handlers

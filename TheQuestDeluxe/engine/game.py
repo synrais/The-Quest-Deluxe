@@ -405,10 +405,21 @@ class Game:
         self.events.on_level_start()
         self.events.run('level_start')
 
-    def next_level(self):
+    def take_exit(self, link):
+        """An exit that has its own entry in LINKS: (level,) to arrive at that level's start (its stories first), or
+        (level, x, y) to arrive on that square with the level kept as it was left."""
+        level = link[0]
+        if not 1 <= level <= self.levels:
+            self.report('It leads nowhere.', 7)
+        elif len(link) >= 3:
+            self.take_link()
+        else:
+            self.next_level(level)
+
+    def next_level(self, target=None):
         if self.world.level and self.events.meta(self.world.level, 'LEAVE_JINGLE', True):
             self.play('song_bevcop')
-        nxt = self.world.level + 1
+        nxt = target or self.world.level + 1
         if nxt > self.levels:
             ending = [8, 9] if self.status.mission1 == 2 else [8]
 
@@ -575,10 +586,14 @@ class Game:
         elif kind == 'exit' and self.in_afterlife() and self.events.meta(w.level, 'UNDERWORLD_RETURN', 'exit') == 'exit':
             self.revive()                                    # the way out of the Underworld leads back to his body
         elif kind == 'exit':
+            # an exit with an entry in the level's LINKS leads there (any level, perhaps to a square); each exit of a level
+            # can lead somewhere of its own. Without one it is the way on to the next level, as in the original.
+            link = (self.events.meta(w.level, 'LINKS', {}) or {}).get((p.X, p.Y))
+            go = (lambda: self.take_exit(link)) if link else self.next_level
             if self.events.meta(w.level, 'ASK_TO_LEAVE', True):
-                self.overlay = ui.YesNo('Want to travel further? (Y)es (N)o', self.next_level)
+                self.overlay = ui.YesNo('Want to travel further? (Y)es (N)o', go)
             else:
-                self.next_level()
+                go()
         elif kind == 'teleporter':
             # teleporter1() on the pad, the jump (level 5), then teleporter2() where the hero lands
             self.play_at('teleporter1', p.X, p.Y)
