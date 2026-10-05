@@ -387,6 +387,14 @@ class Game:
             if p.skill.hon == 2 and st.ems > 0:
                 self.play('honor')
                 return False
+            # The original leaves a screen in two passes: the first takes the hero's step back to the edge square and gives
+            # the creatures a whole turn there (they see him at the edge, attack, chase, wander), with `leaving` set; only
+            # the second changes the screen. So stepping off costs two turns: the walk off screen's extra creature movement.
+            self.leaving_to = (nx, ny)
+            self.end_turn()
+            self.leaving_to = None
+            if self.overlay or p.hero.life < 1:
+                return True                              # he died (or a level-up screen is up): he did not get away
             w.leave_room(st.ems, self.events.shadow)
             p.X, p.Y = nx, ny
             w.enter_room(p, st)

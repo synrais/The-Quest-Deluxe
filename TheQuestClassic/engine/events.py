@@ -284,8 +284,9 @@ class Events:
         return {
             'level': lambda: w.level, 'm1': lambda: st.mission1, 'm2': lambda: st.mission2,
             'rep': lambda: p.hero.rep, 'coins': lambda: p.inv.coins, 'killer': lambda: st.killer,
-            'ems': lambda: st.ems, 'mons': lambda: len(w.enemies), 'leaving': lambda: 0,
-            'x': lambda: self.ctx['x'], 'y': lambda: self.ctx['y'], 'hx': lambda: p.X, 'hy': lambda: p.Y,
+            'ems': lambda: st.ems, 'mons': lambda: len(w.enemies), 'leaving': lambda: 1 if getattr(g, 'leaving_to', None) else 0,
+            'x': lambda: self.ctx['x'], 'y': lambda: self.ctx['y'], 'hx': lambda: (getattr(g, 'leaving_to', None) or (p.X, p.Y))[0],
+            'hy': lambda: (getattr(g, 'leaving_to', None) or (p.X, p.Y))[1],
             'ax': lambda: p.X - ox + 1, 'ay': lambda: p.Y - oy + 1, 'attacker': lambda: self.attacker,
         }[name]()
 

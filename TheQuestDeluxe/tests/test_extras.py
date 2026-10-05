@@ -344,6 +344,37 @@ def exits():
     print('exits: each exit of a level can lead to any level, or a square of it; the rest go on: ok')
 
 
+def walk_off_screen():
+    """The original leaves a screen in two passes, so the creatures get a whole turn while the hero stands at the edge (and
+    another on the new screen): a creature chasing him is a step nearer on the screen he left."""
+    g = with_changes(lambda folder, json: None)
+    w, p = g.world, g.player
+    for e in list(w.enemies):
+        w.sq(e.x, e.y).mon = 0
+    w.enemies.clear()
+    w.leave_room()
+    p.X, p.Y = 10, 5
+    w.enter_room(p, g.status)
+    for x in range(1, 11):
+        for y in range(1, 11):
+            w.sq(x, y).wall = 0
+            w.sq(x, y).item = 0
+    w.sq(6, 5).mon = 2                                         # an Orc, five squares from him
+    w.sq(11, 5).wall = w.sq(11, 5).mon = 0
+    w.leave_room()
+    w.enter_room(p, g.status)
+    g.status.ems = len(w.enemies)
+    for e in w.enemies:
+        e.att = 9
+    p.hero.life = p.hero.mlife = 500
+    before = [(e.x, e.y) for e in w.enemies]
+    assert before == [(6, 5)]
+    assert g.try_move(1, 0)                                    # off the screen
+    assert (p.X, p.Y) == (11, 5) and w.origin == (11, 1)
+    assert w.sq(7, 5).mon == 2 and w.sq(6, 5).mon == 0, 'the creature took its turn at the edge before he left'
+    print('walking off a screen: the creatures on it get a turn first: ok')
+
+
 def links():
     def stairs(folder, json):
         path = os.path.join(folder, 'items.json')
@@ -1618,6 +1649,7 @@ if __name__ == '__main__':
     disguise()
     event_code_text()
     exits()
+    walk_off_screen()
     links()
     moved_walls()
     painted_hero()
