@@ -39,7 +39,7 @@ EDITIONS = {
         'Play The Quest Deluxe.bat': ('The Quest Deluxe', 'run_deluxe.py', False),
         'The Quest Deluxe Editor.bat': ('The Quest Deluxe Editor', 'run_editor.py', True)}),
     'studio': ('TheQuestDeluxe-Studio', 'TheQuestDeluxe-Studio', ['run_deluxe.py', 'settings.ini'], ['engine', 'packs'],
-               ['run_studio.py', 'run_compare.py', 'core', 'studio', 'compare', 'dos', 'docs', 'tools'], {
+               ['run_studio.py', 'run_compare.py', 'Stop everything.bat', 'Stop everything.ps1', 'core', 'studio', 'compare', 'dos', 'docs', 'tools'], {
         'Play The Quest Deluxe.bat': ('The Quest Deluxe', 'run_deluxe.py', False),
         'The Quest Studio.bat': ('The Quest Studio', 'run_studio.py', True)}),
 }
