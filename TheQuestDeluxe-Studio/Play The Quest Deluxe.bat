@@ -57,9 +57,10 @@ if errorlevel 1 (
 )
 
 :run
-%PY% run_deluxe.py %*
-if errorlevel 1 (
-    echo.
-    echo The game stopped with an error; the message above says why.
-    pause
-)
+rem Started with no terminal window of its own (pythonw), so there is nothing to close by mistake; an error is shown in a box and kept in your user folder.
+set "PYW=%PY%"
+set "PYW=%PYW:python.exe=pythonw.exe%"
+if /i "%PYW%"=="py -3" set "PYW=pyw -3"
+if /i "%PYW%"=="python" set "PYW=pythonw"
+start "" %PYW% run_deluxe.py %*
+exit /b 0

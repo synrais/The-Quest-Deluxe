@@ -76,6 +76,8 @@ def manifest_ok() -> list:
 
 def find_dosbox() -> str | None:
     """The DOSBox that comes with the pack (dos/dosbox), else one installed on the machine."""
+    if os.environ.get('QUEST_NO_DOSBOX'):
+        return None                                    # (for the test of what happens without it)
     names = ['dosbox.exe'] if WINDOWS else ['dosbox']
     for n in names:
         for sub in ('dosbox', os.path.join('dosbox', 'bin')):
@@ -101,6 +103,17 @@ class Dos:
         self._mem = None
         self.base = None
         self.exe = find_dosbox()
+        self.idle = lambda: None                      # called all the while this waits (the compare window answers Windows with it)
+
+    def _sleep(self, seconds: float):
+        """Sleep, but in short slices, calling idle() between them: a window that is not answering Windows for a few seconds is shown as stuck."""
+        end = time.time() + seconds
+        while True:
+            self.idle()
+            left = end - time.time()
+            if left <= 0:
+                return
+            time.sleep(min(0.05, left))
 
     # ── life ────────────────────────────────────────────────────────────────
     def __enter__(self):
@@ -140,8 +153,8 @@ class Dos:
             self.window = self._find_window()
             if self.window:
                 break
-            time.sleep(0.2)
-        time.sleep(1.0)
+            self._sleep(0.2)
+        self._sleep(1.0)
         self.focus()
 
     def alive(self):
@@ -269,13 +282,13 @@ class Dos:
             self.key(name)
             t = time.time()
             while time.time() - t < change_within and self.picture_bytes() == before:
-                time.sleep(0.1)
+                self._sleep(0.1)
         self.wait_still(quiet, limit)
 
     def wait_still(self, quiet=1.0, limit=15.0):
         """Wait until the picture has stopped changing for `quiet` seconds (or `limit` passes). Without pictures, just wait."""
         if not self.window or (WINDOWS and self.picture_bytes() is None):
-            time.sleep(min(limit, quiet + 2))
+            self._sleep(min(limit, quiet + 2))
             return
         t = time.time()
         last, since = None, time.time()
@@ -285,7 +298,7 @@ class Dos:
                 last, since = cur, time.time()
             elif time.time() - since >= quiet:
                 return
-            time.sleep(0.1)
+            self._sleep(0.1)
 
     def screenshot(self, path: str) -> bool:
         if not self.window:

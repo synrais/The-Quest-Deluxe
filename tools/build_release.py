@@ -152,7 +152,9 @@ def crlf(path: str) -> bytes:
 def write_launchers() -> list[str]:
     """Each edition folder's double-click launchers, from tools/launcher.bat."""
     written = []
-    for src, _, _, _, _, launchers in EDITIONS.values():
+    for name, (src, _, _, _, _, launchers) in EDITIONS.items():
+        if name == 'studio':
+            continue                                  # its launchers are its own (they start without a terminal window)
         for bat, (title, program, tk) in launchers.items():
             path = os.path.join(ROOT, src, bat)
             with open(path, 'wb') as fh:

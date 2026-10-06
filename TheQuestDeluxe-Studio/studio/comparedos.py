@@ -12,7 +12,7 @@ from tkinter import ttk
 from compare import dos, loadout as loadouts
 from engine import savefile
 from engine.pack import ROOT
-from core import custom
+from core import custom, proc
 
 from . import levelmeta, ui
 from .pages.world_places import SquarePicker
@@ -334,7 +334,7 @@ class CheckDialog(ui.Dialog):
 
         def work():
             try:
-                r = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, timeout=240)
+                r = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, timeout=240, **proc.quiet())
                 text = (r.stdout + ('\n' + r.stderr[-1500:] if r.returncode and r.stderr.strip() else '')).strip()
             except (OSError, subprocess.SubprocessError) as e:
                 text = f'The check could not run: {e}'
@@ -367,9 +367,9 @@ def open_compare(app):
         return
     try:
         with open(LOG, 'w', encoding='utf-8') as fh:
-            proc = subprocess.Popen(d.command_line, cwd=ROOT, stdout=fh, stderr=subprocess.STDOUT)
+            child = subprocess.Popen(d.command_line, cwd=ROOT, stdout=fh, stderr=subprocess.STDOUT, **proc.quiet())
     except OSError as e:
         ui.inform(app.root, 'The comparison did not start', f'It could not be started: {e}')
         return
-    watch(app, proc)
+    watch(app, child)
     app.say('Starting the comparison: your game and the original open side by side in a moment.', 'ok')

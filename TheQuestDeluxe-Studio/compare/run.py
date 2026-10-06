@@ -99,6 +99,23 @@ def main(argv=None):
         return 1
 
 
+def play_alone(comp, font, screen, why):
+    """Our game on its own (the original could not be started): the window says why, and the game can still be played."""
+    import pygame
+    print('compare:', why, flush=True)
+    status(font, screen, why, (250, 120, 110))
+    clock = pygame.time.Clock()
+    while True:
+        for ev in pygame.event.get():
+            if ev.type == pygame.QUIT:
+                return 1
+            if ev.type == pygame.KEYDOWN:
+                comp.game.handle(ev)
+        comp.draw()
+        pygame.display.flip()
+        clock.tick(30)
+
+
 def run(argv=None):
     a = parse(argv)
     if a.check:
@@ -160,12 +177,26 @@ def run(argv=None):
         pygame.event.pump()
 
     comp.progress, comp.after_dos_window = say, dock
+    comp.dos.idle = pygame.event.pump
+    ours = screen.subsurface((0, 0, 640, 480))
     try:
-        comp.start_dos()
-        dock()
-        comp.start_ours(screen.subsurface((0, 0, 640, 480)), hero)
+        say('Starting The Quest Deluxe ...')
+        comp.begin_ours(ours, hero)                                   # our game first: it is on the screen while the original loads
         comp.draw()
         pygame.display.flip()
+        solo = None
+        try:
+            comp.start_dos()
+            dock()
+            comp.finish_ours()
+        except Exception as e:                                        # noqa: BLE001 - the original could not be started: ours still plays
+            import traceback
+            print(traceback.format_exc(), file=sys.stderr, flush=True)
+            solo = f'The original could not be started ({type(e).__name__}: {e}). Press "Check it works" in the Studio. Ours plays alone.'
+        comp.draw()
+        pygame.display.flip()
+        if solo:
+            return play_alone(comp, font, screen, solo)
         msg, colour = 'Same keys go to both. Everything is recorded; F12 saves it.', (150, 220, 150)
         if comp.removed:
             msg, colour = comp.removed[:90], (240, 190, 90)

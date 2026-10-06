@@ -28,4 +28,5 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    from core import crashlog
+    sys.exit(crashlog.guard(main, 'studio'))

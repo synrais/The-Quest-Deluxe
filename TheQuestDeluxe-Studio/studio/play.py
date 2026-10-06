@@ -5,7 +5,7 @@ import os
 import subprocess
 import sys
 
-from core import side_save
+from core import proc, side_save
 from engine.pack import ROOT
 
 from . import ui
@@ -34,7 +34,7 @@ def launch(app, level=None, at=None, from_start=False):
     with open(app.play_log, 'w', encoding='utf-8') as log:
         log.write(' '.join(cmd) + '\n\n')
         log.flush()
-        app.player = subprocess.Popen(cmd, cwd=ROOT, env=game_env(), stdout=log, stderr=subprocess.STDOUT)
+        app.player = subprocess.Popen(cmd, cwd=ROOT, env=game_env(), stdout=log, stderr=subprocess.STDOUT, **proc.quiet())
     app.say('Starting the game… (its window can open behind this one)')
     app.root.after(3500, lambda: _check(app))
 

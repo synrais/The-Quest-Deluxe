@@ -158,6 +158,23 @@ def one_window():
     print('compare: the original\'s window is locked into the right half of the compare window: ok')
 
 
+def ours_without_the_original():
+    """Whatever goes wrong with the original, our game is on the screen and can be played, and the window says why."""
+    import subprocess
+    cmd = [sys.executable, os.path.join(ROOT, 'run_compare.py'), '--level', '1', '--at', '22,10', '--class', '1']
+    proc = subprocess.Popen(cmd, cwd=ROOT, env=dict(DISPLAY_ENV, QUEST_NO_DOSBOX='1'), stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    try:
+        time.sleep(12)
+        assert proc.poll() is None, 'the window went away: ' + proc.communicate()[0].decode(errors='replace')[-500:]
+        tree = subprocess.run(['xwininfo', '-root', '-tree'], env=DISPLAY_ENV, capture_output=True, text=True).stdout
+        assert 'compare to DOS' in tree, 'no compare window'
+    finally:
+        proc.terminate()
+        said = proc.communicate(timeout=15)[0].decode(errors='replace')
+    assert 'The original could not be started' in said and 'Starting The Quest Deluxe' in said, said[-600:]
+    print('compare: with no original to start, our game is still shown and playable, and the window says why: ok')
+
+
 def for_real():
     from compare import form, record, replay
     out = os.path.join(tempfile.mkdtemp(), 'compare zips')
@@ -167,6 +184,7 @@ def for_real():
     assert rolled > 10, f'the test saw only {rolled} dice rolls, so it did not test them'
     # the same on another level, with the hero somewhere else
     side_by_side(2, (10, 10), ['Right', 'Down', 'Down', 'Left', 'Up', 'Right', 'Right'], 'level 2')
+    ours_without_the_original()
     one_window()
     # the check a person runs when it does not work: every step of what a comparison needs, said one by one
     from compare import check

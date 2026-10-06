@@ -20,6 +20,8 @@ import sys
 import time
 from dataclasses import dataclass, field
 
+from core import proc
+
 from . import dos, state
 
 ROOT = dos.ROOT
@@ -57,7 +59,7 @@ def make_dos_save(out_dir: str, level: int, at, hero_file: str | None = None, cl
     env = dict(os.environ, SDL_VIDEODRIVER='dummy', SDL_AUDIODRIVER='dummy')
     env.pop('QUEST_PACK', None)
     try:
-        r = subprocess.run(cmd, cwd=ROOT, env=env, capture_output=True, text=True, timeout=120)
+        r = subprocess.run(cmd, cwd=ROOT, env=env, capture_output=True, text=True, timeout=120, **proc.quiet())
     finally:
         if gear_file:
             os.remove(gear_file)
@@ -126,8 +128,13 @@ class Compare:
     after_dos_window = staticmethod(lambda: None)            # called when DOSBox's window exists, and after each step of loading (the window is locked into ours)
 
     def start_ours(self, window, hero):
+        self.begin_ours(window, hero)
+        self.finish_ours()
+
+    def begin_ours(self, window, hero):
+        """Our game, on its level and square with its hero: shown at once, while the original is still starting."""
         from engine.game import Game
-        from . import hero as hero_mod, record
+        from . import hero as hero_mod
         self.window = window
         self.game = Game(window, settings={'fixes': self.fixes, 'sound': 'off'})
         if hero is not None and self.same_things:             # the original cannot hold what it has not got: neither does ours
@@ -135,6 +142,10 @@ class Compare:
             if gone and not self.removed:
                 self.removed = hero_mod.describe(gone)
         state.start(self.game, self.level, self.at, hero=hero, cls=self.cls, loadout=self.loadout)
+
+    def finish_ours(self):
+        """Once the original is ready: our dice are set from its, and the recording begins with both pictures."""
+        from . import record
         self.sync_seed()
         hero_bytes = None
         if self.hero_file:
@@ -158,7 +169,7 @@ class Compare:
                     return True
             except (OSError, RuntimeError, ValueError):
                 self.dos._mem = None
-            time.sleep(0.25)
+            self.dos._sleep(0.25)
         return False
 
     def fix_seed(self):
