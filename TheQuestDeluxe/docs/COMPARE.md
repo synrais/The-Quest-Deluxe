@@ -3,12 +3,32 @@
 A button in the Studio's top bar (also the gear menu and Ctrl+K) that runs **your pack's game and the original DOS game side by side,
 fed the same keys**, so every difference between them can be seen, saved and reported.
 
-1. Click **Compare to DOS**. Pick a level (1 to 7 are in the original), the square to start on (click it on a map of the level)
-   and the hero: a new one of any class, or one of your saved games.
+1. Click **Compare to DOS**. Pick a level (1 to 7 are in the original) and the hero (a new one of any class, or one of your saved
+   games). Starting asks which square to start on: click it on a map of the level.
 2. Two windows open: ours ("The Quest Deluxe - compare to DOS") on the left, the original in DOSBox on the right. **Type in our window.**
    Every key goes to both, one at a time, when both have finished the last.
-3. The line under our picture says whether the key left them the same, or what differed. **F12** saves a bug report in the
-   `compare reports` folder: both pictures and the differences side by side (pink), and every key pressed so far.
+3. The line under our picture says whether the key left them the same, or what differed. **F12** saves a recording (below).
+
+## Recording what you find
+Everything you do is recorded as you go. When you see a difference, press **F12**: a short form asks a few questions (your name, what
+looked wrong, which one looked right, how bad, what you were doing, whether it happens every time) and saves one zip in
+`Custom Maps/compare zips`. Closing the window offers to save when the recording has differences in it. **Send my edits** sends the
+`compare zips` folder with everything else, so a brother can record and the recording arrives with his edits.
+
+What is in the zip, and why it is small and still exact to the pixel: both games start from one save and the original's dice are put in
+ours before every key, so the same start, keys and dice give the same game again. So the zip holds the start (the save the original
+loaded, the level and square, the dice it began with), every key with its time, a line of facts per key (the dice each side rolled, how many
+pixels differ, a CRC-32 of each picture's exact pixels, where the hero stood, his life, what the game said), and the pictures
+themselves (lossless PNG, 16 colours, about 10 KB each) only at the start, the end and wherever the two differed, both sides and the
+difference side by side. `report.txt` reads like a letter, `steps.csv` opens in a spreadsheet, `log.txt` is the log.
+
+`python run_compare.py --replay "Custom Maps/compare zips/<zip>"` starts both again from the recording's save and dice, presses the same keys
+and says whether every dice roll and every picture on both sides came out the same as recorded (THE SAME, or the first key that did not).
+The original's dice state is set from the recording (written into DOSBox's memory), which is what makes the replay exact.
+
+Things the original does not have (a hero's new items, spells past the 20th, a class the original lacks, Deluxe's extra potions and keys) cannot
+be in its save. They are left out of what the original is given, and, unless you untick it, out of ours too so the two heroes match; the bottom
+line of our window and the report say what was left out.
 
 ## How they are made to agree
 * **One save.** The hero and the place come from a save file made on the original's own level. The original loads it through its Load

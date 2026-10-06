@@ -81,7 +81,7 @@ class SettingsPage(Page):
         box.pack(side='left')
         box.bind('<<ComboboxSelected>>', lambda e: self._put('first_level', int(box.get().split()[0]), 'Change the first level'))
         r = self._row(f, 'A giant takes up', 'How many squares across a hero under a giant potion takes up.')
-        ui.Number(r, 1, 5, int(q.get('giant_size') or 2), commit=lambda v: self._put('giant_size', v, 'Change the giant size'), slider=False,
+        ui.Number(r, 1, 10 ** 9, int(q.get('giant_size') or 2), commit=lambda v: self._put('giant_size', v, 'Change the giant size'), slider=False,
                   width=3, raised=True).pack(side='left')
         ttk.Label(r, text=' squares across', style='Raised.Dim.TLabel').pack(side='left')
         r = self._row(f, 'Folder')
@@ -210,7 +210,7 @@ class SettingsPage(Page):
             r = ttk.Frame(self.pot_rows, style='Raised.TFrame')
             r.pack(anchor='w', pady=2)
             ttk.Label(r, text=names.get(int(k), f'Potion {k}'), style='Raised.TLabel', width=24).pack(side='left')
-            ui.Number(r, 0, 99, n, commit=lambda v, k=k: self._start_potion(k, v), slider=False, width=3, raised=True).pack(side='left')
+            ui.Number(r, 0, 10 ** 9, n, commit=lambda v, k=k: self._start_potion(k, v), slider=False, width=3, raised=True).pack(side='left')
         r = ttk.Frame(self.pot_rows, style='Raised.TFrame')
         r.pack(anchor='w', pady=(px(6), 0))
         box = ttk.Combobox(r, state='readonly', width=26, values=[f'{k}  {v}' for k, v in sorted(names.items()) if str(k) not in have])
@@ -267,7 +267,7 @@ class SettingsPage(Page):
         ui.Switch(row2, bool(pot.get('cure_poison')), lambda v, k=k: self._pot(k, 'cure_poison', True if v else None), bg=C['raised']).pack(side='left', padx=(px(6), px(16)))
         for f, label in NUMBER_FIELDS:
             ttk.Label(row2, text=label, style='Raised.TLabel').pack(side='left')
-            ui.Number(row2, 0, 999, pot.get(f) or 0, commit=lambda v, k=k, f=f: self._pot(k, f, v or None), slider=False, width=4,
+            ui.Number(row2, 0, 10 ** 9, pot.get(f) or 0, commit=lambda v, k=k, f=f: self._pot(k, f, v or None), slider=False, width=4,
                       raised=True).pack(side='left', padx=(px(4), px(10)))
         ui.hsep(parent).pack(fill='x') if k == '9' else None
 

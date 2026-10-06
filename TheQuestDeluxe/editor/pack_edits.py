@@ -237,6 +237,13 @@ def gather(deluxe: str = DELUXE, include_all: bool = False, when: float | None =
                          f'{len(now)} files')
             for f in sorted(now):
                 files.append((os.path.join(folder, *f.split('/')), f'{PREFIX}/{group}/{name}/{f}'))
+    recs = os.path.join(custom, 'compare zips')                 # recordings of comparisons to the DOS game (compare/record.py)
+    if os.path.isdir(recs):
+        zips = sorted(f for f in os.listdir(recs) if f.lower().endswith('.zip'))
+        if zips:
+            lines += [f'{CUSTOM}/compare zips: {len(zips)} recording{"s" if len(zips) != 1 else ""} of comparisons to the DOS game:'] + \
+                     [f'    {f}' for f in zips] + ['']
+            files += [(os.path.join(recs, f), f'{PREFIX}/{CUSTOM}/compare zips/{f}') for f in zips]
     if not files:
         return [], 'Nothing has been added or changed since the game came: there is nothing to pack.'
     lines += ['', f'{len(files)} files in all.']

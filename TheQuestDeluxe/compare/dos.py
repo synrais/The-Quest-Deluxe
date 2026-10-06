@@ -299,6 +299,19 @@ class Dos:
         self._mem.seek(self.base + address)
         return self._mem.read(n)
 
+    def write(self, address: int, data: bytes) -> bool:
+        """Put bytes into DOS memory (to set the original's random number state). False when the system will not allow it."""
+        self._open_memory()
+        try:
+            if WINDOWS:
+                return self._mem.write(self.base + address, data)
+            with open(f'/proc/{self.proc.pid}/mem', 'r+b', 0) as fh:
+                fh.seek(self.base + address)
+                fh.write(data)
+            return True
+        except (OSError, ValueError):
+            return False
+
     def snapshot(self, size=0xA0000) -> bytes:
         return self.read(0, size)
 
@@ -353,6 +366,7 @@ class _WinMem:
     def __init__(self, pid):
         import ctypes
         self.k = ctypes.windll.kernel32
+        self.pid = pid
         self.h = self.k.OpenProcess(0x0410, False, pid)           # query information, read memory
 
     def find_base(self):
@@ -375,6 +389,14 @@ class _WinMem:
         got = ctypes.c_size_t()
         self.k.ReadProcessMemory(self.h, ctypes.c_void_p(address), buf, n, ctypes.byref(got))
         return buf.raw[:got.value]
+
+    def write(self, address, data):
+        import ctypes
+        h = self.k.OpenProcess(0x0038, False, self.pid)               # query, write and operate on memory
+        done = ctypes.c_size_t()
+        ok = self.k.WriteProcessMemory(h, ctypes.c_void_p(address), data, len(data), ctypes.byref(done))
+        self.k.CloseHandle(h)
+        return bool(ok) and done.value == len(data)
 
     def close(self):
         self.k.CloseHandle(self.h)

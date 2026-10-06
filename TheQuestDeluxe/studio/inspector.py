@@ -12,12 +12,13 @@ from .theme import C, px
 CREATURE_REFS = {'raises_dead', 'reveals_as', 'hides_as', 'becomes_on_death', 'transforms_into'}
 ITEM_REFS = {'hit_item'}
 # (lowest, highest, where the slider ends) for numbers that are better dragged than typed
-RANGES = {'life': (0, 99999, 300), 'power': (0, 999, 100), 'atk': (0, 999, 250), 'def': (0, 999, 200), 'warm': (0, 999, 60),
-          'marm': (0, 999, 60), 'range': (1, 30, 12), 'exp': (0, 99999, 500), 'size': (1, 6, 4), 'price': (0, 99999, 1500),
-          'req_str': (0, 99, 40), 'req_int': (0, 99, 40), 'str': (-99, 99, 20), 'int': (-99, 99, 20), 'dex': (-99, 99, 20),
-          'acc': (-99, 99, 20), 'atk.item': (-99, 999, 100), 'mana': (0, 9999, 200), 'growth': (0, 99, 20),
-          'chase_range': (1, 40, 20), 'flees_within': (1, 40, 20), 'transforms_below': (1, 100, 100),
-          'rise_limit': (1, 20, 10), 'blood_range': (1, 100, 30), 'hit_item_chance': (1, 100, 100)}
+BIG = 10 ** 9                       # no cap: the slider only reaches as far as is handy, a typed number goes as high as you like
+RANGES = {'life': (0, BIG, 300), 'power': (0, BIG, 100), 'atk': (0, BIG, 250), 'def': (0, BIG, 200), 'warm': (0, BIG, 60),
+          'marm': (0, BIG, 60), 'range': (1, BIG, 12), 'exp': (0, BIG, 500), 'size': (1, BIG, 4), 'price': (0, BIG, 1500),
+          'req_str': (0, BIG, 40), 'req_int': (0, BIG, 40), 'str': (-BIG, BIG, 20), 'int': (-BIG, BIG, 20), 'dex': (-BIG, BIG, 20),
+          'acc': (-BIG, BIG, 20), 'atk.item': (-BIG, BIG, 100), 'mana': (0, BIG, 200), 'growth': (0, BIG, 20),
+          'chase_range': (1, BIG, 20), 'flees_within': (1, BIG, 20), 'transforms_below': (1, 100, 100),
+          'rise_limit': (1, BIG, 10), 'blood_range': (1, BIG, 30), 'hit_item_chance': (1, 100, 100)}
 
 
 def _range(key):
@@ -341,10 +342,10 @@ class LootEditor(ttk.Frame):
         hi.pack(side='left')
         if r[2] == 'gold':
             ttk.Label(row, text='  gold: up to').pack(side='left')
-            n = ui.Number(row, 1, 999, r[3], commit=lambda v, r=r: self._set(r, 3, v), slider=False, width=4)
+            n = ui.Number(row, 1, BIG, r[3], commit=lambda v, r=r: self._set(r, 3, v), slider=False, width=4)
             n.pack(side='left', padx=px(4))
             ttk.Label(row, text='plus').pack(side='left')
-            b = ui.Number(row, 0, 9999, r[4], commit=lambda v, r=r: self._set(r, 4, v), slider=False, width=4)
+            b = ui.Number(row, 0, BIG, r[4], commit=lambda v, r=r: self._set(r, 4, v), slider=False, width=4)
             b.pack(side='left', padx=px(4))
             ui.tip(n, 'A random amount from 1 up to this (a die).')
             ui.tip(b, 'Added to the random amount.')

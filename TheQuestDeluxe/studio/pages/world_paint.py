@@ -93,7 +93,7 @@ class PalettePanel(ttk.Frame):
         row.pack(fill='x', padx=px(6))
         for n in GOLD_PRESETS:
             ttk.Button(row, text=str(n), width=4, style='TButton', command=lambda n=n: self._set_gold(n)).pack(side='left', padx=1)
-        self.gold_num = ui.Number(g, 1, 9999, self.gold, commit=self._set_gold, soft_max=500)
+        self.gold_num = ui.Number(g, 1, 10 ** 9, self.gold, commit=self._set_gold, soft_max=500)
         self.gold_num.pack(anchor='w', padx=px(6), pady=px(10))
         ttk.Label(g, text='Put a heap of gold on the map with the brush.\nThe eraser takes it away.', style='Faint.TLabel',
                   justify='left').pack(anchor='w', padx=px(6))

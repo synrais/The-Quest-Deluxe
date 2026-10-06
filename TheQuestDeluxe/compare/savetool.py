@@ -31,8 +31,12 @@ def main():
     g = Game(window, settings={'fixes': 'off', 'sound': 'off'})
     hero = None
     if a.hero:
+        from compare import hero as hero_mod
         with open(a.hero, 'rb') as fh:
             hero = savefile.from_bytes(fh.read())
+        gone = hero_mod.strip_unknown(hero)                  # what the original does not have is left out (the others are told)
+        if gone:
+            print('REMOVED ' + hero_mod.describe(gone))
     state.start(g, a.level, (a.x, a.y), hero=hero, cls=a.cls)
     if (g.player.X, g.player.Y) != (a.x, a.y):
         print(f'BLOCKED {g.player.X} {g.player.Y}')

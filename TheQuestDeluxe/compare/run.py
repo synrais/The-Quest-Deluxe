@@ -2,9 +2,9 @@
 
     python run_compare.py --level 3 --at 45,60 [--pack PACK] [--hero-file SAVE | --class 1] [--fixes on|off]
 
-Press keys in OUR window (the one that says "The Quest Deluxe"): each goes to both games. F12 saves a bug report of what both show now
-(the two pictures and the differences side by side, and every key so far) in the 'compare reports' folder. Esc twice does what Esc does
-in the game; to leave the comparison close this window.
+Press keys in OUR window (the one that says "The Quest Deluxe"): each goes to both games. Everything is recorded; F12 asks a few questions and
+saves the recording as a zip in Custom Maps/compare zips (Send my edits sends it with the rest). To leave the comparison close this window (it
+offers to save a recording that has differences in it).
 """
 from __future__ import annotations
 
@@ -25,7 +25,9 @@ def parse(argv=None):
     ap.add_argument('--hero-file')
     ap.add_argument('--class', dest='cls', type=int, default=1)
     ap.add_argument('--fixes', choices=('on', 'off'), default='off')
-    ap.add_argument('--reports', default=os.path.join(ROOT, 'compare reports'))
+    ap.add_argument('--same-things', dest='same', choices=('on', 'off'), default='on')
+    ap.add_argument('--hero-label', default='')
+    ap.add_argument('--replay', help='a recording (a zip from compare zips) to run again and check')
     return ap.parse_args(argv)
 
 
@@ -46,6 +48,22 @@ def status(font, surface, text, colour, y=480, h=28):
     surface.blit(font.render(text[:90], True, colour), (8, y + 6))
 
 
+def message(font, screen, comp, text, colour):
+    status(font, screen, text, colour)
+
+
+def save_recording(comp, font, screen, a):
+    from . import form
+    r = comp.recorder
+    summary = f'{len(r.steps)} keys pressed, {len(r.differences)} left the two different. Level {comp.level}.'
+    answers = form.ask(summary)
+    if answers is None:
+        return None
+    path = comp.save_recording(answers)
+    status(font, screen, f'Saved {os.path.basename(path)}', (150, 200, 250))
+    return path
+
+
 def main(argv=None):
     a = parse(argv)
     if a.pack:
@@ -58,6 +76,14 @@ def main(argv=None):
     font = pygame.font.SysFont('dejavusans,arial', 14)
     status(font, screen, 'Starting the original in DOSBox ...', (230, 230, 230))
     pygame.display.flip()
+    if a.replay:
+        from . import replay
+        bad, comp = replay.replay(a.replay, screen.subsurface((0, 0, 640, 480)))
+        if bad:
+            print(f'NOT THE SAME: {len(bad)} keys came out differently, the first is key {bad[0][0]} ({bad[0][1]}): {bad[0][2]}')
+            return 1
+        print('THE SAME: every key rolled the same dice and drew the same pictures as recorded.')
+        return 0
     from . import keys
     from .session import Compare
     at = tuple(int(v) for v in a.at.split(','))
@@ -66,14 +92,17 @@ def main(argv=None):
         from engine import savefile
         with open(a.hero_file, 'rb') as fh:
             hero = savefile.from_bytes(fh.read())
-    comp = Compare(a.level, at, pack_root=a.pack, hero_file=a.hero_file, cls=a.cls, fixes=a.fixes)
+    comp = Compare(a.level, at, pack_root=a.pack, hero_file=a.hero_file, cls=a.cls, fixes=a.fixes, same_things=a.same == 'on',
+                   hero_label=a.hero_label)
     try:
         comp.start_dos()
         put_beside(comp)
         comp.start_ours(screen.subsurface((0, 0, 640, 480)), hero)
         comp.draw()
         pygame.display.flip()
-        msg, colour = 'Same keys go to both. F12 saves a bug report.', (150, 220, 150)
+        msg, colour = 'Same keys go to both. Everything is recorded; F12 saves it.', (150, 220, 150)
+        if comp.removed:
+            msg, colour = comp.removed[:90], (240, 190, 90)
         if not comp.seed_ok:
             msg, colour = 'The dice cannot be matched (the original is laid out differently in memory).', (240, 190, 90)
         status(font, screen, msg, colour)
@@ -81,12 +110,27 @@ def main(argv=None):
         while True:
             for ev in pygame.event.get():
                 if ev.type == pygame.QUIT:
+                    if comp.recorder and comp.recorder.unsaved:
+                        status(font, screen, 'There are differences in the recording: save it?', (250, 200, 100))
+                        pygame.display.flip()
+                        try:
+                            from tkinter import messagebox
+                            import tkinter
+                            root = tkinter.Tk()
+                            root.withdraw()
+                            ans = messagebox.askyesnocancel('Compare to DOS', 'The recording has differences in it. Save it before closing?', parent=root)
+                            root.destroy()
+                        except Exception:                                  # noqa: BLE001
+                            ans = False
+                        if ans is None:
+                            continue
+                        if ans:
+                            save_recording(comp, font, screen, a)
                     return 0
                 if ev.type != pygame.KEYDOWN:
                     continue
                 if ev.key == pygame.K_F12:
-                    path = comp.mark(a.reports, 'saved by F12')
-                    status(font, screen, f'Saved {os.path.basename(path)}', (150, 200, 250))
+                    save_recording(comp, font, screen, a)
                     continue
                 name = keys.from_pygame(ev.key)
                 if not keys.sendable(name):
@@ -95,10 +139,11 @@ def main(argv=None):
                 pygame.display.flip()
                 k, u = keys.to_pygame(name)
                 r = comp.press(name, k, u)
+                n = len(comp.recorder.differences)
                 if r.same:
-                    status(font, screen, f'{name}: both the same (dice {r.dos_draws}, pictures equal)', (150, 220, 150))
+                    status(font, screen, f'{name}: same (dice {r.dos_draws}, pictures equal)   {n} differences so far', (150, 220, 150))
                 else:
-                    status(font, screen, f'{name}: ' + ' '.join(r.notes)[:80] + '  F12 saves it', (250, 120, 110))
+                    status(font, screen, f'{name}: ' + ' '.join(r.notes)[:70] + '  F12 saves', (250, 120, 110))
             comp.draw()
             pygame.display.flip()
             clock.tick(30)

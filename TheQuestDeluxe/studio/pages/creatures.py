@@ -102,7 +102,7 @@ class FightCard(ui.Card):
         self.cls = ttk.Combobox(head, state='readonly', width=12)
         self.cls.pack(side='left')
         ttk.Label(head, text='at level', style='Raised.Dim.TLabel').pack(side='left', padx=px(10))
-        self.level = ui.Number(head, 1, 60, int(page.app.settings.get('calc_level', 5)), commit=self._level, soft_max=30, width=3,
+        self.level = ui.Number(head, 1, 10 ** 9, int(page.app.settings.get('calc_level', 5)), commit=self._level, soft_max=30, width=3,
                                raised=True)
         self.level.pack(side='left')
         self.cls.bind('<<ComboboxSelected>>', lambda e: self._class())

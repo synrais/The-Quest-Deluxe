@@ -279,7 +279,7 @@ class QuestWizard(StepDialog):
         cards.pack(fill='x', padx=px(16))
         self.h('How many levels?', 'Each one is a whole level, with its own map, creatures and treasure.')
         r = self.line('Levels')
-        num = ui.Number(r, 2, 12, p.count, live=lambda v: self._set('count', v), commit=lambda v: self._set('count', v), width=3)
+        num = ui.Number(r, 2, 500, p.count, live=lambda v: self._set('count', v), commit=lambda v: self._set('count', v), width=3, soft_max=20)
         num.pack(side='right')
         self.h('How big is each level?')
         ui.Segmented(self.page, SIZES, self._pick_size, str(p.size)).pack(anchor='w', padx=px(22))

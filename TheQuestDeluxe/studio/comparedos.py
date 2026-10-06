@@ -45,9 +45,12 @@ def problems() -> list:
     return out
 
 
-def command(pack_root, level, at, hero_path=None, cls=1, keep_bugs=True) -> list:
+def command(pack_root, level, at, hero_path=None, cls=1, keep_bugs=True, same_things=True, hero_label='') -> list:
     cmd = [sys.executable, os.path.join(ROOT, 'run_compare.py'), '--level', str(level), '--at', f'{at[0]},{at[1]}',
-           '--class', str(cls), '--fixes', 'off' if keep_bugs else 'on', '--pack', pack_root]
+           '--class', str(cls), '--fixes', 'off' if keep_bugs else 'on', '--pack', pack_root,
+           '--same-things', 'on' if same_things else 'off']
+    if hero_label:
+        cmd += ['--hero-label', hero_label]
     if hero_path:
         cmd += ['--hero-file', hero_path]
     return cmd
@@ -59,6 +62,8 @@ class CompareDialog(ui.Dialog):
         self.app, self.s = app, app.session
         self.level = tk.IntVar(value=1)
         self.at = levelmeta.start_of(self.s, 1)
+        self.chosen = False                          # a square has been picked (it is asked for when it has not)
+        self.same = tk.BooleanVar(value=True)
         self.hero = tk.StringVar(value='new')
         self.keep = tk.BooleanVar(value=True)
         self.heroes = saved_heroes(self.s.project.root)
@@ -94,11 +99,14 @@ class CompareDialog(ui.Dialog):
                       style='Faint.TLabel').pack(anchor='w', padx=px(24))
         ttk.Checkbutton(b, text="Keep the original's bugs in my game too (so the two match; leave on to compare)",
                         variable=self.keep).pack(anchor='w', pady=(px(12), 0))
+        ttk.Checkbutton(b, text="Leave out of both what the original does not have (a hero's new items, spells and classes: it cannot hold them)",
+                        variable=self.same).pack(anchor='w')
         self.add_buttons([('Cancel', None, 'TButton'), ('Start the comparison', 'go', 'Accent.TButton')], default='go')
 
     def _level(self, key):
         self.level.set(int(key))
         self.at = levelmeta.start_of(self.s, int(key))
+        self.chosen = False
         self._show_at()
 
     def _show_at(self):
@@ -109,7 +117,16 @@ class CompareDialog(ui.Dialog):
         p = SquarePicker(self, self.s, self.level.get(), *self.at)
         if p.run() == 'ok':
             self.at = p.pos
+            self.chosen = True
             self._show_at()
+            return True
+        return False
+
+    def close(self, value):
+        """Starting asks which square to start from, if it has not been said."""
+        if value == 'go' and not self.chosen and not self._pick():
+            return
+        super().close(value)
 
     def launch(self):
         """The command that starts the comparison (what the buttons chose)."""
@@ -117,7 +134,8 @@ class CompareDialog(ui.Dialog):
         if self.hero.get() != 'new':
             hero_path = next((p for n, t, p in self.heroes if str(n) == self.hero.get()), None)
         cls = int(self.cls.get().split()[0]) if self.cls.get() else 1
-        return command(self.s.project.root, self.level.get(), self.at, hero_path, cls, self.keep.get())
+        label = next((t for n, t, p in self.heroes if str(n) == self.hero.get()), '') if self.hero.get() != 'new' else ''
+        return command(self.s.project.root, self.level.get(), self.at, hero_path, cls, self.keep.get(), self.same.get(), label)
 
 
 def open_compare(app):
