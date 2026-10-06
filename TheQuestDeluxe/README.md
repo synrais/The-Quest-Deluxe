@@ -11,11 +11,12 @@ classes and levels are made with the editor.
 python run_deluxe.py                       a new game of packs/TheQuest
 python run_deluxe.py --pack mypack         another pack (a folder, or a name under packs/ or Custom Maps/)
 python run_deluxe.py --quick 1 --level 2   start at once with a Knight on level 2 (testing)
-python run_editor.py                       The Quest Deluxe Editor (needs tkinter)
+python run_studio.py                       The Quest Studio, the editor (needs tkinter)
+python run_editor.py                       the older editor (same quests)
 ```
 
 It needs Python 3.10+ and pygame-ce. On Windows, double-click **Play The Quest Deluxe.bat** or
-**The Quest Deluxe Editor.bat**: the first time they find Python (or offer to install it) and set up
+**The Quest Studio.bat** (the editor): the first time they find Python (or offer to install it) and set up
 pygame-ce.
 
 ## What it adds to the original
@@ -31,7 +32,7 @@ pygame-ce.
 | **Bug fixes** | | The original's bugs (the Shield / Ring of Ice swap, the shop memory, questionnaire ties, the item in a tree and more) are fixed: `settings.ini` has them on for every pack, or leaves it to each pack, whose author picks them one by one. `packs/TheQuest` itself keeps them all, so the tests can hold it to the original. |
 | **Past the original's limits** | 9, 0 | More than 20 spells (a spell book with pages), potions 9 and 10, more key colours, and new classes in class changes and the questionnaire. |
 | **Mods** | | Every addition above can be switched off for a pack in the editor's Mods tab, so a pack can play as close to the original as it likes: [docs/MODS.md](docs/MODS.md). |
-| **The editor** | | Maps and level settings, items, creatures, classes, spells, tiles, shops, dialogue, stories and events; a 16-colour painter for every picture; a 3D preview; Play (F5) test-plays from the clicked square; new packs. |
+| **The Quest Studio** | | The editor, rebuilt: a map editor with every tool and a level wizard that makes whole levels, creatures with a fight check against any hero, items, spells, heroes, tiles, shops, stories, dialogue and events, the Quest Doctor, Ctrl+K to find anything, undo for everything, saved as you go: [docs/STUDIO.md](docs/STUDIO.md). A 16-colour painter for every picture; Play (F5) test-plays from the clicked square. |
 
 The original's keys all work as in [the classic edition](../TheQuestClassic/README.md#keys).
 
@@ -39,18 +40,20 @@ The original's keys all work as in [the classic edition](../TheQuestClassic/READ
 
 | Path | What it is |
 |---|---|
-| `Play The Quest Deluxe.bat`, `The Quest Deluxe Editor.bat` | The Windows launchers. |
+| `Play The Quest Deluxe.bat`, `The Quest Studio.bat`, `The Quest Deluxe Editor.bat` | The Windows launchers. |
 | `settings.ini` | The player's settings: bug fixes and sound. |
-| `run_deluxe.py`, `run_editor.py` | Start the game and the editor. |
+| `run_deluxe.py`, `run_studio.py`, `run_editor.py` | Start the game, the Studio and the older editor. |
 | `engine/` | The Quest Deluxe's code (a fork of the classic port's engine, reading everything from a pack). |
-| `editor/` | The editor (tkinter). |
+| `studio/` | The Quest Studio (tkinter): its pages are in `studio/pages/`. |
+| `editor/` | The older editor (tkinter); the Studio shares its pack loader, pictures and painter. |
 | `packs/TheQuest/` | The original quest as a pack: the first 7 levels, **locked**. The game plays it, and the editor never opens it. |
 | `Custom Maps/` | The packs made in the editor, a folder each (made the first time the editor runs). Every one starts as a copy of `packs/TheQuest`, and everything changed in the editor (levels, stats, pictures) stays in its own folder. On the game's title and load screens, **P** switches between The Quest and these packs; each pack has its own saves. |
 | `docs/QUEST_PACKS.md` | Every file of a pack, and every field. |
+| `docs/STUDIO.md` | The Quest Studio: its pages, the level wizard, the fight check and the Quest Doctor. |
 | `docs/MODS.md` | Every addition to the original, and the Mods tab that switches each off for a pack. |
 | `docs/EVENTS.md` | The level scripts: the language, the handlers and the functions they can call. |
 | `tools/make_pack.py` | Rebuilds `packs/TheQuest` from the original (the only thing here that reads `../TheQuestClassic`). |
-| `tests/` | `test_packs.py`, `test_limits.py`, `test_fixes.py`, `test_editor.py` (under `xvfb-run` on Linux), and `test_standalone.py`: a copy of this folder alone must play, opening nothing outside itself. |
+| `tests/` | `test_packs.py`, `test_limits.py`, `test_fixes.py`, `test_editor.py` and `test_studio.py` (under `xvfb-run` on Linux), `test_worldgen.py`, and `test_standalone.py`: a copy of this folder alone must play, opening nothing outside itself. |
 
 Saves go to `saves/<pack>/save01.dat` to `save20.dat`.
 
