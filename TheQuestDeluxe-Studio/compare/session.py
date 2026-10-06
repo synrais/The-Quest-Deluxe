@@ -255,6 +255,13 @@ class Compare:
     def dos_picture(self):
         """The original's screen as a pygame surface (None when it can't be taken)."""
         import pygame
+        if dos.WINDOWS:                                                    # (no file in between: that is slow)
+            shot = self.dos.picture_surface()
+            size = dos._CAPTURE['size']
+            if shot is not None and size not in (None, (640, 480)) and not getattr(self, '_said_size', False):
+                self._said_size = True
+                self.log(f'The original\'s window is {size[0]} x {size[1]}, not 640 x 480: Windows is stretching it, so many pixels will differ.')
+            return shot
         path = os.path.join(self.dos.scratch, 'shot.png')
         if not self.dos.screenshot(path):
             return None

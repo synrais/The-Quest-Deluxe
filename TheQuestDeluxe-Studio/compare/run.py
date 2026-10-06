@@ -291,7 +291,8 @@ def run(argv=None):
                     screen.blit(shot, (640, 0))
                     if not copied[0]:
                         copied[0] = True
-                        print('compare: the original\'s picture is being copied into the right half', flush=True)
+                        from . import dos as _dos
+                        print('compare: the original\'s picture is being copied into the right half; its window is', _dos._CAPTURE['size'], '(640 x 480 is exact; anything else is stretched and every pixel will differ), copied by', _dos._CAPTURE['how'], flush=True)
                 elif time.time() - mirror_since > 4:
                     beside[0] = True
                     shown = comp.dos.show_beside(pygame.display.get_wm_info().get('window'))

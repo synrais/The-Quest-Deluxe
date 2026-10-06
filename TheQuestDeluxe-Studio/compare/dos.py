@@ -146,6 +146,7 @@ class Dos:
             fh.write(CONF.format(w=self.size[0], h=self.size[1], cycles=self.cycles, path=self.game_dir))
         env = dict(self.env, SDL_AUDIODRIVER='dummy')
         if WINDOWS:
+            env['__COMPAT_LAYER'] = 'HIGHDPIAWARE'         # Windows must not stretch its window on a scaled screen (its picture would no longer be pixel for pixel)
             env['SDL_VIDEODRIVER'] = 'windib'              # plain Windows drawing: its window can be photographed and takes posted keys
         self.proc = subprocess.Popen([self.exe, '-conf', conf, '-noconsole'] if WINDOWS else [self.exe, '-conf', conf], env=env,
                                      cwd=self.scratch, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,   # (it writes stdout.txt where it runs)
@@ -293,7 +294,7 @@ class Dos:
         if not self.window:
             return None
         if WINDOWS:
-            shot = _win_capture(self.window)
+            shot = _win_capture(self.window, want_surface=False)
             return shot[2] if shot else None
         r = subprocess.run(['import', '-window', self.window, 'png:-'], env=self.env, capture_output=True)
         return r.stdout if r.returncode == 0 else None
@@ -597,7 +598,10 @@ def bring_to_front(h):
         u.SetForegroundWindow(h)
 
 
-def _win_capture(h):
+_CAPTURE = {'how': None, 'size': None}                       # which way of copying worked (kept: the first is tried first), and the size seen
+
+
+def _win_capture(h, want_surface=True):
     """(width, height, raw pixels, a 640 x 480 pygame surface) of the window's client area, or None. GDI copy of the window's own drawing."""
     import ctypes
     from ctypes import wintypes
@@ -630,13 +634,21 @@ def _win_capture(h):
             u.PrintWindow(h, mdc, 3)                                          # PW_CLIENTONLY | PW_RENDERFULLCONTENT (works while it is behind another window)
         g.GetDIBits(mdc, bmp, 0, hh, buf, ctypes.byref(info), 0)
         return any(buf.raw[i] for i in range(0, w * hh * 4, 4099))            # not all black
-    ok = grab('blt') or grab('print')
+    order = ['blt', 'print'] if _CAPTURE['how'] != 'print' else ['print', 'blt']
+    ok = False
+    for how in order:
+        if grab(how):
+            ok, _CAPTURE['how'] = True, how
+            break
+    _CAPTURE['size'] = (w, hh)
     g.SelectObject(mdc, old)
     g.DeleteObject(bmp)
     g.DeleteDC(mdc)
     u.ReleaseDC(h, hdc)
     if not ok:
         return None
+    if not want_surface:
+        return w, hh, buf.raw, None                                          # (just the bytes: to see whether the picture is changing)
     import pygame
     raw = bytearray(buf.raw)
     raw[3::4] = b'\xff' * (w * hh)                                           # GDI leaves the alpha bytes empty: the picture is opaque
