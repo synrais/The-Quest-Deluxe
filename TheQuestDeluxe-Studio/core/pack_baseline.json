@@ -44,7 +44,7 @@
 "levels/7/shops/1.txt": "8860916a600b6a3661ae4d8f8b4d716a5425fe91",
 "levels/7/shops/2.txt": "655217f5985761e10e4ba1a7f62c46e21964ca25",
 "levels/common.qs": "86f70054c3a0a6e3ffa82f12d05be1789fbb7dd6",
-"quest.json": "4aae42c1e7fe3204a549b29c34a7d4e542d6bc2e",
+"quest.json": "29afeab13a2bbe62342e32bcfa8c288d744ab788",
 "skills.json": "74fa80a707ae37c25f7f6aa7aaf1e928be63b8a6",
 "spells.json": "0e37ce1eb00a063a25d75debe747cf9caf61c421",
 "sprites/bag/0.png": "b7dee51a25817baa76e779bfcc15ee87676729f0",
@@ -4331,6 +4331,11 @@
 },
 "quest.json": {
 "author": "Alex Kutsenok",
+"doctor_ok": [
+"unusedmon:35,46",
+"lost:6",
+"noexit:6"
+],
 "engine": "deluxe",
 "first_level": 1,
 "format": 1,

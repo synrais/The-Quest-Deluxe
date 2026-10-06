@@ -1102,6 +1102,20 @@ print('play: the game does not inherit the Studio dummy video driver: ok')
 import tkinter as _tk
 root = _tk.Tk()
 root.withdraw()
+# a fresh copy of the shipped quest: the Doctor has nothing left to say (its four notices are meant: the bosses, the kamikaze, the secret area,
+# the exit made by beating Fate Bringer), and a blank pack does not inherit that
+import core.custom as _cu
+from core.project import Project as _P
+from studio import doctor as _doc
+_fresh = _P(_cu.create('Doctor Fresh', folder=tmp_gear))
+class _S:
+    project = _fresh
+_keys = {p.key for p in _doc.check(_S) if p.severity in ('info', 'warn', 'error')}
+assert _keys <= set(_fresh.quest['doctor_ok']), _keys - set(_fresh.quest['doctor_ok'])
+_blank = _P.create(os.path.join(tmp_gear, 'Doctor Blank'), _fresh.root, blank=True)
+assert 'doctor_ok' not in _blank.quest
+print('doctor: a fresh copy of the shipped quest has nothing unexplained; a blank pack starts clean: ok')
+
 # numbers: the slider is only a handy stretch; it never stops anyone, and a stat's slider does not start at minus a billion
 num = ui.Number(root, -10 ** 9, 10 ** 9, 100, soft_max=100, soft_min=0, commit=lambda v: None)
 assert float(num.scale.cget('from')) == 0 and float(num.scale.cget('to')) >= 100, 'a stat\'s slider starts at 0, not minus a billion'

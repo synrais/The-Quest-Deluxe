@@ -37,5 +37,10 @@
   }
  ],
  "fixes": true,
- "base": "TheQuest"
+ "base": "TheQuest",
+ "doctor_ok": [
+  "unusedmon:35,46",
+  "lost:6",
+  "noexit:6"
+ ]
 }

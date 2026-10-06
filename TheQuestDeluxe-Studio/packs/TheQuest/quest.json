@@ -35,5 +35,10 @@
    "item": 0,
    "why": "item 311, a shield with no stats, picture or price"
   }
+ ],
+ "doctor_ok": [
+  "unusedmon:35,46",
+  "lost:6",
+  "noexit:6"
  ]
 }

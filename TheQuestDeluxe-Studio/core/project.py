@@ -355,6 +355,7 @@ class Project:
             q = packio.read_json(os.path.join(dest, 'quest.json'))
             q.update({'title': os.path.basename(dest), 'author': '', 'year': None, 'levels': 1, 'first_level': 1})
             q.pop('map_fixes', None)                     # its levels are gone
+            q.pop('doctor_ok', None)                     # and so are the things the Doctor was told were meant
             packio.write_json(os.path.join(dest, 'quest.json'), q)
             p = Project(dest)
             p.grids[1] = Grid()

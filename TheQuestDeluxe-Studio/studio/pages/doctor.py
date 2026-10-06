@@ -54,7 +54,8 @@ class DoctorPage(Page):
         self.render()
 
     def ignored(self) -> set:
-        return set(self.app.settings.get('ignored', {}).get(self.s.project.root, []))
+        mine = set(self.app.settings.get('ignored', {}).get(self.s.project.root, []))
+        return mine | set(self.s.project.quest.get('doctor_ok') or [])      # and what the pack itself says is meant (quest.json `doctor_ok`)
 
     def schedule(self):
         pass

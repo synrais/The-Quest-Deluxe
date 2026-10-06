@@ -255,7 +255,7 @@ def check_creatures(f: Facts, out: list):
             out.append(Problem('warn', 'Creatures', f'{name} has no picture', 'It would be drawn as a grey square. Paint it on the Creatures page.', go, key=f'nopic:mon:{cid}'))
         if (c.get('life') or 0) <= 0 and cid > 0:
             out.append(Problem('warn', 'Creatures', f'{name} has no life', 'It dies as soon as it appears.', go, key=f'nolife:{cid}'))
-        if cid > 0 and (c.get('atk') or 0) == 0 and (c.get('range') or 1) == 1 and not c.get('cast_anim') and not c.get('heals_allies') and (c.get('att', 9) or 0) > 0:
+        if cid > 0 and (c.get('atk') or 0) == 0 and (c.get('range') or 1) == 1 and not c.get('cast_anim') and not c.get('heals_allies') and not c.get('explodes') and (c.get('att', 9) or 0) > 0:
             out.append(Problem('info', 'Creatures', f'{name} can neither fight nor cast', 'Attack 0 with range 1 means it never hurts anyone. Fine for a harmless creature.', go, key=f'toothless:{cid}'))
         for k in ('raises_dead', 'reveals_as', 'hides_as', 'becomes_on_death', 'transforms_into'):
             v = c.get(k)
@@ -279,7 +279,7 @@ def check_creatures(f: Facts, out: list):
     unused = [c for c in unused if c['id'] not in made]
     if unused and f.levels:
         names = ', '.join((c.get('name') or str(c['id'])) for c in unused[:6]) + ('...' if len(unused) > 6 else '')
-        out.append(Problem('info', 'Creatures', f'{len(unused)} monsters are not on any map yet', names, ('creatures', {'select': unused[0]['id']}), key='unusedmon'))
+        out.append(Problem('info', 'Creatures', f'{len(unused)} monsters are not on any map yet', names, ('creatures', {'select': unused[0]['id']}), key='unusedmon:' + ','.join(str(c['id']) for c in sorted(unused, key=lambda c: c['id']))))
 
 
 def check_items(f: Facts, out: list):
