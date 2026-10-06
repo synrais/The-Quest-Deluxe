@@ -107,7 +107,7 @@ class TablePage(Page):
         ui.button(head, 'New', self.new, 'plus', 'Accent.TButton', f'Make a new {self.noun}').pack(side='right')
         if len(self.filters) > 1:
             self.seg = ui.Segmented(left, self.filters, self._filter, 'all')
-            self.seg.pack(anchor='w', padx=px(14))
+            self.seg.pack(fill='x', padx=px(14))
         self.search_box = ui.SearchBox(left, self._search, 'Search', width=24)
         self.search_box.pack(fill='x', padx=px(14), pady=px(8))
         self.gallery = Gallery(left, on_select=self.select, card=self.card, drag=self.on_drag)
@@ -116,7 +116,10 @@ class TablePage(Page):
     def _build_detail(self, right):
         self.empty = ui.EmptyState(right, self.icon, f'Pick one on the left, or make a new {self.noun}.', f'Make a {self.noun}', self.new)
         self.detail = ttk.Frame(right)
-        top = ttk.Frame(self.detail)
+        self.pane = ui.Scrolled(self.detail)             # the whole detail scrolls together: header, previews and fields
+        self.pane.pack(fill='both', expand=True)
+        host = self.pane.body
+        top = ttk.Frame(host)
         top.pack(fill='x', padx=px(20), pady=(px(16), px(4)))
         self.pic_box = ttk.Frame(top)
         self.pic_box.pack(side='left')
@@ -136,9 +139,10 @@ class TablePage(Page):
         self.bar = bar
         self.uses_label = ttk.Label(col, text='', style='Faint.TLabel', wraplength=px(560), justify='left')
         self.uses_label.pack(anchor='w', pady=(px(6), 0))
-        self.extra_cards(self.detail)
-        self.inspector = Inspector(self.detail, self.s, self.schema, skip=self.skip, on_change=self._edited)
-        self.inspector.pack(fill='both', expand=True)
+        col.bind('<Configure>', lambda e: self.uses_label.configure(wraplength=max(px(200), e.width - px(8))))
+        self.extra_cards(host)
+        self.inspector = Inspector(host, self.s, self.schema, skip=self.skip, on_change=self._edited, scroller=self.pane)
+        self.inspector.pack(fill='x')
 
     # ── the list ────────────────────────────────────────────────────────────
     def rows(self):

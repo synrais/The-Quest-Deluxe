@@ -325,17 +325,33 @@ class Segmented(ttk.Frame):
         self.command, self.buttons, self.value = command, {}, None
         for key, text in options:
             b = tk.Label(self, text=text, padx=px(10), pady=px(5), cursor="hand2", font=(theme.FONT, 10))
-            b.pack(side='left', padx=(0, 2))
             b.bind('<Button-1>', lambda e, k=key: self.choose(k))
             self.buttons[key] = b
+        self._flowed = None
+        self.bind('<Configure>', lambda e: self._flow(e.width))
+        self._flow(0)
         self.choose(value if value is not None else options[0][0], run=False)
+
+    def _flow(self, width):
+        """Lay the tabs out in as many rows as the width needs (a long row of tabs is never cut off)."""
+        if self._flowed == width:
+            return
+        self._flowed = width
+        gap, x, y, rows_w, row_h = 2, 0, 0, 0, 0
+        for b in self.buttons.values():
+            w, h = b.winfo_reqwidth(), b.winfo_reqheight()
+            if x and width > 1 and x + w > width:
+                x, y = 0, y + row_h + gap
+            b.place(x=x, y=y)
+            x += w + gap
+            rows_w, row_h = max(rows_w, x - gap), h
+        self.configure(width=max(rows_w, 1), height=y + row_h)
 
     def choose(self, key, run=True):
         self.value = key
         for k, b in self.buttons.items():
             on = k == key
-            b.configure(bg=C['accent'] if on else C['raised'], fg=C['accent_text'] if on else C['dim'],
-                        font=(theme.FONT, 10, 'bold' if on else 'normal'))
+            b.configure(bg=C['accent'] if on else C['raised'], fg=C['accent_text'] if on else C['dim'])
         if run:
             self.command(key)
 

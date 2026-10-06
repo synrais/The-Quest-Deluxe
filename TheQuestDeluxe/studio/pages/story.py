@@ -80,7 +80,7 @@ class StoriesView(ttk.Frame):
         ui.vsep(self).pack(side='left', fill='y')
         head = ttk.Frame(left)
         head.pack(fill='x', padx=px(14), pady=(px(6), px(6)))
-        ttk.Label(head, text='Story screens', style='H3.TLabel').pack(side='left')
+        ttk.Label(head, text='Stories', style='H3.TLabel').pack(side='left')
         ui.button(head, 'New', self.new, 'plus', 'Accent.TButton', 'Write a new story').pack(side='right')
         self.list = Gallery(left, on_select=self._pick, list_mode=True)
         self.list.pack(fill='both', expand=True)
@@ -128,7 +128,8 @@ class StoriesView(ttk.Frame):
         entries = []
         for st in storytext.stories(self.s.project):
             first = (st.lines[0] if st.lines else '').strip()
-            entries.append(Entry(st.number, f'Story {st.number}', f'{used.get(st.number, "not shown anywhere")}  ·  {first[:34]}'))
+            glimpse = first if len(first) <= 24 else first[:23].rstrip() + '…'
+            entries.append(Entry(st.number, f'Story {st.number}', f'{used.get(st.number, "not shown anywhere")}  ·  {glimpse}'))
         self.list.set_items(entries)
         self.list.select(self.number, scroll=False)
 

@@ -31,7 +31,7 @@ def _range(key):
 class Inspector(ttk.Frame):
     """Shows the row of `schema.table` with this id. `skip`: field keys the page shows itself."""
 
-    def __init__(self, master, session, schema, skip=(), on_change=None, label_width=190):
+    def __init__(self, master, session, schema, skip=(), on_change=None, label_width=190, scroller=None):
         super().__init__(master)
         self.s, self.schema, self.skip = session, schema, set(skip)
         self.on_change = on_change
@@ -39,9 +39,14 @@ class Inspector(ttk.Frame):
         self.label_width = label_width
         self._open = {}
         self._errors = {}
-        self.scroll = ui.Scrolled(self)
-        self.scroll.pack(fill='both', expand=True)
-        self.body = self.scroll.body
+        if scroller is None:
+            self.scroll = ui.Scrolled(self)
+            self.scroll.pack(fill='both', expand=True)
+            self.body = self.scroll.body
+        else:                                                   # the page scrolls: the fields are just a frame in it
+            self.scroll = scroller
+            self.body = ttk.Frame(self)
+            self.body.pack(fill='x')
         self.extra_top = None
 
     @property

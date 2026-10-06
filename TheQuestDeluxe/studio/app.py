@@ -134,6 +134,9 @@ class Studio:
         top = ttk.Frame(r, style='Bg.TFrame')
         top.pack(fill='x')
         self._topbar(top)
+        bar = ttk.Frame(r, style='Bg.TFrame')              # packed before the body, so a page that wants more room never pushes it off
+        bar.pack(fill='x', side='bottom')
+        self._statusbar(bar)
         body = ttk.Frame(r, style='Bg.TFrame')
         body.pack(fill='both', expand=True)
         side = ttk.Frame(body, style='Side.TFrame', width=px(208))
@@ -143,9 +146,6 @@ class Studio:
         ttk.Separator(body, orient='vertical').pack(side='left', fill='y')
         self.content = ttk.Frame(body)
         self.content.pack(side='left', fill='both', expand=True)
-        bar = ttk.Frame(r, style='Bg.TFrame')
-        bar.pack(fill='x', side='bottom')
-        self._statusbar(bar)
         classes = page_classes()
         for key, cls in classes.items():
             page = cls(self.content, self)

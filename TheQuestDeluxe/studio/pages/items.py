@@ -102,14 +102,18 @@ class ItemsPage(TablePage):
             return
         self.sec.pack(fill='x', padx=px(20), pady=(px(8), 0), before=self.inspector)
         box = HeroPreview(self.hero_holder, self.s.project, self.dress, self.place_on_hero)
-        box.pack(side='left', anchor='n')
+        box.grid(row=0, column=0, sticky='nw')
         box.show(row)
         self.hero_box = box
         if row.get('type') in ('weapon', 'launcher', 'shield'):
             from editor.fps_preview import FpsPreview
             fps = FpsPreview(self.hero_holder, self.s.project, box, self.place_on_hero)
-            fps.pack(side='left', anchor='n', padx=px(14))
             fps.show(row)
+            fps.grid(row=0, column=1, sticky='nw', padx=(px(14), 0))
+            self.hero_holder.update_idletasks()
+            room = self.winfo_toplevel().winfo_width() - px(208 + self.list_width + 60)       # window - sidebar - list - margins
+            if box.winfo_reqwidth() + fps.winfo_reqwidth() + px(14) > room:                  # a narrow window: one under the other
+                fps.grid(row=1, column=0, sticky='nw', padx=0, pady=(px(10), 0))
 
     def place_on_hero(self, key, value, final=True):
         """The hero preview moved, flipped or turned the item: keep it on the item (0 or off leaves the key out)."""
