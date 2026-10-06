@@ -573,12 +573,13 @@ def _noting_run(self):
     return r
 comparedos.CompareDialog.run = _noting_run
 _popen = comparedos.subprocess.Popen
-started = []
-comparedos.subprocess.Popen = lambda *a, **k: (started.append(a[0]), type('P', (), {'poll': lambda s: 0})())[1]           # (nothing is started)
+started, started_env = [], []
+comparedos.subprocess.Popen = lambda *a, **k: (started.append(a[0]), started_env.append(k.get('env')), type('P', (), {'poll': lambda s: 0})())[1]           # (nothing is started)
 app.compare_dos(); pump(20)
 comparedos.subprocess.Popen = _popen
 comparedos.CompareDialog.run = _open_run
 check('Start comparison asks for a square, takes it and starts', shown and shown[-1] == ('go', (7, 9), True), str(shown))
+check('and it is started with a real video driver, not the dummy one the Studio runs with (it then has no window at all)', started_env and started_env[-1] is not None and 'SDL_VIDEODRIVER' not in started_env[-1], str(started_env))
 check('and what it starts is the comparison at that square', started and started[-1][started[-1].index('--at') + 1] == '7,9', str(started))
 # a comparison that stops at once says so and shows why (it used to stop without a word); the check window shows the check's words
 import subprocess as _sp

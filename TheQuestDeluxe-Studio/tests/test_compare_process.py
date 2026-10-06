@@ -117,6 +117,13 @@ def main():
     pygame.init()
     clean_up()
 
+    # 0. started from the Studio, which runs with SDL's dummy video driver and may pass it on: there must still be a window
+    proc = start({'SDL_VIDEODRIVER': 'dummy', 'SDL_AUDIODRIVER': 'dummy'})
+    got = wait_both(proc)
+    if not got:
+        fail('started with the Studio\'s dummy video driver in its environment, there was no compare window: ' + said(proc)[-500:])
+    clean_up()
+
     # 1. it comes up: ours on the left, the original on the right, inside the time limit
     proc = start()
     got = wait_both(proc)
@@ -179,6 +186,20 @@ def main():
         os.kill(proc.pid, how)
         leftovers(f'after the compare program got {how.name}')
         run('pkill', '-x', 'dosbox')
+
+    # 6b. leftovers (the kind a crashed run leaves) are found and closed by the cleanup, which also runs before every comparison
+    proc = start()
+    got = wait_both(proc)
+    if got:
+        sys.path.insert(0, ROOT)
+        from compare import cleanup
+        stopped = cleanup.stop_leftovers()
+        if not stopped:
+            fail('the cleanup found nothing to stop while a comparison was running')
+        leftovers('after the cleanup')
+    else:
+        fail('no window for the cleanup test')
+        clean_up()
 
     # 7. the original cannot start at all: our game is up and playable, and the window says why (and nothing is left)
     proc = start({'QUEST_NO_DOSBOX': '1'})

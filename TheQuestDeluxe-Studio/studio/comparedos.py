@@ -115,8 +115,16 @@ class CompareDialog(ui.Dialog):
                         variable=self.keep).pack(anchor='w', pady=(px(12), 0))
         ttk.Checkbutton(b, text="Leave out of both what the original does not have (a hero's new items, spells and classes: it cannot hold them)",
                         variable=self.same).pack(anchor='w')
-        ttk.Button(b, text='Check it works…', command=self._check).pack(anchor='w', pady=(px(10), 0))
+        row = ttk.Frame(b)
+        row.pack(anchor='w', pady=(px(10), 0))
+        ttk.Button(row, text='Check it works…', command=self._check).pack(side='left')
+        ttk.Button(row, text='Close leftovers', command=self._leftovers).pack(side='left', padx=px(8))
         self.add_buttons([('Cancel', None, 'TButton'), ('Start the comparison', 'go', 'Accent.TButton')], default='go')
+
+    def _leftovers(self):
+        from compare import cleanup
+        gone = cleanup.stop_leftovers()
+        ui.inform(self, 'Close leftovers', ('Closed:\n' + '\n'.join(gone)) if gone else 'Nothing from an earlier comparison was left running.')
 
     def _check(self):
         c = CheckDialog(self.app)
@@ -369,7 +377,8 @@ class CheckDialog(ui.Dialog):
 
         def work():
             try:
-                r = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, timeout=240, **proc.quiet())
+                from .play import game_env
+                r = subprocess.run(cmd, cwd=ROOT, env=game_env(), capture_output=True, text=True, timeout=240, **proc.quiet())
                 text = (r.stdout + ('\n' + r.stderr[-1500:] if r.returncode and r.stderr.strip() else '')).strip()
             except (OSError, subprocess.SubprocessError) as e:
                 text = f'The check could not run: {e}'
@@ -401,8 +410,11 @@ def open_compare(app):
         ui.inform(app.root, 'Compare to DOS', 'It cannot run yet:\n\n' + '\n'.join(bad))
         return
     try:
+        from compare import cleanup
+        cleanup.stop_leftovers()                                    # an earlier comparison's DOSBox or program, still running
         with open(LOG, 'w', encoding='utf-8') as fh:
-            child = subprocess.Popen(d.command_line, cwd=ROOT, stdout=fh, stderr=subprocess.STDOUT, **proc.quiet())
+            from .play import game_env                      # (the Studio itself runs with SDL's dummy video driver: a program it starts must not inherit that, or it has no window)
+            child = subprocess.Popen(d.command_line, cwd=ROOT, env=game_env(), stdout=fh, stderr=subprocess.STDOUT, **proc.quiet())
     except OSError as e:
         ui.inform(app.root, 'The comparison did not start', f'It could not be started: {e}')
         return

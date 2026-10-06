@@ -13,6 +13,9 @@ import time
 
 
 def run(say=print, env=None) -> bool:
+    for name in ('SDL_VIDEODRIVER', 'SDL_AUDIODRIVER'):
+        if env is None and os.environ.get(name) == 'dummy':
+            del os.environ[name]                           # (started from the Studio, which runs with the dummy driver: the check needs a real window)
     results = []
 
     def step(name, ok, detail=''):

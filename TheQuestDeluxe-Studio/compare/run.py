@@ -121,11 +121,21 @@ def run(argv=None):
     if a.check:
         from . import check
         return 0 if check.run() else 1
+    for name in ('SDL_VIDEODRIVER', 'SDL_AUDIODRIVER'):
+        if os.environ.get(name) == 'dummy' and not os.environ.get('QUEST_HEADLESS'):
+            del os.environ[name]                           # whoever started this (the Studio runs with the dummy driver) may have passed it on: this needs a real window
+    from . import cleanup
+    gone = cleanup.stop_leftovers()                        # what an earlier comparison left running (it keeps files in use)
+    if gone:
+        print('compare: stopped what was left from before:', '; '.join(gone), flush=True)
     if a.pack:
         os.environ['QUEST_PACK'] = a.pack                  # before the engine is loaded
     os.environ.setdefault('SDL_VIDEO_WINDOW_POS', '40,40')
     import pygame
     pygame.init()
+    if pygame.display.get_driver() == 'dummy' and not os.environ.get('QUEST_HEADLESS'):
+        print('compare: this has no real window (the dummy video driver): it would run unseen. Stopping.', flush=True)
+        return 1
     screen = pygame.display.set_mode((1280, 480 + 28))                # ours on the left, the original's window locked into the right half
     pygame.display.set_caption('The Quest Deluxe (left) and the original in DOSBox (right) - compare to DOS: type here')
     font = pygame.font.SysFont('dejavusans,arial', 14)
