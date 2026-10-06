@@ -6,6 +6,7 @@ from tkinter import ttk
 
 from . import icons, theme, ui
 from .gallery import Entry, Picker
+from .model import scope_of
 from .theme import C, px
 
 CREATURE_REFS = {'raises_dead', 'reveals_as', 'hides_as', 'becomes_on_death', 'transforms_into'}
@@ -33,7 +34,6 @@ class Inspector(ttk.Frame):
     def __init__(self, master, session, schema, skip=(), on_change=None, label_width=190):
         super().__init__(master)
         self.s, self.schema, self.skip = session, schema, set(skip)
-        self.table = schema.table
         self.on_change = on_change
         self.rid = None
         self.label_width = label_width
@@ -43,6 +43,10 @@ class Inspector(ttk.Frame):
         self.scroll.pack(fill='both', expand=True)
         self.body = self.scroll.body
         self.extra_top = None
+
+    @property
+    def table(self):
+        return self.schema.table
 
     def row(self):
         return self.s.row(self.table, self.rid) if self.rid is not None else None
@@ -251,7 +255,7 @@ class Inspector(ttk.Frame):
             return
         name = row.get('name') or f'#{row["id"]}'
         shown = self._shown(row)
-        with self.s.edit(f'Change {f.label.lower()} of {name}', self.table, merge=f'{self.table}:{self.rid}:{f.key}', source=self):
+        with self.s.edit(f'Change {f.label.lower()} of {name}', scope_of(self.table), merge=f'{self.table}:{self.rid}:{f.key}', source=self):
             if f.kind == 'bool':
                 if value == bool(f.default):
                     sch.drop(row, f.key)

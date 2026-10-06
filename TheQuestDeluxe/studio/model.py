@@ -16,6 +16,12 @@ SETTINGS = os.path.join(os.path.expanduser('~'), '.quest_studio.json')
 FOLDER_LAYER = {'floors': 'floor', 'walls': 'wall', 'decos': 'deco', 'items': 'item', 'creatures': 'mon', 'bag': 'bag',
                 'spells': 'spell'}
 AUTOSAVE_MS = 1500
+TILE_KINDS = ('floors', 'walls', 'decos')       # three lists in tiles.json: one scope, 'tiles', in the history
+
+
+def scope_of(table: str) -> str:
+    """The part of the quest the history keeps for a table (the three tile lists share one)."""
+    return 'tiles' if table in TILE_KINDS else table
 
 
 def load_settings() -> dict:
@@ -167,10 +173,12 @@ class Session:
 
     # ── helpers pages use ───────────────────────────────────────────────────
     def rows(self, table: str) -> list:
+        if table in TILE_KINDS:
+            return self.project.tiles.setdefault(table, [])
         return self.project.tables[table]
 
     def row(self, table: str, v):
-        return next((r for r in self.project.tables[table] if r['id'] == v), None)
+        return next((r for r in self.rows(table) if r['id'] == v), None)
 
     def name_of(self, table: str, v) -> str:
         r = self.row(table, v)

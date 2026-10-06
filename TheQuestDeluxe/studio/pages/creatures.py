@@ -14,7 +14,7 @@ from ..gallery import Entry, Gallery
 from ..inspector import Inspector
 from ..schema import Schema
 from ..theme import C, px
-from .base import Page
+from .tablepage import TablePage
 
 VERDICT_COLOURS = {'Pushover': 'ok', 'Easy': 'ok', 'Fair': 'info', 'Tough': 'warn', 'Deadly': 'bad', 'Cannot be hurt': 'bad'}
 ROLES = [('all', 'All'), ('mon', 'Monsters'), ('person', 'People'), ('ally', 'Allies')]
@@ -27,277 +27,61 @@ def role_of(v: int) -> str:
 ROLE_TITLE = {'mon': 'Monsters', 'person': 'People', 'ally': 'Summoned allies'}
 
 
-class CreaturesPage(Page):
+class CreaturesPage(TablePage):
     key = 'creatures'
     title = 'Creatures'
     icon = 'skull'
     table = 'creatures'
+    layer = 'mon'
+    noun = 'creature'
+    nouns = 'creatures'
+    skip = ('id', '_role', 'name')
+    filters = ROLES
+    card = (94, 104)
 
     def build(self):
-        self.schema = Schema(self.s, 'creatures')
-        self.rid = None
-        self.role = 'all'
-        self.query = ''
-        left = ttk.Frame(self, width=px(330))
-        left.pack(side='left', fill='y')
-        left.pack_propagate(False)
-        ui.vsep(self).pack(side='left', fill='y')
-        right = ttk.Frame(self)
-        right.pack(side='left', fill='both', expand=True)
-        self._build_list(left)
-        self._build_detail(right)
-        self.s.on('creatures', self._changed)
-        self.s.on('pictures', self._pictures_changed)
+        super().build()
         self.s.on('classes', lambda sc, src: self.fight.refresh())
         self.s.on('items', lambda sc, src: self.fight.refresh())
 
-    # ── the list ────────────────────────────────────────────────────────────
-    def _build_list(self, left):
-        head = ttk.Frame(left)
-        head.pack(fill='x', padx=px(14), pady=(px(14), px(6)))
-        ttk.Label(head, text='Creatures', style='H2.TLabel').pack(side='left')
-        ui.button(head, 'New', self.new, 'plus', 'Accent.TButton', 'Make a new creature').pack(side='right')
-        seg = ui.Segmented(left, ROLES, self._role, 'all')
-        seg.pack(anchor='w', padx=px(14))
-        self.search = ui.SearchBox(left, self._search, 'Search', width=24)
-        self.search.pack(fill='x', padx=px(14), pady=px(8))
-        self.gallery = Gallery(left, on_select=self.select, card=(94, 104))
-        self.gallery.pack(fill='both', expand=True)
+    def category(self, row):
+        return role_of(row['id'])
 
-    def _entries(self):
-        pic = self.s.pictures
-        out = []
-        for c in sorted(self.s.rows('creatures'), key=lambda c: (-(1 if c['id'] > 0 else 0 if c['id'] > -100 else -1), c['id'])):
-            r = role_of(c['id'])
-            if self.role != 'all' and r != self.role:
-                continue
-            out.append(Entry(c['id'], c.get('name') or '(no name)', f'#{c["id"]}', pic.thumb('mon', c['id'], 44, 'raised'),
-                             group=ROLE_TITLE[r] if self.role == 'all' else '', search=f'{c.get("name", "")} {c["id"]} {r}'.lower()))
-        return out
+    def group(self, row):
+        return ROLE_TITLE[role_of(row['id'])]
 
-    def _fill(self):
-        self.gallery.set_items(self._entries())
-        self.gallery.filter(self.query)
-        self.gallery.select(self.rid, scroll=False)
+    def order(self, row):
+        return (0 if row['id'] > 0 else 1 if row['id'] > -100 else 2, row['id'] if row['id'] > 0 else -row['id'])
 
-    def _role(self, key):
-        self.role = key
-        self._fill()
-
-    def _search(self, text):
-        self.query = text
-        self.gallery.filter(text)
-
-    # ── the detail ──────────────────────────────────────────────────────────
-    def _build_detail(self, right):
-        self.empty = ui.EmptyState(right, 'skull', 'Pick a creature on the left, or make a new one.', 'Make a creature', self.new)
-        self.detail = ttk.Frame(right)
-        top = ttk.Frame(self.detail)
-        top.pack(fill='x', padx=px(20), pady=(px(16), px(4)))
-        self.pic = tk.Label(top, bd=0, bg=C['panel'])
-        self.pic.pack(side='left')
-        col = ttk.Frame(top)
-        col.pack(side='left', fill='x', expand=True, padx=px(16))
-        self.name_var = tk.StringVar()
-        e = ttk.Entry(col, textvariable=self.name_var, font=(theme.FONT, 16, 'bold'))
-        e.pack(fill='x')
-        e.bind('<Return>', lambda ev: self._rename())
-        e.bind('<FocusOut>', lambda ev: self._rename())
-        self.badges = ttk.Frame(col)
-        self.badges.pack(anchor='w', pady=(px(6), 0))
-        bar = ttk.Frame(col)
-        bar.pack(anchor='w', pady=(px(8), 0))
-        ui.button(bar, 'Paint', self.paint, 'brush', 'TButton', 'Draw or change its picture').pack(side='left')
-        ui.button(bar, 'Import', self.import_picture, 'download', 'TButton', 'Use a picture file (converted to the 16 game colours)').pack(side='left', padx=px(6))
-        ui.button(bar, 'Duplicate', self.duplicate, 'copy', 'TButton').pack(side='left')
-        ui.button(bar, '', self.delete, 'trash', 'Tool.TButton', 'Delete this creature').pack(side='left', padx=px(6))
-        self.uses = ttk.Label(col, text='', style='Faint.TLabel', wraplength=px(560), justify='left')
-        self.uses.pack(anchor='w', pady=(px(6), 0))
-        self.fight = FightCard(self.detail, self)
-        self.fight.pack(fill='x', padx=px(20), pady=(px(10), px(4)))
-        self.inspector = Inspector(self.detail, self.s, self.schema, skip=('id', '_role', 'name'), on_change=self._edited)
-        self.inspector.pack(fill='both', expand=True)
-
-    def select(self, rid, scroll=True):
-        if rid is None:
-            return
-        self.rid = rid
-        self.gallery.select(rid, scroll=scroll)
-        self._show()
-
-    def row(self):
-        return self.s.row('creatures', self.rid)
-
-    def _show(self):
-        r = self.row()
-        if r is None:
-            self.detail.pack_forget()
-            self.empty.pack(expand=True)
-            return
-        self.empty.pack_forget()
-        self.detail.pack(fill='both', expand=True)
-        self.name_var.set(r.get('name') or '')
-        self._header()
-        self.inspector.show(self.rid)
-        self.fight.refresh()
-
-    def _header(self):
-        r = self.row()
-        if r is None:
-            return
-        self.pic.configure(image=self.s.pictures.thumb('mon', r['id'], px(96), 'raised', frame=True))
-        for w in self.badges.winfo_children():
-            w.destroy()
+    def badges(self, row):
         from editor.creatures_tab import role
-        ui.Badge(self.badges, f'#{r["id"]}', 'dim').pack(side='left')
-        ui.Badge(self.badges, role(r['id']), 'accent' if r['id'] > 0 else 'info').pack(side='left', padx=px(6))
-        size = int(r.get('size') or 1)
+        out = [(f'#{row["id"]}', 'dim'), (role(row['id']), 'accent' if row['id'] > 0 else 'info')]
+        size = int(row.get('size') or 1)
         if size > 1:
-            ui.Badge(self.badges, f'{size} × {size} squares', 'warn').pack(side='left')
-        used = self.schema.uses(r)
-        if used:
-            more = f'  and {len(used) - 3} more' if len(used) > 3 else ''
-            self.uses.configure(text='Used in: ' + '; '.join(used[:3]) + more)
-        else:
-            self.uses.configure(text='Not used anywhere yet: put it on a map, or in a spell.')
-
-    def _rename(self):
-        r = self.row()
-        if r is None or self.name_var.get().strip() == (r.get('name') or ''):
-            return
-        f = next(f for f in self.schema.all_fields() if f.key == 'name')
-        self.inspector.commit(f, self.name_var.get().strip())
-
-    def _edited(self, row, key):
-        if key in ('name', 'size', 'att'):
-            self._header()
-            if key == 'name':
-                self.name_var.set(row.get('name') or '')
-                self._fill()
-        self.fight.refresh()
-        self.app.changed_world()
-
-    # ── notifications ───────────────────────────────────────────────────────
-    def _changed(self, scope, source):
-        if source is self.inspector:
-            return
-        if not self.visible and not self.built:
-            return
-        self._fill()
-        if self.rid is not None and self.row() is None:
-            self.rid = None
-        self._show()
-
-    def _pictures_changed(self, scope, source):
-        if isinstance(scope, tuple) and len(scope) > 1 and scope[1] == 'creatures':
-            self._fill()
-            self._header()
-
-    # ── pictures ────────────────────────────────────────────────────────────
-    def paint(self):
-        from editor.painter import Painter
-        r = self.row()
-        if r is None:
-            return
-        p, rid = self.s.project, r['id']
-        templates = [(f'{c["id"]}  {c.get("name", "")}', lambda c=c: p.picture('creatures', c['id']))
-                     for c in sorted(self.s.rows('creatures'), key=lambda c: c['id']) if c['id'] != rid and p.picture('creatures', c['id']) is not None]
-
-        def keep(surface):
-            self.set_picture(rid, surface)
-        Painter(self, f'Picture: {r.get("name", rid)}', p.picture('creatures', rid), keep, opaque=False, templates=templates,
-                project=p, folder='creatures')
-
-    def import_picture(self):
-        r = self.row()
-        if r is None:
-            return
-        path = filedialog.askopenfilename(title='A picture (40 x 40 is best)', parent=self.winfo_toplevel(),
-                                          filetypes=[('Pictures', '*.png *.gif *.bmp'), ('All files', '*.*')])
-        if not path:
-            return
-        try:
-            img = pygame.image.load(path)
-        except pygame.error as e:
-            ui.inform(self, 'Import', f"Couldn't read that picture: {e}")
-            return
-        self.set_picture(r['id'], to_ega(img, keep_alpha=True))
-
-    def set_picture(self, rid, surface):
-        with self.s.edit('Change a creature\'s picture', ('pic', 'creatures', rid)):
-            self.s.project.set_picture('creatures', rid, surface)
-        self._fill()
-        self._header()
-
-    # ── new, duplicate, delete ──────────────────────────────────────────────
-    def new(self):
-        w = CreatureWizard(self)
-        rid = w.run()
-        if rid is not None:
-            self.role = 'all'
-            self._fill()
-            self.select(rid)
-
-    def duplicate(self):
-        r = self.row()
-        if r is None:
-            return
-        p = self.s.project
-        new = copy.deepcopy(r)
-        new['id'] = self.schema.duplicate_id(r)
-        new['name'] = f'{r.get("name", "")} (copy)'
-        with self.s.edit('Duplicate a creature', 'creatures', ('pic', 'creatures', new['id'])):
-            self.s.rows('creatures').append(new)
-            self.s.rows('creatures').sort(key=lambda c: c['id'])
-            img = p.picture('creatures', r['id'])
-            if img is not None:
-                p.set_picture('creatures', new['id'], img)
-        self._fill()
-        self.select(new['id'])
-
-    def delete(self):
-        r = self.row()
-        if r is None:
-            return
-        used = self.schema.uses(r)
-        msg = f'Delete {r.get("name") or r["id"]}?'
-        if used:
-            msg += '\n\nIt is still used here, and those places would point at nothing:\n  ' + '\n  '.join(used[:10])
-            if len(used) > 10:
-                msg += f'\n  ... and {len(used) - 10} more'
-        msg += '\n\nYou can bring it back with Undo (Ctrl+Z).'
-        if not ui.confirm(self, 'Delete a creature', msg, 'Delete', danger=True):
-            return
-        rid = r['id']
-        with self.s.edit(f'Delete {r.get("name") or rid}', 'creatures', ('pic', 'creatures', rid)):
-            self.s.rows('creatures').remove(r)
-            if self.s.project.picture('creatures', rid) is not None:
-                self.s.project.set_picture('creatures', rid, None)
-        self.rid = None
-        self._fill()
-        self._show()
-
-    # ── life cycle ──────────────────────────────────────────────────────────
-    def on_show(self, select=None, **where):
-        self._fill()
-        if select is not None and self.row() is not None or (select is not None and self.s.row('creatures', select)):
-            self.rid = select
-        if self.rid is None and self.s.rows('creatures'):
-            self.rid = next((c['id'] for c in sorted(self.s.rows('creatures'), key=lambda c: c['id']) if c['id'] > 0),
-                            self.s.rows('creatures')[0]['id'])
-        self.gallery.select(self.rid, scroll=True)
-        self._show()
-
-    def reload(self):
-        self._fill()
-        self._show()
-
-    def search(self, q):
-        out = []
-        for c in self.s.rows('creatures'):
-            if q in (c.get('name') or '').lower() or q == str(c['id']):
-                out.append((c.get('name') or f'#{c["id"]}', f'creature #{c["id"]}', 'skull', lambda c=c: self.app.go('creatures', select=c['id'])))
+            out.append((f'{size} × {size} squares', 'warn'))
         return out
+
+    def extra_cards(self, parent):
+        self.fight = FightCard(parent, self)
+        self.fight.pack(fill='x', padx=px(20), pady=(px(10), px(4)))
+
+    def shown(self, row):
+        self.fight.refresh()
+
+    def edited(self, row, key):
+        self.fight.refresh()
+
+    def first_id(self):
+        rows = sorted((c for c in self.rows() if c['id'] > 0), key=lambda c: c['id']) or sorted(self.rows(), key=lambda c: c['id'])
+        return rows[0]['id'] if rows else None
+
+    def new(self):
+        rid = CreatureWizard(self).run()
+        if rid is not None:
+            self.cat = 'all'
+            self.seg.choose('all', run=False)
+            self.fill()
+            self.select(rid)
 
 
 class FightCard(ui.Card):

@@ -10,6 +10,10 @@ os.environ.setdefault('SDL_VIDEODRIVER', 'dummy')
 import pygame  # noqa: E402
 
 pygame.init()
+try:
+    pygame.display.set_mode((1, 1))        # the dummy driver: no window, but surfaces can convert_alpha()
+except pygame.error:
+    pass
 
 BIG = 96                      # icons are drawn at this size and scaled down (that is what smooths them)
 

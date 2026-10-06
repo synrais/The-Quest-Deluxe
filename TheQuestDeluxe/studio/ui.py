@@ -324,7 +324,7 @@ class Segmented(ttk.Frame):
         super().__init__(master, style='Raised.TFrame' if raised else 'TFrame')
         self.command, self.buttons, self.value = command, {}, None
         for key, text in options:
-            b = tk.Label(self, text=text, padx=px(14), pady=px(5), cursor='hand2', font=(theme.FONT, 10))
+            b = tk.Label(self, text=text, padx=px(10), pady=px(5), cursor="hand2", font=(theme.FONT, 10))
             b.pack(side='left', padx=(0, 2))
             b.bind('<Button-1>', lambda e, k=key: self.choose(k))
             self.buttons[key] = b

@@ -25,25 +25,38 @@ class _App:
     def status(self, text):
         pass
 
+    def pictures_changed(self, layer, v):
+        self.session.pictures.forget(layer, v)
+
     def changed(self):
         pass
 
 
 class Schema:
     def __init__(self, session, table: str):
+        self.table = table
+        table = 'tiles' if table in ('floors', 'walls', 'decos') else table
         mod, name = TABS[table]
         cls = getattr(importlib.import_module(mod), name)
-        self.table = table
         self.cls = cls
         self.t = cls.__new__(cls)                 # the tab without its widgets: only its descriptions are used
         self.t.app = _App(session)
+        if self.table in ('floors', 'walls', 'decos'):
+            self.t.kind = self.table
         self.session = session
         self.get, self.put, self.drop = TableTab.get, TableTab.put, TableTab.drop
 
     # descriptions ------------------------------------------------------------
+    groups_override = None
+
     @property
     def groups(self):
-        return self.cls.GROUPS
+        return self.groups_override if self.groups_override is not None else self.cls.GROUPS
+
+    def set_kind(self, kind: str):
+        """For the tiles: which of the three lists the tab describes."""
+        self.table = kind
+        self.t.kind = kind
 
     @property
     def intro(self):
