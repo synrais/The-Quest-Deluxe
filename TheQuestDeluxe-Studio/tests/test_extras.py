@@ -4,6 +4,7 @@
 """
 from __future__ import annotations
 
+import glob
 import os
 import shutil
 import sys
@@ -1459,7 +1460,10 @@ def hero_shows_gear():
     inventory picture behind him, anything else its picture on the ground; the amulet colours the clasp."""
     from engine import worn
     from engine.state import SLOT_WEAPON, SLOT_OFFHAND, SLOT_HELMET, SLOT_ARMOR, SLOT_AMULET
-    g = with_changes(lambda folder, json: None)
+    def drawn_heroes(folder, json):                  # the shipped heroes are painted now: this is about the engine's drawn one
+        for f in glob.glob(os.path.join(folder, 'sprites', 'heroes', '*.png')):
+            os.remove(f)
+    g = with_changes(drawn_heroes)
     p = g.player
     slots = (SLOT_WEAPON, SLOT_OFFHAND, SLOT_HELMET, SLOT_ARMOR, SLOT_AMULET)
     ox, oy = g.world.origin
