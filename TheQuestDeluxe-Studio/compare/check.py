@@ -72,6 +72,14 @@ def run(say=print, env=None) -> bool:
         moved = bool(first) and after != first
         step('keys reach it', moved, (f'input by {"the keyboard (DOSBox brought forward)" if os.environ.get("DOS_INPUT") == "focus" else "posted keys"}' if dos.WINDOWS else '')
              if moved else 'the picture did not change when keys were sent: set DOS_INPUT=focus and try again, or click on DOSBox once')
+        try:
+            pygame.display.init()
+            pygame.display.set_mode((1280, 508))
+            locked = d.embed(pygame.display.get_wm_info().get('window'), 640, 0)
+            info('locked into the compare window', 'yes' if locked else 'no: the original will be shown as a picture in the right half instead')
+            pygame.display.quit()
+        except Exception as e:      # noqa: BLE001 - only a note
+            info('locked into the compare window', f'could not be tried ({e})')
         ok, last = False, ''
         for _ in range(24):
             try:

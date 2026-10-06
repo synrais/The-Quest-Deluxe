@@ -194,6 +194,37 @@ class Dos:
         self.parent = parent if ok else None
         return ok
 
+    def picture_surface(self):
+        """The original's screen as a pygame surface (None when it cannot be taken)."""
+        if not self.window:
+            return None
+        if WINDOWS:
+            shot = _win_capture(self.window)
+            return shot[3] if shot else None
+        return None
+
+    def hide_away(self):
+        """Windows, when DOSBox cannot be locked into the compare window: its window goes off the screen (it is still drawn, and the compare window shows its picture)."""
+        if WINDOWS and self.proc is not None:
+            h = _win_find(self.proc.pid)
+            if h:
+                self.window = h
+                _api()[0].SetWindowPos(h, None, -3000, 0, 0, 0, 0x0001 | 0x0004 | 0x0010)    # SWP_NOSIZE | NOZORDER | NOACTIVATE
+
+    def keep_embedded(self, x: int, y: int) -> bool:
+        """Called now and then: DOSBox may make itself a new window when the game changes screen mode (a new window is a new top-level one, outside ours);
+        find it again and lock it in. True when it had to."""
+        if not WINDOWS or not getattr(self, 'parent', None) or self.proc is None:
+            return False
+        h = _win_find(self.proc.pid)
+        if h is None:
+            return False
+        u = _api()[0]
+        if h != self.window or u.GetParent(h) != self.parent:
+            self.window = h
+            return _win_embed(h, self.parent, x, y)
+        return False
+
     def focus(self):
         if not self.window:
             return
@@ -364,7 +395,7 @@ def _api():
         for lib, name, args, res in (
                 (u, 'EnumWindows', [proto, w.LPARAM], w.BOOL), (u, 'GetWindowThreadProcessId', [w.HWND, ctypes.POINTER(w.DWORD)], w.DWORD),
                 (u, 'IsWindowVisible', [w.HWND], w.BOOL), (u, 'GetWindowTextW', [w.HWND, w.LPWSTR, ctypes.c_int], ctypes.c_int),
-                (u, 'IsIconic', [w.HWND], w.BOOL), (u, 'ShowWindow', [w.HWND, ctypes.c_int], w.BOOL), (u, 'SetForegroundWindow', [w.HWND], w.BOOL),
+                (u, 'GetParent', [w.HWND], w.HWND), (u, 'IsIconic', [w.HWND], w.BOOL), (u, 'ShowWindow', [w.HWND, ctypes.c_int], w.BOOL), (u, 'SetForegroundWindow', [w.HWND], w.BOOL),
                 (u, 'GetClientRect', [w.HWND, ctypes.POINTER(w.RECT)], w.BOOL), (u, 'GetDC', [w.HWND], w.HDC), (u, 'ReleaseDC', [w.HWND, w.HDC], ctypes.c_int),
                 (u, 'PrintWindow', [w.HWND, w.HDC, w.UINT], w.BOOL), (u, 'PostMessageW', [w.HWND, w.UINT, w.WPARAM, w.LPARAM], w.BOOL),
                 (u, 'SetWindowPos', [w.HWND, w.HWND, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, w.UINT], w.BOOL),
@@ -417,7 +448,7 @@ def _win_embed(child, parent, x, y):
     u.SetParent(child, parent)
     u.SetWindowLongPtrW(child, GWL_STYLE, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS)       # no title bar, no frame
     u.SetWindowPos(child, None, x, y, 0, 0, 0x0001 | 0x0004 | 0x0020 | 0x0040)             # SWP_NOSIZE | NOZORDER | FRAMECHANGED | SHOWWINDOW
-    return True
+    return u.GetParent(child) == parent                                                     # did it take?
 
 
 # ── Windows (written from the API's documentation: the Studio's "Check it works" says what does and does not work on the machine) ──

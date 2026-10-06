@@ -98,22 +98,32 @@ class Compare:
         self.seed_ok = False
 
     # ── starting both ───────────────────────────────────────────────────────
+    progress = staticmethod(lambda text: None)               # told what is happening while it starts (the window shows it)
+
     def start_dos(self):
+        self.progress('Making the save the original loads ...')
         game_dir = self.dos.prepare()
         problem, self.removed = make_dos_save(os.path.join(game_dir, 'data'), self.level, self.at, self.hero_file, self.cls, self.loadout)
         if problem:
             raise RuntimeError(problem)
         with open(os.path.join(game_dir, 'data', 'save01.dat'), 'rb') as fh:
             self.start_save = fh.read()
+        self.progress('Starting the original in DOSBox ...')
         self.dos.start()
+        self.after_dos_window()
         self.dos.wait_still(1.2, 20)                                               # the title has been drawn
+        self.progress('Loading the saved game in the original ...')
         for k in ('Down', 'Return', 'Return'):                                      # Load Game, then the first save
             self.dos.key_and_wait(k)
+            self.after_dos_window()
+        self.progress('Finding the original\'s dice ...')
         self.seed_ok = self.dos_memory_ok()
         if not self.seed_ok:
             self.log('The original game is laid out differently in memory than expected: the dice cannot be matched.')
         else:
             self.fix_seed()
+
+    after_dos_window = staticmethod(lambda: None)            # called when DOSBox's window exists, and after each step of loading (the window is locked into ours)
 
     def start_ours(self, window, hero):
         from engine.game import Game

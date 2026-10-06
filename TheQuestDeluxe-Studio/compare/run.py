@@ -137,9 +137,32 @@ def run(argv=None):
             gear = json.load(fh)
     comp = Compare(a.level, at, pack_root=a.pack, hero_file=a.hero_file, cls=a.cls, fixes=a.fixes, same_things=a.same == 'on',
                    hero_label=a.hero_label, loadout=gear)
+    docked = [None]                                                    # None: not tried yet; then whether it could be locked in
+
+    def say(text):
+        """What is happening, in the window (which keeps answering Windows while it waits) and in the log."""
+        print('compare:', text, flush=True)
+        status(font, screen, text, (230, 230, 230))
+        pygame.event.pump()
+        pygame.display.flip()
+
+    def dock():
+        """Lock DOSBox's window into the right half of ours (again whenever DOSBox has made a new one)."""
+        if comp.dos.window is None:
+            return
+        if docked[0] is None:
+            docked[0] = put_beside(comp)
+            print('compare: the original\'s window is', 'locked into ours' if docked[0] else 'shown in the right half (it could not be locked in)', flush=True)
+        elif docked[0] and comp.dos.keep_embedded(640, 0):
+            print('compare: DOSBox made a new window; locked it in again', flush=True)
+        elif docked[0] is False and sys.platform.startswith('win'):
+            comp.dos.hide_away()                                          # (its picture is shown in the right half instead)
+        pygame.event.pump()
+
+    comp.progress, comp.after_dos_window = say, dock
     try:
         comp.start_dos()
-        put_beside(comp)
+        dock()
         comp.start_ours(screen.subsurface((0, 0, 640, 480)), hero)
         comp.draw()
         pygame.display.flip()
@@ -150,7 +173,11 @@ def run(argv=None):
             msg, colour = 'The dice cannot be matched (the original is laid out differently in memory).', (240, 190, 90)
         status(font, screen, msg, colour)
         clock = pygame.time.Clock()
+        last_dock = last_mirror = 0.0
         while True:
+            if time.time() - last_dock > 0.5:
+                last_dock = time.time()
+                dock()
             for ev in pygame.event.get():
                 if ev.type == pygame.QUIT:
                     if comp.recorder and comp.recorder.unsaved:
@@ -188,6 +215,11 @@ def run(argv=None):
                 else:
                     status(font, screen, f'{name}: ' + ' '.join(r.notes)[:70] + '  F12 saves', (250, 120, 110))
             comp.draw()
+            if docked[0] is False and time.time() - last_mirror > 0.15:
+                last_mirror = time.time()
+                shot = comp.dos.picture_surface()
+                if shot is not None:
+                    screen.blit(shot, (640, 0))
             pygame.display.flip()
             clock.tick(30)
     finally:
