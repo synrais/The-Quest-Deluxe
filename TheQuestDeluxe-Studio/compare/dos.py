@@ -103,6 +103,7 @@ class Dos:
         self._mem = None
         self.base = None
         self.exe = find_dosbox()
+        self._job = None
         self.idle = lambda: None                      # called all the while this waits (the compare window answers Windows with it)
 
     def _sleep(self, seconds: float):
@@ -147,7 +148,10 @@ class Dos:
         if WINDOWS:
             env['SDL_VIDEODRIVER'] = 'windib'              # plain Windows drawing: its window can be photographed and takes posted keys
         self.proc = subprocess.Popen([self.exe, '-conf', conf, '-noconsole'] if WINDOWS else [self.exe, '-conf', conf], env=env,
-                                     cwd=self.scratch, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)   # (it writes stdout.txt where it runs)
+                                     cwd=self.scratch, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,   # (it writes stdout.txt where it runs)
+                                     **({} if WINDOWS else {'preexec_fn': _die_with_parent}))
+        if WINDOWS:
+            self._job = _win_job(self.proc)                    # DOSBox ends when this program does, however it ends
         t = time.time()
         while time.time() - t < wait:
             self.window = self._find_window()
@@ -422,6 +426,46 @@ def _api():
             fn.argtypes, fn.restype = args, res
         _API.extend([u, g])
     return _API[0], _API[1]
+
+
+def _die_with_parent():
+    """Linux, in the new DOSBox process: be killed when the process that started it ends (closed, asked to stop or killed): no DOSBox is left behind."""
+    import ctypes
+    import signal
+    try:
+        ctypes.CDLL('libc.so.6').prctl(1, int(signal.SIGKILL))          # PR_SET_PDEATHSIG
+    except (OSError, AttributeError):
+        pass
+
+
+def _win_job(proc):
+    """Windows: put the process in a job that kills everything in it when its last handle closes, which happens when this program ends for any reason."""
+    import ctypes
+    from ctypes import wintypes
+    k = ctypes.WinDLL('kernel32', use_last_error=True)
+
+    class Basic(ctypes.Structure):
+        _fields_ = [('PerProcessUserTimeLimit', ctypes.c_int64), ('PerJobUserTimeLimit', ctypes.c_int64), ('LimitFlags', wintypes.DWORD),
+                    ('MinimumWorkingSetSize', ctypes.c_size_t), ('MaximumWorkingSetSize', ctypes.c_size_t), ('ActiveProcessLimit', wintypes.DWORD),
+                    ('Affinity', ctypes.c_size_t), ('PriorityClass', wintypes.DWORD), ('SchedulingClass', wintypes.DWORD)]
+
+    class IoCounters(ctypes.Structure):
+        _fields_ = [(n, ctypes.c_uint64) for n in ('Read', 'Write', 'Other', 'ReadBytes', 'WriteBytes', 'OtherBytes')]
+
+    class Extended(ctypes.Structure):
+        _fields_ = [('Basic', Basic), ('Io', IoCounters), ('ProcessMemoryLimit', ctypes.c_size_t), ('JobMemoryLimit', ctypes.c_size_t),
+                    ('PeakProcessMemoryUsed', ctypes.c_size_t), ('PeakJobMemoryUsed', ctypes.c_size_t)]
+    k.CreateJobObjectW.restype = wintypes.HANDLE
+    k.SetInformationJobObject.argtypes = [wintypes.HANDLE, ctypes.c_int, ctypes.c_void_p, wintypes.DWORD]
+    k.AssignProcessToJobObject.argtypes = [wintypes.HANDLE, wintypes.HANDLE]
+    job = k.CreateJobObjectW(None, None)
+    if not job:
+        return None
+    info = Extended()
+    info.Basic.LimitFlags = 0x2000                                          # JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
+    k.SetInformationJobObject(job, 9, ctypes.byref(info), ctypes.sizeof(info))
+    k.AssignProcessToJobObject(job, int(proc._handle))
+    return job
 
 
 def _x11_embed(child, parent, x, y):

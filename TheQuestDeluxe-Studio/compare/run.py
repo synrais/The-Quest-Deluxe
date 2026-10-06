@@ -177,6 +177,11 @@ def run(argv=None):
         pygame.event.pump()
 
     comp.progress, comp.after_dos_window = say, dock
+    try:
+        import signal
+        signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))              # asked to stop: leave by the normal way, which closes DOSBox
+    except (ValueError, OSError):
+        pass
     comp.dos.idle = pygame.event.pump
     ours = screen.subsurface((0, 0, 640, 480))
     try:
@@ -208,6 +213,8 @@ def run(argv=None):
         while True:
             if time.time() - last_dock > 0.5:
                 last_dock = time.time()
+                if comp.dos.proc is not None and not comp.dos.alive():
+                    return play_alone(comp, font, screen, 'The original has closed. Ours plays on alone; start the comparison again to compare.')
                 dock()
             for ev in pygame.event.get():
                 if ev.type == pygame.QUIT:
