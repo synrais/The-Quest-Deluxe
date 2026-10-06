@@ -154,6 +154,7 @@ def run(argv=None):
             gear = json.load(fh)
     comp = Compare(a.level, at, pack_root=a.pack, hero_file=a.hero_file, cls=a.cls, fixes=a.fixes, same_things=a.same == 'on',
                    hero_label=a.hero_label, loadout=gear)
+    beside = [False]                                                   # its picture could not be copied in: DOSBox is shown beside ours instead
     docked = [None]                                                    # None: not tried yet; then whether it could be locked in
 
     def say(text):
@@ -172,8 +173,8 @@ def run(argv=None):
             print('compare: the original\'s window is', 'locked into ours' if docked[0] else 'shown in the right half (it could not be locked in)', flush=True)
         elif docked[0] and comp.dos.keep_embedded(640, 0):
             print('compare: DOSBox made a new window; locked it in again', flush=True)
-        elif docked[0] is False and sys.platform.startswith('win'):
-            comp.dos.hide_away()                                          # (its picture is shown in the right half instead)
+        elif docked[0] is False and sys.platform.startswith('win') and not beside[0]:
+            comp.dos.tuck_behind(pygame.display.get_wm_info().get('window'))      # (its picture is shown in the right half instead)
         pygame.event.pump()
 
     comp.progress, comp.after_dos_window = say, dock
@@ -185,6 +186,12 @@ def run(argv=None):
     comp.dos.idle = pygame.event.pump
     ours = screen.subsurface((0, 0, 640, 480))
     try:
+        if sys.platform.startswith('win'):
+            try:
+                from . import dos
+                dos.bring_to_front(pygame.display.get_wm_info().get('window'))
+            except Exception as e:                                        # noqa: BLE001
+                print('compare: could not bring the window to the front:', e, flush=True)
         say('Starting The Quest Deluxe ...')
         comp.begin_ours(ours, hero)                                   # our game first: it is on the screen while the original loads
         comp.draw()
@@ -209,8 +216,16 @@ def run(argv=None):
             msg, colour = 'The dice cannot be matched (the original is laid out differently in memory).', (240, 190, 90)
         status(font, screen, msg, colour)
         print('compare: ready', flush=True)
+        if sys.platform.startswith('win'):
+            try:
+                from . import dos
+                dos.bring_to_front(pygame.display.get_wm_info().get('window'))      # (a window started by another program is often left behind it)
+            except Exception as e:                                        # noqa: BLE001
+                print('compare: could not bring the window to the front:', e, flush=True)
         clock = pygame.time.Clock()
         last_dock = last_mirror = 0.0
+        mirror_since = time.time()
+        copied = [False]
         while True:
             if time.time() - last_dock > 0.5:
                 last_dock = time.time()
@@ -254,11 +269,19 @@ def run(argv=None):
                 else:
                     status(font, screen, f'{name}: ' + ' '.join(r.notes)[:70] + '  F12 saves', (250, 120, 110))
             comp.draw()
-            if docked[0] is False and time.time() - last_mirror > 0.15:
+            if docked[0] is False and not beside[0] and time.time() - last_mirror > 0.15:
                 last_mirror = time.time()
                 shot = comp.dos.picture_surface()
                 if shot is not None:
                     screen.blit(shot, (640, 0))
+                    if not copied[0]:
+                        copied[0] = True
+                        print('compare: the original\'s picture is being copied into the right half', flush=True)
+                elif time.time() - mirror_since > 4:
+                    beside[0] = True
+                    shown = comp.dos.show_beside(pygame.display.get_wm_info().get('window'))
+                    print('compare: the original\'s picture could not be copied; DOSBox is shown beside this window:', shown, flush=True)
+                    status(font, screen, 'The original is in its own window beside this one (its picture could not be copied in).', (240, 190, 90))
             pygame.display.flip()
             clock.tick(30)
     finally:

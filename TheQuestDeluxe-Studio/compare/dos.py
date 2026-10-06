@@ -220,13 +220,37 @@ class Dos:
             return shot[3] if shot else None
         return None
 
-    def hide_away(self):
-        """Windows, when DOSBox cannot be locked into the compare window: its window goes off the screen (it is still drawn, and the compare window shows its picture)."""
-        if WINDOWS and self.proc is not None:
-            h = _win_find(self.proc.pid)
-            if h:
-                self.window = h
-                _api()[0].SetWindowPos(h, None, -3000, 0, 0, 0, 0x0001 | 0x0004 | 0x0010)    # SWP_NOSIZE | NOZORDER | NOACTIVATE
+    def tuck_behind(self, our_window, x_in_ours: int = 640, y_in_ours: int = 0) -> bool:
+        """Windows, when DOSBox cannot be locked into the compare window: it sits exactly behind the right half of ours (on the screen, never minimised or
+        off it, so it is still drawn and can be copied), and the compare window shows its picture there."""
+        if not WINDOWS or self.proc is None:
+            return False
+        h = _win_find(self.proc.pid)
+        if not h:
+            return False
+        self.window = h
+        u = _api()[0]
+        if u.IsIconic(h):
+            u.ShowWindow(h, 4)                                              # SW_SHOWNOACTIVATE: not minimised
+        rect = _win_rect(our_window)
+        if rect is None:
+            return False
+        u.SetWindowPos(h, our_window, rect[0] + x_in_ours, rect[1] + y_in_ours, 0, 0, 0x0001 | 0x0010)   # SWP_NOSIZE | NOACTIVATE, just below ours
+        return True
+
+    def show_beside(self, our_window) -> bool:
+        """Windows, when its picture cannot be copied in: DOSBox is put in front, to the right of ours, so the original can always be seen."""
+        if not WINDOWS or self.proc is None:
+            return False
+        h = _win_find(self.proc.pid)
+        rect = _win_rect(our_window)
+        if not h or rect is None:
+            return False
+        self.window = h
+        u = _api()[0]
+        u.ShowWindow(h, 9)                                                  # SW_RESTORE
+        u.SetWindowPos(h, None, rect[2] + 8, rect[1], 0, 0, 0x0001 | 0x0004 | 0x0040)   # SWP_NOSIZE | NOZORDER | SHOWWINDOW
+        return True
 
     def keep_embedded(self, x: int, y: int) -> bool:
         """Called now and then: DOSBox may make itself a new window when the game changes screen mode (a new window is a new top-level one, outside ours);
@@ -412,7 +436,7 @@ def _api():
         for lib, name, args, res in (
                 (u, 'EnumWindows', [proto, w.LPARAM], w.BOOL), (u, 'GetWindowThreadProcessId', [w.HWND, ctypes.POINTER(w.DWORD)], w.DWORD),
                 (u, 'IsWindowVisible', [w.HWND], w.BOOL), (u, 'GetWindowTextW', [w.HWND, w.LPWSTR, ctypes.c_int], ctypes.c_int),
-                (u, 'GetParent', [w.HWND], w.HWND), (u, 'IsIconic', [w.HWND], w.BOOL), (u, 'ShowWindow', [w.HWND, ctypes.c_int], w.BOOL), (u, 'SetForegroundWindow', [w.HWND], w.BOOL),
+                (u, 'GetParent', [w.HWND], w.HWND), (u, 'GetForegroundWindow', [], w.HWND), (u, 'AttachThreadInput', [w.DWORD, w.DWORD, w.BOOL], w.BOOL), (u, 'IsIconic', [w.HWND], w.BOOL), (u, 'ShowWindow', [w.HWND, ctypes.c_int], w.BOOL), (u, 'SetForegroundWindow', [w.HWND], w.BOOL),
                 (u, 'GetClientRect', [w.HWND, ctypes.POINTER(w.RECT)], w.BOOL), (u, 'GetDC', [w.HWND], w.HDC), (u, 'ReleaseDC', [w.HWND, w.HDC], ctypes.c_int),
                 (u, 'PrintWindow', [w.HWND, w.HDC, w.UINT], w.BOOL), (u, 'PostMessageW', [w.HWND, w.UINT, w.WPARAM, w.LPARAM], w.BOOL),
                 (u, 'SetWindowPos', [w.HWND, w.HWND, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, w.UINT], w.BOOL),
@@ -541,6 +565,38 @@ def _win_focus(h):
     u.SetForegroundWindow(h)
 
 
+def _win_rect(h):
+    """(left, top, right, bottom) of a window on the screen."""
+    import ctypes
+    from ctypes import wintypes
+    rect = wintypes.RECT()
+    u = _api()[0]
+    u.GetWindowRect.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.RECT)]
+    if not u.GetWindowRect(h, ctypes.byref(rect)):
+        return None
+    return rect.left, rect.top, rect.right, rect.bottom
+
+
+def bring_to_front(h):
+    """Windows: put a window in front and give it the keyboard. A program started by another one is often left behind it (Windows does not let a program take
+    the front just because it started); the topmost-then-not trick, and attaching to the input of the window that has the front, get past that."""
+    import ctypes
+    from ctypes import wintypes
+    u = _api()[0]
+    u.ShowWindow(h, 9)                                                      # SW_RESTORE
+    u.SetWindowPos(h, ctypes.c_void_p(-1), 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0040)      # HWND_TOPMOST, no move or size, shown
+    u.SetWindowPos(h, ctypes.c_void_p(-2), 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0040)      # then HWND_NOTOPMOST: it stays in front of the others
+    front = u.GetForegroundWindow()
+    k = ctypes.WinDLL('kernel32')
+    me, other = k.GetCurrentThreadId(), u.GetWindowThreadProcessId(front, None) if front else 0
+    if other and other != me:
+        u.AttachThreadInput(me, other, True)
+        u.SetForegroundWindow(h)
+        u.AttachThreadInput(me, other, False)
+    else:
+        u.SetForegroundWindow(h)
+
+
 def _win_capture(h):
     """(width, height, raw pixels, a 640 x 480 pygame surface) of the window's client area, or None. GDI copy of the window's own drawing."""
     import ctypes
@@ -571,7 +627,7 @@ def _win_capture(h):
         if how == 'blt':
             g.BitBlt(mdc, 0, 0, w, hh, hdc, 0, 0, 0x00CC0020)                 # SRCCOPY
         else:
-            u.PrintWindow(h, mdc, 1)                                          # PW_CLIENTONLY
+            u.PrintWindow(h, mdc, 3)                                          # PW_CLIENTONLY | PW_RENDERFULLCONTENT (works while it is behind another window)
         g.GetDIBits(mdc, bmp, 0, hh, buf, ctypes.byref(info), 0)
         return any(buf.raw[i] for i in range(0, w * hh * 4, 4099))            # not all black
     ok = grab('blt') or grab('print')
