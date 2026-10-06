@@ -52,10 +52,11 @@ line of our window and the report say what was left out.
 ## What it has found
 * The character sheet (C) closed only on Esc, C, Space or Enter in our game, but on **any key** in the original. Fixed here.
   (`TheQuestClassic/` has the same code and was left alone.)
-* **Closing the inventory takes a turn in the original** (the creatures move, the dice are rolled once); ours does not. Found by pressing `i` then
-  `Esc` (or `i` again), with or without gear. Not fixed yet.
-* **A worn armour's hatching** is drawn from the screen's corner by the original, so in the Body slot its pattern is one step out of phase with ours: a few
-  hundred pixels in that slot (the other worn things match to the pixel). Not fixed yet.
+* **Closing the inventory takes a turn in the original** (the creatures move), with or without gear; ours did not. Found by pressing `i` then `Esc`.
+  Fixed in this folder's engine (`engine/game.py`, `open_inventory`).
+* **A worn armour's hatching** is drawn from the screen's corner by the original, so in the Body slot its pattern was one step out of phase with ours (about
+  330 pixels). Fixed (`engine/hatch.py` draws a worn armour's hatching in the phase of the place it is drawn at); at most a few pixels remain where the shape's
+  edge is hatching or outline.
 * Small ones it reports and that are not fixed: the strip under the sheet (the skills line) is drawn one pixel wider by the original, and
   the original leaves a piece of the map frame on the right of the sheet. They show up as a few hundred pink pixels on those screens.
 

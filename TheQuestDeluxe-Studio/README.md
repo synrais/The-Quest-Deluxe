@@ -1,5 +1,7 @@
 # The Quest Deluxe and The Quest Studio
 
+**This folder is the main one**: the game, and The Quest Studio, the editor everyone uses to make quests (the older `TheQuestDeluxe/` editor is only kept for reference).
+
 The game and its editor in one folder, **standalone**: it needs nothing from the classic edition or from any other folder of this repository. It plays
 **quest packs**: folders of plain JSON, text and PNG files that hold a whole quest. `packs/TheQuest` is
 the original game, converted, and plays exactly like the faithful port. New quests, items, creatures,

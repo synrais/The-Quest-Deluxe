@@ -34,6 +34,7 @@ from .settings import fix_override
 from . import settings as settings_mod
 from .hands import attack_kind
 from . import anim
+from . import hatch
 from . import invshop
 from . import ui
 from . import view3d
@@ -116,7 +117,8 @@ class PageHost:
         it = (self.store if a == 2 else self.bag).get((i, ii), 0)
         img = self.game.renderer.sprites.bag.get(it) if it else None
         if img:
-            self.layer.blit(img, invshop.icon_pos(i, ii, a))
+            at = invshop.icon_pos(i, ii, a)
+            self.layer.blit(hatch.rehatch(img, (id(img), it), at), at)       # a worn armour's hatching is anchored to the screen
 
     def put3(self, it):
         """put3(): drop the item at the hero's square (or the nearest free one) and redraw it."""
@@ -822,7 +824,7 @@ class Game:
 
     def open_inventory(self, mode: int = 1, store=None):
         """inventory(mode): 1 from the i key, 2 as the shop's selling page. Afterwards
-        statusupdate(); 'b' on the selling page goes back to buying."""
+        statusupdate(); 'b' on the selling page goes back to buying. Closing the i page takes a turn, as in the original."""
         layer = self.page_layer()
         host = PageHost(self, layer, store or {})
 
@@ -830,6 +832,10 @@ class Game:
             rules.status_update(self.player, self.status, self.items)
             if mode == 2 and key == ord('b'):
                 self.open_shop()
+            if mode == 1:
+                # closing the inventory takes a turn in the original: the creatures move (found by comparing with the DOS game, docs/COMPARE.md)
+                self.end_turn()
+                self.events.run('after_action', 'key')
         self.overlay = ui.Page(self, layer, invshop.inventory(host, mode), done)
 
     def open_shop(self):

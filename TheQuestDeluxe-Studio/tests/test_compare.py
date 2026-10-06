@@ -136,12 +136,14 @@ def for_real():
     assert rolled > 10, f'the test saw only {rolled} dice rolls, so it did not test them'
     # the same on another level, with the hero somewhere else
     side_by_side(2, (10, 10), ['Right', 'Down', 'Down', 'Left', 'Up', 'Right', 'Right'], 'level 2')
-    # the same gear on both heroes (worn and in the bag, from the original's own items): the pictures and the dice stay equal, and the
-    # inventory shows it (closing it is not pressed: the original takes a turn then, ours does not: docs/COMPARE.md)
+    # the same gear on both heroes (worn and in the bag, from the original's own items): pictures and dice stay equal through the inventory,
+    # which shows it (and whose closing takes a turn, as in the original), and a worn armour's hatching is the original's phase (up to a few
+    # pixels where the shape's edge is hatching or outline: docs/COMPARE.md)
     from compare import loadout
     gear = dict(loadout.BUILT_IN['Fighter'], name='Fighter')
-    # (the original draws a worn armour's hatching from the screen's corner, ours from the picture's: a few hundred pixels in its slot)
-    side_by_side(1, (22, 10), ['Right', 'Right', 'i'], 'with gear', loadout=gear, known={2: 400})
+    side_by_side(1, (22, 10), ['Right', 'Right', 'i', 'Escape', 'Left', 'i', 'i', 'Right'], 'with gear', loadout=gear, known={2: 8, 5: 8})
+    for armour in (101, 107, 112, 114):
+        side_by_side(1, (22, 10), ['i', 'Escape'], f'armour {armour}', loadout={'name': 'one', 'worn': {'armor': armour}, 'bag': [armour, 1]}, known={0: 8})
     assert dos.manifest_ok() == []
     # the recording: the zip holds everything, and run again it comes out the same, to the pixel
     rec = record.read(zip_path)
