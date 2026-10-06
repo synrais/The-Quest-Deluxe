@@ -66,6 +66,43 @@ def default_pack() -> 'Pack':
     return _default
 
 
+def base_of(quest: dict, root: str) -> str | None:
+    """The pack whose pictures a pack falls back on (quest.json `"base": "TheQuest"`): a pack then holds only the pictures it adds
+    or changes, and everything else it shows comes from the base. None: the pack is complete on its own."""
+    name = (quest or {}).get('base')
+    if not name:
+        return None
+    path = os.path.join(PACKS_DIR, name)
+    return path if os.path.isdir(path) and os.path.abspath(path) != os.path.abspath(root) else None
+
+
+def sprite_find(root: str, base: str | None, *parts) -> str | None:
+    """A picture's file: the pack's own, else the base's. An empty own file means "no picture here" (it hides the base's)."""
+    own = os.path.join(root, 'sprites', *parts)
+    if os.path.exists(own):
+        return own if os.path.getsize(own) else None
+    if base:
+        found = os.path.join(base, 'sprites', *parts)
+        if os.path.exists(found):
+            return found
+    return None
+
+
+def sprite_files(root: str, base: str | None, folder: str) -> dict:
+    """{file name: path} of a picture folder: the base's pictures, then the pack's own over them (empty ones take a name away)."""
+    out = {}
+    for top in ([base] if base else []) + [root]:
+        d = os.path.join(top, 'sprites', folder)
+        if os.path.isdir(d):
+            for f in sorted(os.listdir(d)):
+                path = os.path.join(d, f)
+                if os.path.getsize(path):
+                    out[f] = path
+                else:
+                    out.pop(f, None)
+    return out
+
+
 def _load_json(path: str):
     with open(path, encoding='utf-8') as fh:
         return json.load(fh)
@@ -77,6 +114,7 @@ class Pack:
     def __init__(self, root: str | None = None):
         self.root = os.path.abspath(root or pack_path())
         self.quest = _load_json(self.path('quest.json'))
+        self.base = base_of(self.quest, self.root)       # the pack its pictures fall back on, if any
         self.items = {r['id']: r for r in _load_json(self.path('items.json'))['items']}
         self.spells = {r['id']: r for r in _load_json(self.path('spells.json'))['spells']}
         self.creatures = {r['id']: r for r in _load_json(self.path('creatures.json'))['creatures']}
@@ -114,8 +152,13 @@ class Pack:
     def script_path(self, level: int) -> str:
         return self.path('levels', 'common.qs') if level == 0 else self.path('levels', str(level), 'script.qs')
 
-    def sprite_dir(self, kind: str) -> str:
-        return self.path('sprites', kind)
+    def sprite(self, *parts) -> str | None:
+        """The file of a picture (sprites/<parts>): this pack's own, else the base's; None if there is none."""
+        return sprite_find(self.root, self.base, *parts)
+
+    def sprite_files(self, kind: str) -> dict:
+        """{file name: path} of the pictures in sprites/<kind>, the base's included."""
+        return sprite_files(self.root, self.base, kind)
 
     # ── items ───────────────────────────────────────────────────────────────
     def item(self, v: int) -> dict:

@@ -27,6 +27,9 @@ class _Pack:
     def path(self, *parts):
         return self.project.path(*parts)
 
+    def sprite(self, *parts):
+        return self.project.sprite_file(*parts)
+
     def item(self, v):
         return next((r for r in self.project.tables['items'] if r['id'] == v), {})
 

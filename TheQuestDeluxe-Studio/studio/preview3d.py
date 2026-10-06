@@ -20,8 +20,8 @@ def project_scene(project, level: int) -> view3d.Scene:
     """A Scene over the editor's copy of a level (pictures not yet saved included)."""
     grid = project.grid(level)
     pictures = {}
-    gold_path = project.path('sprites', 'gold.png')
-    gold = pygame.image.load(gold_path) if os.path.exists(gold_path) else None
+    gold_path = project.sprite_file('gold.png')
+    gold = pygame.image.load(gold_path) if gold_path else None
 
     def picture(kind, v):
         if kind == 'gold':

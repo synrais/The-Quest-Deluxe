@@ -33,7 +33,7 @@ def valid_name(name: str, folder: str | None = None) -> str | None:
 
 
 def create(name: str, folder: str | None = None, template: str | None = None) -> str:
-    """Make Custom Maps/<name>: a full copy of the locked game (its 7 levels, creatures, items, pictures ...). Returns its
+    """Make Custom Maps/<name>: a copy of the locked game (its 7 levels, creatures, items ...) that takes its pictures from it. Returns its
     folder."""
     name = name.strip()
     problem = valid_name(name, folder)
@@ -57,3 +57,31 @@ def is_locked(path: str) -> bool:
 
 def packs() -> list[str]:
     return custom_packs()
+
+
+def slim(folder: str, base: str | None = None) -> tuple:
+    """Make a complete pack hold only its own pictures: every picture that is byte for byte the locked game's is deleted from the
+    pack, and quest.json says `"base": "TheQuest"` so the game and the Studio take those from the locked game. Nothing else is
+    touched, and what the pack changed or added stays. Returns (pictures kept, pictures removed)."""
+    import filecmp
+    base = base or DEFAULT_PACK
+    path = os.path.join(folder, 'quest.json')
+    quest = packio.read_json(path)
+    kept = removed = 0
+    sprites = os.path.join(folder, 'sprites')
+    for here, _, files in os.walk(sprites):
+        for f in files:
+            own = os.path.join(here, f)
+            theirs = os.path.join(base, os.path.relpath(own, folder))
+            if os.path.exists(theirs) and os.path.getsize(own) and filecmp.cmp(own, theirs, shallow=False):
+                os.remove(own)
+                removed += 1
+            else:
+                kept += 1
+    if quest.get('base') != os.path.basename(base):
+        quest['base'] = os.path.basename(base)
+        packio.write_json(path, quest)
+    for here, dirs, files in os.walk(sprites, topdown=False):         # no empty folders left behind
+        if not os.listdir(here) and here != sprites:
+            os.rmdir(here)
+    return kept, removed

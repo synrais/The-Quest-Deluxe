@@ -64,9 +64,8 @@ class History:
             rel = f'{scope[1]}/{scope[2]}.png'
             if rel in p.pictures:
                 return p.pictures[rel]
-            import os
-            path = p.path('sprites', scope[1], f'{scope[2]}.png')
-            if os.path.exists(path):
+            path = p.sprite_file(scope[1], f'{scope[2]}.png')
+            if path:
                 with open(path, 'rb') as fh:
                     return fh.read()
             return None

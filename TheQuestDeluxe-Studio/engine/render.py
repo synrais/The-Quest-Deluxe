@@ -43,22 +43,22 @@ class Sprites:
         self._worn_auto: dict[int, object] = {}
         self.gold = None
         for kind, folder in SPRITE_DIRS.items():
-            for n, path in self._pngs(pack.sprite_dir(folder)):
+            for n, path in self._pngs(pack.sprite_files(folder)):
                 self.images[(kind, int(n))] = pygame.image.load(path).convert_alpha()
-        for n, path in self._pngs(pack.sprite_dir('heroes')):
+        for n, path in self._pngs(pack.sprite_files('heroes')):
             self.hero[n] = pygame.image.load(path).convert_alpha()
-        for n, path in self._pngs(pack.sprite_dir('bag')):
+        for n, path in self._pngs(pack.sprite_files('bag')):
             self.bag[int(n)] = pygame.image.load(path).convert()
-        gold = pack.path('sprites', 'gold.png')
-        if os.path.exists(gold):
+        gold = pack.sprite('gold.png')
+        if gold:
             self.gold = pygame.image.load(gold).convert_alpha()
 
     @staticmethod
-    def _pngs(folder):
-        if os.path.isdir(folder):
-            for f in sorted(os.listdir(folder)):
-                if f.lower().endswith('.png'):
-                    yield f[:-4], os.path.join(folder, f)
+    def _pngs(files):
+        """(name, path) of each .png of {file name: path} (Pack.sprite_files)."""
+        for f, path in sorted(files.items()):
+            if f.lower().endswith('.png'):
+                yield f[:-4], path
 
     def get(self, kind: str, n: int):
         return self.images.get((kind, n))
@@ -259,7 +259,7 @@ class Renderer:
             behind, front = self.gear_layers(game, colour)
             for layer in behind:
                 scr.blit(layer, (hx, hy))
-            scr.blit(worn.base_hero(colour, self.pack.path('sprites', 'hero_base.png')), (hx, hy))
+            scr.blit(worn.base_hero(colour, self.pack.sprite('hero_base.png')), (hx, hy))
             for layer in front:
                 if layer is not None:
                     scr.blit(layer, (hx, hy))

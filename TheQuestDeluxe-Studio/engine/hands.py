@@ -67,8 +67,8 @@ class Hands:
         """The weapon upright, grip at the bottom, at 1x (None: no picture)."""
         if item not in self._pictures:
             pic = None
-            own = self.pack.path('sprites', 'hands', f'{item}.png')
-            if os.path.exists(own):
+            own = self.pack.sprite('hands', f'{item}.png')
+            if own:
                 pic = pygame.image.load(own).convert_alpha()
             elif item in self.sprites.bag:
                 pic = cut_out(self.sprites.bag[item])

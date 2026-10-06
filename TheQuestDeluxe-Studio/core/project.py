@@ -9,7 +9,7 @@ import re
 import shutil
 
 from engine import packio
-from engine.pack import PACKS_DIR
+from engine.pack import PACKS_DIR, base_of, sprite_files, sprite_find
 
 TABLES = {'items': 'items.json', 'creatures': 'creatures.json', 'spells': 'spells.json',
           'classes': 'classes.json', 'skills': 'skills.json'}
@@ -127,9 +127,17 @@ class Project:
     SPRITE_DIRS = {'floor': 'floors', 'wall': 'walls', 'deco': 'decos', 'item': 'items', 'mon': 'creatures',
                    'bag': 'bag', 'spell': 'spells'}
 
+    @property
+    def base(self) -> str | None:
+        """The pack its pictures fall back on (quest.json `base`), or None: this pack holds all its own."""
+        return base_of(self.quest, self.root)
+
+    def sprite_file(self, *parts) -> str | None:
+        """A picture's file under sprites/: this pack's own, else the base's."""
+        return sprite_find(self.root, self.base, *parts)
+
     def sprite(self, layer: str, v: int) -> str | None:
-        p = self.path('sprites', self.SPRITE_DIRS[layer], f'{v}.png')
-        return p if os.path.exists(p) else None
+        return self.sprite_file(self.SPRITE_DIRS[layer], f'{v}.png')
 
     # ── pictures (kept here until saved) ────────────────────────────────────
     def picture(self, folder: str, v: int):
@@ -139,15 +147,13 @@ class Project:
         if rel in self.pictures:
             data = self.pictures[rel]
             return None if data is None else pygame.image.load(io.BytesIO(data), 'x.png')
-        p = self.path('sprites', folder, f'{v}.png')
-        return pygame.image.load(p) if os.path.exists(p) else None
+        p = self.sprite_file(folder, f'{v}.png')
+        return pygame.image.load(p) if p else None
 
     def picture_ids(self, folder: str) -> list[int]:
         """The numbers of the pictures in a sprite folder, those still to be saved included, those deleted not."""
         ids = set()
-        d = self.path('sprites', folder)
-        if os.path.isdir(d):
-            ids |= {int(n[:-4]) for n in os.listdir(d) if n.endswith('.png') and n[:-4].lstrip('-').isdigit()}
+        ids |= {int(n[:-4]) for n in sprite_files(self.root, self.base, folder) if n.endswith('.png') and n[:-4].lstrip('-').isdigit()}
         for rel, data in self.pictures.items():
             head, _, name = rel.partition('/')
             if head == folder and name.endswith('.png') and name[:-4].lstrip('-').isdigit():
@@ -302,7 +308,10 @@ class Project:
                 for rel, data in self.pictures.items():
                     p = self.path('sprites', *rel.split('/'))
                     if data is None:
-                        if os.path.exists(p):
+                        if self.base and os.path.exists(os.path.join(self.base, 'sprites', *rel.split('/'))):
+                            os.makedirs(os.path.dirname(p), exist_ok=True)       # the base has it: an empty file hides it here
+                            open(p, 'wb').close()
+                        elif os.path.exists(p):
                             os.remove(p)
                     else:
                         os.makedirs(os.path.dirname(p), exist_ok=True)
@@ -323,10 +332,13 @@ class Project:
         says otherwise (the Quest tab unticks them)."""
         if os.path.exists(dest):
             raise FileExistsError(dest)
-        shutil.copytree(template, dest)
+        shipped = os.path.abspath(template) == os.path.abspath(PACKS_DIR + os.sep + 'TheQuest')
+        shutil.copytree(template, dest, ignore=shutil.ignore_patterns('sprites') if shipped else None)
         q = packio.read_json(os.path.join(dest, 'quest.json'))
-        if 'fixes' not in q:
-            q['fixes'] = True
+        if shipped:
+            q['base'] = 'TheQuest'                      # a new pack holds only its own pictures: the rest come from the locked game
+        if 'fixes' not in q or shipped:
+            q.setdefault('fixes', True)
             packio.write_json(os.path.join(dest, 'quest.json'), q)
         if blank:
             for f in os.listdir(os.path.join(dest, 'levels')):

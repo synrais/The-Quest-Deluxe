@@ -38,8 +38,7 @@ class Art:
         key = (layer, v)
         if key not in self._src:
             if layer == 'gold':
-                p = self.project.path('sprites', 'gold.png')
-                p = p if os.path.exists(p) else None
+                p = self.project.sprite_file('gold.png')
                 self._src[key] = pygame.image.load(p) if p else None
             else:
                 self._src[key] = self.project.picture(self.project.SPRITE_DIRS[layer], v)

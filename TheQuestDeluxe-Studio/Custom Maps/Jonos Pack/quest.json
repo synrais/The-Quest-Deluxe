@@ -36,5 +36,6 @@
    "why": "item 311, a shield with no stats, picture or price"
   }
  ],
- "fixes": true
+ "fixes": true,
+ "base": "TheQuest"
 }

@@ -45,8 +45,7 @@ def ega_index(rgb) -> int | None:
 class Face:
     def __init__(self, pack, sprites):
         self.pack, self.sprites = pack, sprites
-        own = pack.path('sprites', 'bust.png')
-        path = own if os.path.exists(own) else os.path.join(os.path.dirname(__file__), 'assets', 'bust.png')
+        path = pack.sprite('bust.png') or os.path.join(os.path.dirname(__file__), 'assets', 'bust.png')
         self.picture = pygame.image.load(path).convert_alpha()
         self._amulets: dict[int, int] = {}
         self._cache_key, self._cache = None, None

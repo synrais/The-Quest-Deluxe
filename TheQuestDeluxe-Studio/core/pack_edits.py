@@ -68,6 +68,15 @@ def scan(folder: str) -> dict:
     return out
 
 
+def layered(folder: str) -> bool:
+    """Does the pack fall back on another pack's pictures (quest.json `base`)?"""
+    try:
+        with open(os.path.join(folder, 'quest.json'), encoding='utf-8') as fh:
+            return bool(json.load(fh).get('base'))
+    except (OSError, ValueError):
+        return False
+
+
 def read_tables(folder: str) -> dict:
     out = {}
     for name in TABLES:
@@ -219,6 +228,8 @@ def gather(deluxe: str = DELUXE, include_all: bool = False, when: float | None =
         now = scan(folder)
         if (name == SHIPPED or group == CUSTOM) and base is not None and not include_all:
             added, changed, removed = compare(now, base)
+            if layered(folder):                                 # it holds only its own pictures: the ones it lacks are the base's
+                removed = [f for f in removed if not f.startswith('sprites/')]
             lines.append(f'{group}/{name} ({"a copy of the shipped pack" if group == CUSTOM else "the shipped pack"}): '
                          f'{len(added)} new, {len(changed)} changed, {len(removed)} removed files')
             for label, listed in (('new', added), ('changed', changed), ('removed', removed)):

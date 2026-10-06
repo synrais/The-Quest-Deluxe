@@ -47,7 +47,7 @@ The original's keys all work as in [the classic edition](../TheQuestClassic/READ
 | `studio/` | The Quest Studio (tkinter): its pages are in `studio/pages/`. |
 | `core/` | What the Studio works on, with no windows: the pack loader (`project.py`), Custom Maps, the descriptions of every field (`fields/`), events and stories, and "Send my edits" (`pack_edits.py`, `side_save.py`, `send_edits.py`). |
 | `packs/TheQuest/` | The original quest as a pack: the first 7 levels, **locked**. The game plays it, and the editor never opens it. |
-| `Custom Maps/` | The packs made in the editor, a folder each (made the first time the editor runs). Every one starts as a copy of `packs/TheQuest`, and everything changed in the editor (levels, stats, pictures) stays in its own folder. On the game's title and load screens, **P** switches between The Quest and these packs; each pack has its own saves. |
+| `Custom Maps/` | The packs made in the editor, a folder each (made the first time the editor runs). Every one starts as a copy of `packs/TheQuest`'s levels and tables, and takes its pictures from it (`"base": "TheQuest"` in `quest.json`), so a pack's own folder holds only what was changed or added: levels, stats, pictures. The locked game itself is never edited. To use something from another pack, use **Merge** in the Studio. On the game's title and load screens, **P** switches between The Quest and these packs; each pack has its own saves. |
 | `docs/QUEST_PACKS.md` | Every file of a pack, and every field. |
 | `docs/COMPARE.md` | Compare to The Quest DOS: your game and the original in DOSBox side by side on the same keys. |
 | `docs/STUDIO.md` | The Quest Studio: its pages, the level and quest wizards, the fight check and the Quest Doctor. |
