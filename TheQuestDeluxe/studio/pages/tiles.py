@@ -29,6 +29,7 @@ GROUPS = {
 
 class TilesPage(TablePage):
     key = 'tiles'
+    intro = 'Floors, walls, doors and decorations: what the maps are made of. Paint a new one, say what it does (blocks, hurts, heals), then paint with it on the World page.'
     title = 'Tiles'
     icon = 'tiles'
     table = 'floors'

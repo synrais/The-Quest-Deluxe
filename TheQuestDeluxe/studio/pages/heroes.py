@@ -26,6 +26,7 @@ def _surface(project, row, size):
 
 class HeroesPage(TablePage):
     key = 'heroes'
+    intro = 'These are the classes a player can be. Change what each starts with and how it grows, or make a new one.'
     title = 'Heroes'
     icon = 'helmet'
     table = 'classes'

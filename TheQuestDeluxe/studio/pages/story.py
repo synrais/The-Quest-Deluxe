@@ -27,6 +27,7 @@ def make_text(parent, height=10, width=60):
 
 class StoryPage(Page):
     key = 'story'
+    intro = 'Story pages are shown before levels, when a game starts and when it ends. "What people say" is what each person tells the hero. The preview is the page as the game shows it.'
     title = 'Story & talk'
     icon = 'book'
 

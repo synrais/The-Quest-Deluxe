@@ -32,6 +32,7 @@ HANDLERS = {
 
 class EventsPage(Page):
     key = 'events'
+    intro = 'Events are the small scripts that make things happen: a door that opens, a villager who asks for something. The wizard writes them for you, and you can type them too. Check finds mistakes.'
     title = 'Events'
     icon = 'bolt'
 

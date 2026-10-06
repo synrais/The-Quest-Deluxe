@@ -1,10 +1,12 @@
 """What every page of the Studio is: built on first show, told when it is shown, hidden or the pack changed."""
 from __future__ import annotations
 
+import tkinter as tk
 from tkinter import ttk
 
-from .. import theme, ui
-from ..theme import px
+from .. import icons, theme, ui
+from ..model import save_settings
+from ..theme import C, px
 
 
 class Page(ttk.Frame):
@@ -12,6 +14,7 @@ class Page(ttk.Frame):
     title = 'Page'
     icon = 'home'
     blurb = ''
+    intro = ''                        # a few words the first time the page is opened (a bar that can be put away)
     section = 'make'                  # where the sidebar lists it
 
     def __init__(self, master, app):
@@ -30,7 +33,31 @@ class Page(ttk.Frame):
             self.built = True
             self.build()
         self.visible = True
+        self._show_intro()
         self.on_show(**where)
+
+    def _show_intro(self):
+        seen = self.app.settings.setdefault('seen', [])
+        if not self.intro or self.key in seen or getattr(self, '_intro_bar', None) is not None:
+            return
+        bar = tk.Frame(self, bg=C['raised'], highlightthickness=1, highlightbackground=C['accent'])
+        tk.Label(bar, image=icons.icon('info', C['accent'], px(18)), bg=C['raised']).pack(side='left', padx=(px(12), px(8)), pady=px(8))
+        tk.Label(bar, text=self.intro, bg=C['raised'], fg=C['text'], anchor='w', justify='left', wraplength=px(900)).pack(
+            side='left', fill='x', expand=True, pady=px(6))
+        ttk.Button(bar, text='Got it', style='Small.TButton', command=self._put_away_intro).pack(side='right', padx=px(12))
+        kids = self.pack_slaves()
+        bar.pack(side='top', fill='x', padx=px(10), pady=(px(8), 0), **({'before': kids[0]} if kids else {}))
+        self._intro_bar = bar
+
+    def _put_away_intro(self):
+        bar = getattr(self, '_intro_bar', None)
+        if bar is not None:
+            bar.destroy()
+        self._intro_bar = None
+        seen = self.app.settings.setdefault('seen', [])
+        if self.key not in seen:
+            seen.append(self.key)
+            save_settings(self.app.settings)
 
     def hide(self):
         self.visible = False

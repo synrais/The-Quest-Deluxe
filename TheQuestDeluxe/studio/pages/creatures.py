@@ -29,6 +29,7 @@ ROLE_TITLE = {'mon': 'Monsters', 'person': 'People', 'ally': 'Summoned allies'}
 
 class CreaturesPage(TablePage):
     key = 'creatures'
+    intro = 'Pick a creature, or press New to make one. The Fight check shows how it fares against your hero, and Balance makes it a fair fight. Paint it a picture of its own, then put it on a map from the World page.'
     title = 'Creatures'
     icon = 'skull'
     table = 'creatures'

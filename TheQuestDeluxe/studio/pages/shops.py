@@ -22,6 +22,7 @@ def text_of(items: list) -> str:
 
 class ShopsPage(Page):
     key = 'shops'
+    intro = 'A shop sells up to 40 things, four to a shelf. Click things on the right to put them on the shelves, and drag them to move them. A shop goes on a map with the Shop tool on the World page.'
     title = 'Shops'
     icon = 'coin'
 

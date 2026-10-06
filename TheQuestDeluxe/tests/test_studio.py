@@ -748,6 +748,18 @@ check('no errors were reported', not errors, str(errors[:1]))
 done('items, spells, heroes, tiles, shops, stories, talk, events, mods, settings, the palette, the light theme' + ': ok')
 
 
+# ── the tip each page shows the first time ──
+app.go('mods'); pump(10)
+check('a page shows its tip the first time', app.pages['mods']._intro_bar is not None and 'mods' not in app.settings.get('seen', []))
+app.pages['mods']._put_away_intro(); pump(5)
+check('putting a tip away is remembered', 'mods' in app.settings['seen'] and app.pages['mods']._intro_bar is None)
+app.go('doctor'); pump(5); app.go('mods'); pump(5)
+check('and it does not come back by itself', app.pages['mods']._intro_bar is None)
+app.tips_again(); pump(10)
+check('the tips come back on request', app.settings['seen'] == [] and app.pages['mods']._intro_bar is not None)
+app.pages['mods']._put_away_intro(); app.go('world'); pump(10)
+
+
 # ── quests: making one, switching, the locked game, playing ──
 import editor.custom as custom  # noqa: E402
 import engine.pack as enginepack  # noqa: E402

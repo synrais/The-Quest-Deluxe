@@ -25,6 +25,7 @@ ORIGINAL_POTIONS = {1: 'Minor Health', 2: 'Full Health', 3: 'Minor Mana', 4: 'Fu
 
 class SettingsPage(Page):
     key = 'settings'
+    intro = "The quest's title and author, how the hero starts and the rules of the game. Everything saves by itself."
     title = 'Settings'
     icon = 'scroll'
 

@@ -14,6 +14,7 @@ SEV = {'error': ('Must fix', 'bad', 'warn'), 'warn': ('Probably a mistake', 'war
 
 class DoctorPage(Page):
     key = 'doctor'
+    intro = 'The Quest Doctor reads the whole quest and lists what would go wrong when it is played. Show me takes you to the place, and Fix does what it can. Ignore keeps one quiet.'
     title = 'Quest Doctor'
     icon = 'check'
 

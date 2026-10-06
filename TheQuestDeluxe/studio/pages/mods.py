@@ -18,6 +18,7 @@ INTRO = ('What The Quest Deluxe adds to the original, one by one. Switch one off
 
 class ModsPage(Page):
     key = 'mods'
+    intro = 'Everything The Quest Deluxe adds to the original, one by one. Switch one off and this quest plays as if it never used it.'
     title = 'Mods'
     icon = 'gear'
 

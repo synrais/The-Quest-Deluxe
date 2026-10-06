@@ -34,6 +34,7 @@ NEW_KINDS = [('weapon', 'Weapon', 'A sword, club or staff for the hero\'s hand.'
 
 class ItemsPage(TablePage):
     key = 'items'
+    intro = 'Pick an item, or press New to make a weapon, armour, a potion or ammunition. For things a hero wears, drag the item on the hero picture to put it where it belongs.'
     title = 'Items'
     icon = 'sword'
     table = 'items'

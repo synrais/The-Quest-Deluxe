@@ -19,6 +19,7 @@ KIND_ICONS = {'A bolt': 'bolt', 'Frost': 'water', 'Shadow clones': 'people', 'Di
 
 class SpellsPage(TablePage):
     key = 'spells'
+    intro = 'Pick a spell, or press New. A spell has a picture, a cost in mana and an effect, and the effect decides which of the other fields matter.'
     title = 'Spells'
     icon = 'wand'
     table = 'spells'

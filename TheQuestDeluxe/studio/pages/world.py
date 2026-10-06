@@ -36,6 +36,7 @@ HINTS = {'brush': 'Click or drag to paint · right-click picks what is under the
 
 class WorldPage(Page):
     key = 'world'
+    intro = 'Pick a level on the left, then paint on the map: the left button paints, the right button picks up what is under the pointer. Start, exits and shops are in the Places tab. Everything saves by itself, and Ctrl+Z undoes it.'
     title = 'World'
     icon = 'map'
 

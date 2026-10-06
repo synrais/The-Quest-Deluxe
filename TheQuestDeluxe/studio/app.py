@@ -400,6 +400,7 @@ class Studio:
         m.add_command(label='Switch to the ' + ('light' if theme.name() == 'dark' else 'dark') + ' theme',
                       command=self.toggle_theme)
         m.add_command(label='Shortcuts and help', command=self.help)
+        m.add_command(label='Show the page tips again', command=self.tips_again)
         m.add_separator()
         m.add_command(label='Quit', command=self.quit)
         b = self._menu_btn
@@ -410,6 +411,18 @@ class Studio:
         path = choose_pack(self.root, self.settings.get('last'), force=True)
         if path:
             self.open(path)
+
+    def tips_again(self):
+        self.settings['seen'] = []
+        save_settings(self.settings)
+        for page in self.pages.values():
+            bar = getattr(page, '_intro_bar', None)
+            if bar is not None:
+                bar.destroy()
+            page._intro_bar = None
+        self.say('The tips will show again the next time you open each page.', 'ok')
+        if self.current:
+            self.go(self.current)
 
     def toggle_theme(self):
         self.settings['theme'] = 'light' if theme.name() == 'dark' else 'dark'
