@@ -107,6 +107,11 @@ class Studio:
             ui.inform(self.root, 'Locked', 'The first 7 levels of The Quest are locked: they are never edited.\n\n'
                       'Make a quest of your own (it starts as a copy of them, in Custom Maps).')
             return
+        try:                                                       # an old pack, or one with files missing, is mended before it is read
+            from . import upgrade
+            upgrade.upgrade(path)
+        except OSError:
+            pass
         self.session = Session(self.root, path)
         self.session.on_status = self._status_changed
         self.settings['last'] = path
@@ -172,6 +177,9 @@ class Studio:
         self.doctor_btn = ui.button(right, 'Check', lambda: self.go('doctor'), 'check', 'Flat.TButton',
                                     'The Quest Doctor: what is missing or broken')
         self.doctor_btn.pack(side='right', padx=px(6))
+        self.merge_btn = ui.button(right, 'Merge', self.merge_quest, 'copy', 'Flat.TButton',
+                                   'Bring things from another quest into this one: creatures, items, levels ...')
+        self.merge_btn.pack(side='right', padx=px(2))
         self.compare_btn = ui.button(right, 'Compare to DOS', self.compare_dos, 'chart', 'Flat.TButton',
                                      "Run your game beside the original DOS game, with the same keys, to find what is different")
         self.compare_btn.pack(side='right', padx=px(6))
@@ -180,8 +188,8 @@ class Studio:
         self.redo_btn.pack(side='right')
         self.undo_btn = ui.button(right, '', lambda: self._undo(False), 'undo', 'Tool.TButton')
         self.undo_btn.pack(side='right')
-        search = ttk.Button(r, text='  Search or jump to anything…   Ctrl+K', style='TButton', command=self.palette,
-                            image=icons.icon('search', C['dim'], px(14)), compound='left', width=34)
+        search = ttk.Button(r, text='  Search…   Ctrl+K', style='TButton', command=self.palette,
+                            image=icons.icon('search', C['dim'], px(14)), compound='left', width=26)
         search.pack(side='left', padx=px(24), fill='x')
         menu = ui.button(r, '', self._main_menu, 'gear', 'Tool.TButton', 'Menu: packs, saving, theme')
         menu.pack(side='right', padx=px(6))
@@ -398,6 +406,8 @@ class Studio:
         m.add_command(label='Quests…', command=lambda: self._switch())
         m.add_command(label='New quest…', command=self.new_pack)
         m.add_separator()
+        m.add_command(label='Merge another quest into this one…', command=self.merge_quest)
+        m.add_command(label='Import a quest from a folder or zip…', command=self.import_quest)
         m.add_command(label='Compare to The Quest DOS…', command=self.compare_dos)
         m.add_command(label='Send my edits…', command=self.send_edits)
         m.add_command(label='Restore my saved edits…', command=self.restore_edits)
@@ -437,6 +447,33 @@ class Studio:
         keep = self.current
         self._build_shell()
         self.go(keep or 'home')
+
+    def merge_quest(self):
+        from .mergewizard import open_merge
+        open_merge(self)
+
+    def import_quest(self):
+        """Copy a quest folder or zip (an old one, or from another person) into Custom Maps, mend the copy and open it."""
+        from tkinter import filedialog
+        from editor import custom
+        from . import upgrade
+        path = filedialog.askopenfilename(parent=self.root, title='A quest zip to import (Cancel to pick a folder instead)',
+                                          filetypes=[('Zip of a quest', '*.zip'), ('All files', '*.*')])
+        if not path:
+            path = filedialog.askdirectory(parent=self.root, title='A quest folder to import')
+        if not path:
+            return
+        try:
+            dest, notes = upgrade.import_pack(path, custom.CUSTOM_DIR)
+        except Exception as e:                                                  # noqa: BLE001 - say what is wrong with it
+            ui.inform(self.root, 'Import', f'That could not be read as a quest: {e}')
+            return
+        self.open(dest)
+        if notes:
+            ui.inform(self.root, 'Imported', 'It is now in Custom Maps (the original is untouched). It was not complete, so it was mended:\n\n'
+                      + '\n'.join(notes[:10]))
+        else:
+            self.say('Imported into Custom Maps.', 'ok')
 
     def compare_dos(self):
         from .comparedos import open_compare

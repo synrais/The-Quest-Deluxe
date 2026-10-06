@@ -872,6 +872,40 @@ check('the game started on level 2', alive and '--level 2' in log and '--at 10,1
 done('quests: a new blank one, the wizard into it, switching back, the locked game refused, the game started from the quest: ok')
 
 
+# ── Merge: the window, driven from the first page to the last ──
+from studio import mergewizard  # noqa: E402
+check('the top bar has a Merge button', hasattr(app, 'merge_btn'))
+other = custom.pack_dir('MergeSource')
+import shutil as _sh  # noqa: E402
+_sh.copytree(os.path.join(ROOT, 'packs', 'TheQuest'), other)
+app.open(welcome.make_quest('MergeInto', True)); pump(30)
+S = app.session
+levels_before = S.levels
+
+
+def merge_window(d):
+    check('the Merge window starts on the choice of quest', d.step == 0 and d.src is None)
+    d._source('MergeSource'); pump(5)
+    check('picking a quest reads it', d.src is not None and d.src.levels == 7)
+    d.forward(); pump(5)
+    check('the next page lists what can come over', d.step == 1 and 'creatures' in d.vars and 'levels' in d.vars)
+    d.vars['creatures'].set(True); d.plan.choose('creatures', True)
+    d.vars['levels'].set(True); d.plan.choose('levels', True)
+    d.level_vars[2].set(False); d.level_vars[3].set(False); d._levels_changed()
+    check('levels can be chosen one by one', 2 not in d.plan.level_picks and 1 in d.plan.level_picks)
+    d.forward(); pump(5)
+    check('the review page shows the notes', d.step == 2 and d.warn_box.body.winfo_children())
+    d.go_btn.invoke()                       # Merge (nothing of mine is lost, so no question)
+    pump(5)
+
+
+dialog_later(merge_window, tries=120)
+app.merge_quest(); pump(30)
+check('the merge added the chosen levels', S.levels == levels_before + 5, f'{S.levels} {levels_before}')
+app._undo(False); pump(10)
+check('and one Undo takes them away', S.levels == levels_before)
+
+
 # ── the quest wizard: a whole quest, level after level ──
 from studio import questwizard, worldgen  # noqa: E402
 from studio import storytext  # noqa: E402

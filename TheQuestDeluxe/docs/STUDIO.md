@@ -62,6 +62,20 @@ quest gets them as levels 1, 2, 3 ...; any other quest gets them after its last 
 Creatures and wares get tougher and dearer from one level to the next, and a level's exit leads on to the next. It is one
 Undo, and everything it makes is ordinary levels, creatures and stories to change. **New quest** offers it as the way to start.
 
+### Merge, Import and Compare
+* **Merge** (top bar, gear menu, Ctrl+K) brings things from another quest into the open one, in three steps: pick the quest (one of
+  yours, The Quest, or a folder or zip from anywhere), tick what to bring (creatures, items, spells, hero classes, skills, floors, walls,
+  decorations, any of its levels one by one, story pages, the everyday chatter, the quest settings), then look it over. Each thing is
+  *new* (its number is free), *the same* (nothing to do) or a *clash* (your pack has something different under that number): a clash
+  can be brought under a free number (every place it is used in what you bring follows it, in maps, shops, loot, class bags and
+  summons), replace yours, or be left behind. The notes say what would be lost or changed, with an example ("Creature 1 \"Imp\" is
+  replaced by \"Dragonling\"; it is used in level 1 map: 103 squares"). Levels go after your last one, with their shops, stories,
+  what people say there, and exit links renumbered. It is one Undo, and your settings are only changed if you say so.
+* **Import a quest from a folder or zip** (gear menu) copies it into Custom Maps (the original is never touched), mends it and opens it.
+  Opening any old pack mends it first: files it lacks (skills, tiles, texts, fonts, level maps and scripts) are put in from The Quest and
+  its level count is made to agree with its folders; what was done is said.
+* **Compare to DOS** runs your game beside the original: [COMPARE.md](COMPARE.md).
+
 ### Creatures, Items, Spells, Heroes, Tiles
 A gallery of pictures on the left, the chosen one on the right: its picture (Paint, Import), its name, **Put on a map**
 (the World page with this one ready to paint with) and every field in groups that open and close. Sliders are for numbers worth dragging. **New** asks what kind it is:
@@ -125,7 +139,7 @@ G D W S I choose the tools.
 * The Studio reads every field of items, creatures, spells and classes from the old editor's descriptions
   (`editor/*_tab.py`), so the two can never disagree about what a field is. Everything it writes is the same pack format
   ([QUEST_PACKS.md](QUEST_PACKS.md)); a level's name is a `TITLE` line in its script, which the game ignores.
-* `studio/worldgen.py` is the level generator (and plans a whole quest: `quest_params`), `studio/questwizard.py` and
+* `studio/merge.py` (merging) and `studio/upgrade.py` (mending old packs) have no windows and are tested by `tests/test_merge.py`; `studio/worldgen.py` is the level generator (and plans a whole quest: `quest_params`), `studio/questwizard.py` and
   `studio/wizard.py` are its two wizards (both built on `studio/stepdialog.py`), `studio/doctor.py` the Quest Doctor and `studio/fightcalc.py` the fight
   check; none of them touches a window, and they are tested on their own.
 * Tests: `xvfb-run python tests/test_studio.py` drives every page; `python tests/test_worldgen.py` generates levels and has
