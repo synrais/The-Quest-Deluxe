@@ -31,6 +31,7 @@ from .events import Events
 from .render import Renderer, TILE
 from .speaker import Speaker, sound_setting
 from . import anim
+from . import hatch
 from . import invshop
 from . import ui
 
@@ -107,7 +108,8 @@ class PageHost:
         it = (self.store if a == 2 else self.bag).get((i, ii), 0)
         img = self.game.renderer.sprites.bag.get(it) if it else None
         if img:
-            self.layer.blit(img, invshop.icon_pos(i, ii, a))
+            at = invshop.icon_pos(i, ii, a)
+            self.layer.blit(hatch.rehatch(img, (id(img), it), at), at)       # a worn armour's hatching is anchored to the screen
 
     def put3(self, it):
         """put3(): drop the item at the hero's square (or the nearest free one) and redraw it."""
@@ -523,6 +525,10 @@ class Game:
             rules.status_update(self.player, self.status, self.items)
             if mode == 2 and key == ord('b'):
                 self.open_shop()
+            if mode == 1:
+                # closing the inventory takes a turn in the original: the creatures move (found by comparing with the DOS game)
+                self.end_turn()
+                self.events.run('after_action', 'key')
         self.overlay = ui.Page(self, layer, invshop.inventory(host, mode), done)
 
     def open_shop(self):

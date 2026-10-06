@@ -827,7 +827,7 @@ class LevelUpScreen(Overlay):
 
 class CharacterSheet(Overlay):
     def key(self, g, ev):
-        if ev.key in (pygame.K_ESCAPE, pygame.K_c, pygame.K_SPACE) + CONFIRM:
+        if ev.type == pygame.KEYDOWN:               # the original waits for any key (found by running both side by side)
             self.close(g)
 
     def draw(self, r, scr):

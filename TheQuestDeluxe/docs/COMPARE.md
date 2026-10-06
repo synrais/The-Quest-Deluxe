@@ -47,6 +47,8 @@ line of our window and the report say what was left out.
 ## What it has found
 * The character sheet (C) closed only on Esc, C, Space or Enter in our game, but on **any key** in the original. Fixed here.
   (`TheQuestClassic/` has the same code and was left alone.)
+* Closing the inventory takes a turn in the original (the creatures move), and a worn armour's hatching is drawn from the screen's corner. Both fixed in the
+  engine (`engine/game.py`, `engine/hatch.py`); this folder, `TheQuestClassic/` and `TheQuestDeluxe-Studio/` all have them.
 * Small ones it reports and that are not fixed: the strip under the sheet (the skills line) is drawn one pixel wider by the original, and
   the original leaves a piece of the map frame on the right of the sheet. They show up as a few hundred pink pixels on those screens.
 
