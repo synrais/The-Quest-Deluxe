@@ -540,7 +540,7 @@ def quiz_class(total: int) -> int:
 
 class SkillSelect(Choice):
     """creation(): choose one extra skill. A second '+' marks the class's own free skill, which can't be
-    chosen again. Marksmanship is only listed for Rogues and can never be chosen."""
+    chosen again. Marksmanship is offered to every class (the original author: all classes should have it)."""
     count = 5
 
     def __init__(self, cls):
@@ -548,7 +548,7 @@ class SkillSelect(Choice):
         self.cls = cls
 
     def allowed(self, i):
-        return i != self.cls + 1 and i != 4
+        return i != self.cls + 1
 
     def pick(self, g, i):
         g.overlay = FaultSelect(self.cls, i)
@@ -557,8 +557,7 @@ class SkillSelect(Choice):
         creation_page(r, scr)
         r.btext(scr, 'Choose a skill:', (50, 60), 9, SIMPLEX)
         for n, name in enumerate(('Bargaining', 'Ambidexterity', 'Memorization', 'Marksmanship', 'Scholar')):
-            if name != 'Marksmanship' or self.cls == ROGUE:
-                r.btext(scr, name, (100, 100 + 40 * n), 9, SIMPLEX)
+            r.btext(scr, name, (100, 100 + 40 * n), 9, SIMPLEX)
         plus(r, scr, 79, (self.cls + 1) * 40 + 77)
         plus(r, scr, 59, self.i * 40 + 77)
         r.btext(scr, 'Press <Enter> to continue', (150, 440), 14, SIMPLEX)

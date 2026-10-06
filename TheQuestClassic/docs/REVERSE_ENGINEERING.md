@@ -106,8 +106,8 @@ is columns 12–15 of rows 8–11.
 - **Quiz ties favour the Monk.** Each answer adds 1000/100/10/1 to a total, and the biggest digit
   wins. A tie that involves the Monk, or any three- or four-way tie, gives a Monk.
   Knight/Mage, Knight/Rogue and Mage/Rogue ties are a coin flip.
-- **Marksmanship can never be chosen as the extra skill.** It is only listed for Rogues, who
-  already have it. Other classes can still move the cursor onto its empty row.
+- **Marksmanship could never be chosen as the extra skill** in the original (listed only for Rogues, who
+  already have it). Classic now offers it to every class, as the original author says it should be.
 - **Fault colours on the character sheet:** when Cowardice is active (life ≤ 30%), the colour
   is left at yellow, so the Honor and Rashness lines below it come out yellow instead of red.
 - **Invisible wraiths (monster 22) are never drawn**: `clean2()` has no case for them.
