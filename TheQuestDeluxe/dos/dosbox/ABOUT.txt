@@ -1,0 +1,4 @@
+DOSBox 0.74-3 for Windows, unchanged, from the official installer
+(https://sourceforge.net/projects/dosbox/files/dosbox/0.74-3/). It is free software under the GNU GPL (COPYING.txt);
+its source is at https://www.dosbox.com/. The Quest Studio uses it only for "Compare to The Quest DOS" (docs/COMPARE.md).
+On Linux and macOS install DOSBox 0.74 from your package manager instead (apt install dosbox, brew install dosbox).

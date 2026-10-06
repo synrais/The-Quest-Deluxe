@@ -474,6 +474,29 @@ app.go('heroes', select=1); pump(10)
 check('a hero class cannot be put on a map', not [b for b in all_widgets(app.pages['heroes']) if isinstance(b, ttk.Button) and str(b.cget('text')) == 'Put on a map'])
 
 
+# ── Compare to The Quest DOS: the window and the command it would run ──
+from studio import comparedos  # noqa: E402
+check('the top bar has a Compare to DOS button', hasattr(app, 'compare_btn'))
+
+
+def compare_window(d):
+    d._level('3')
+    d.at = (30, 40)
+    d.cls.set(d.cls['values'][1])
+    cmd = d.launch()
+    check('the comparison command carries the level, square, class and the pack', '--level' in cmd and cmd[cmd.index('--level') + 1] == '3'
+          and cmd[cmd.index('--at') + 1] == '30,40' and cmd[cmd.index('--class') + 1] == '2' and cmd[cmd.index('--pack') + 1] == S.project.root
+          and cmd[cmd.index('--fixes') + 1] == 'off', str(cmd))
+    d.keep.set(False)
+    check('and can leave the original\'s bugs out of our game', d.launch()[d.launch().index('--fixes') + 1] == 'on')
+    d.close(None)
+
+
+dialog_later(compare_window)
+app.compare_dos(); pump(10)
+check('the Compare to DOS window opened and closed', True)
+
+
 # ── the painter ──
 from studio.painter import StudioPainter  # noqa: E402
 from editor.art import EGA  # noqa: E402

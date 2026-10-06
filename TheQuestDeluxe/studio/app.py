@@ -172,6 +172,9 @@ class Studio:
         self.doctor_btn = ui.button(right, 'Check', lambda: self.go('doctor'), 'check', 'Flat.TButton',
                                     'The Quest Doctor: what is missing or broken')
         self.doctor_btn.pack(side='right', padx=px(6))
+        self.compare_btn = ui.button(right, 'Compare to DOS', self.compare_dos, 'chart', 'Flat.TButton',
+                                     "Run your game beside the original DOS game, with the same keys, to find what is different")
+        self.compare_btn.pack(side='right', padx=px(6))
         ui.vsep(right).pack(side='right', fill='y', padx=px(8), pady=px(2))
         self.redo_btn = ui.button(right, '', lambda: self._undo(True), 'redo', 'Tool.TButton')
         self.redo_btn.pack(side='right')
@@ -395,6 +398,7 @@ class Studio:
         m.add_command(label='Quests…', command=lambda: self._switch())
         m.add_command(label='New quest…', command=self.new_pack)
         m.add_separator()
+        m.add_command(label='Compare to The Quest DOS…', command=self.compare_dos)
         m.add_command(label='Send my edits…', command=self.send_edits)
         m.add_command(label='Restore my saved edits…', command=self.restore_edits)
         m.add_command(label='Recover pictures without entries', command=self.recover_pictures)
@@ -433,6 +437,10 @@ class Studio:
         keep = self.current
         self._build_shell()
         self.go(keep or 'home')
+
+    def compare_dos(self):
+        from .comparedos import open_compare
+        open_compare(self)
 
     def send_edits(self):
         from editor.send_window import SendWindow

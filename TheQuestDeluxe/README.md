@@ -49,6 +49,7 @@ The original's keys all work as in [the classic edition](../TheQuestClassic/READ
 | `packs/TheQuest/` | The original quest as a pack: the first 7 levels, **locked**. The game plays it, and the editor never opens it. |
 | `Custom Maps/` | The packs made in the editor, a folder each (made the first time the editor runs). Every one starts as a copy of `packs/TheQuest`, and everything changed in the editor (levels, stats, pictures) stays in its own folder. On the game's title and load screens, **P** switches between The Quest and these packs; each pack has its own saves. |
 | `docs/QUEST_PACKS.md` | Every file of a pack, and every field. |
+| `docs/COMPARE.md` | Compare to The Quest DOS: your game and the original in DOSBox side by side on the same keys. |
 | `docs/STUDIO.md` | The Quest Studio: its pages, the level and quest wizards, the fight check and the Quest Doctor. |
 | `docs/MODS.md` | Every addition to the original, and the Mods tab that switches each off for a pack. |
 | `docs/EVENTS.md` | The level scripts: the language, the handlers and the functions they can call. |

@@ -63,6 +63,7 @@ class CommandPalette(tk.Toplevel):
                 ('Undo', 'Ctrl+Z', 'undo', lambda: a._undo(False)), ('Redo', 'Ctrl+Y', 'redo', lambda: a._undo(True)),
                 ('Play the game from here', 'F5', 'play', a.play),
                 ('Play from the title screen', '', 'play', lambda: a.play(from_start=True)),
+                ('Compare to The Quest DOS', 'your game beside the original, same keys', 'chart', a.compare_dos),
                 ('Run the Quest Doctor', 'finds what is missing', 'check', lambda: a.go('doctor')),
                 ('New quest with the wizard', 'level after level, start to end', 'sparkle', lambda: a.go('world', quest=True)),
                 ('New level with the wizard', 'a whole level, start to end', 'wand', lambda: a.go('world', wizard=True)),
