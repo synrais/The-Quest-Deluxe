@@ -34,19 +34,23 @@ def parse(argv=None):
 
 
 def put_beside(comp, our_x=40, our_y=40, width=640):
-    """Move the original's window to the right of ours."""
+    """Lock the original's window into the right half of ours, so they are one window (True). If the system will not do that, put it beside ours (False)."""
     if comp.dos.window is None:
-        return
+        return False
+    import pygame
+    if comp.dos.embed(pygame.display.get_wm_info().get('window'), width, 0):
+        return True
     if sys.platform.startswith('win'):
         from . import dos
         dos._api()[0].SetWindowPos(comp.dos.window, None, our_x + width + 40, our_y, 0, 0, 0x0001 | 0x0004)       # SWP_NOSIZE | SWP_NOZORDER
     else:
         comp.dos._x('windowmove', comp.dos.window, str(our_x + width + 40), str(our_y))
+    return False
 
 
 def status(font, surface, text, colour, y=480, h=28):
     import pygame
-    pygame.draw.rect(surface, (20, 24, 32), (0, y, 640, h))
+    pygame.draw.rect(surface, (20, 24, 32), (0, y, surface.get_width(), h))
     surface.blit(font.render(text[:90], True, colour), (8, y + 6))
 
 
@@ -105,8 +109,8 @@ def run(argv=None):
     os.environ.setdefault('SDL_VIDEO_WINDOW_POS', '40,40')
     import pygame
     pygame.init()
-    screen = pygame.display.set_mode((640, 480 + 28))
-    pygame.display.set_caption('The Quest Deluxe - compare to DOS (type here)')
+    screen = pygame.display.set_mode((1280, 480 + 28))                # ours on the left, the original's window locked into the right half
+    pygame.display.set_caption('The Quest Deluxe (left) and the original in DOSBox (right) - compare to DOS: type here')
     font = pygame.font.SysFont('dejavusans,arial', 14)
     status(font, screen, 'Starting the original in DOSBox ...', (230, 230, 230))
     pygame.display.flip()

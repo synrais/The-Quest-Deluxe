@@ -5,8 +5,9 @@ fed the same keys**, so every difference between them can be seen, saved and rep
 
 1. Click **Compare to DOS**. Pick a level (1 to 7 are in the original) and the hero (a new one of any class, or one of your saved
    games). Starting asks which square to start on: click it on a map of the level.
-2. Two windows open: ours ("The Quest Deluxe - compare to DOS") on the left, the original in DOSBox on the right. **Type in our window.**
-   Every key goes to both, one at a time, when both have finished the last.
+2. One window opens, with our game on the left and the original in DOSBox locked into its right half, so the two move, minimise and close together.
+   **Type with the mouse on the left half.** Every key goes to both, one at a time, when both have finished the last. (If the system will not let
+   DOSBox be locked in, it opens beside ours instead.)
 3. The line under our picture says whether the key left them the same, or what differed. **F12** saves a recording (below).
 
 ## Recording what you find

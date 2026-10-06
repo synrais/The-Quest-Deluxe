@@ -182,6 +182,18 @@ class Dos:
                 return i
         return None
 
+    def embed(self, parent, x: int, y: int) -> bool:
+        """Put DOSBox's window inside another window (the compare window), at (x, y) in it, with no frame of its own: the two are then one window,
+        which moves, hides and closes together. `parent` is that window's handle (pygame.display.get_wm_info()['window']). False when it could not be done."""
+        if not self.window or not parent:
+            return False
+        try:
+            ok = _win_embed(self.window, parent, x, y) if WINDOWS else _x11_embed(self.window, parent, x, y)
+        except (OSError, AttributeError, ValueError):
+            ok = False
+        self.parent = parent if ok else None
+        return ok
+
     def focus(self):
         if not self.window:
             return
@@ -366,6 +378,46 @@ def _api():
             fn.argtypes, fn.restype = args, res
         _API.extend([u, g])
     return _API[0], _API[1]
+
+
+def _x11_embed(child, parent, x, y):
+    """X11: reparent the window into the parent's window (the parent's own drawing leaves its children alone)."""
+    import ctypes
+    import ctypes.util
+    lib = ctypes.CDLL(ctypes.util.find_library('X11') or 'libX11.so.6')
+    lib.XOpenDisplay.restype = ctypes.c_void_p
+    lib.XOpenDisplay.argtypes = [ctypes.c_char_p]
+    lib.XReparentWindow.argtypes = [ctypes.c_void_p, ctypes.c_ulong, ctypes.c_ulong, ctypes.c_int, ctypes.c_int]
+    lib.XMapWindow.argtypes = [ctypes.c_void_p, ctypes.c_ulong]
+    lib.XSync.argtypes = [ctypes.c_void_p, ctypes.c_int]
+    lib.XCloseDisplay.argtypes = [ctypes.c_void_p]
+    display = lib.XOpenDisplay(None)
+    if not display:
+        return False
+    try:
+        lib.XReparentWindow(display, int(child), int(parent), x, y)
+        lib.XMapWindow(display, int(child))
+        lib.XSync(display, 0)
+    finally:
+        lib.XCloseDisplay(display)
+    return True
+
+
+def _win_embed(child, parent, x, y):
+    """Windows: make DOSBox's window a child of the parent's, without its frame, at (x, y); the parent leaves its children's area alone."""
+    import ctypes
+    u = _api()[0]
+    GWL_STYLE, WS_CHILD, WS_VISIBLE, WS_CLIPCHILDREN, WS_CLIPSIBLINGS = -16, 0x40000000, 0x10000000, 0x02000000, 0x04000000
+    u.GetWindowLongPtrW.argtypes, u.GetWindowLongPtrW.restype = [ctypes.c_void_p, ctypes.c_int], ctypes.c_ssize_t
+    u.SetWindowLongPtrW.argtypes, u.SetWindowLongPtrW.restype = [ctypes.c_void_p, ctypes.c_int, ctypes.c_ssize_t], ctypes.c_ssize_t
+    u.SetParent.argtypes, u.SetParent.restype = [ctypes.c_void_p, ctypes.c_void_p], ctypes.c_void_p
+    u.SetWindowPos.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_uint]
+    style = u.GetWindowLongPtrW(parent, GWL_STYLE)
+    u.SetWindowLongPtrW(parent, GWL_STYLE, style | WS_CLIPCHILDREN)
+    u.SetParent(child, parent)
+    u.SetWindowLongPtrW(child, GWL_STYLE, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS)       # no title bar, no frame
+    u.SetWindowPos(child, None, x, y, 0, 0, 0x0001 | 0x0004 | 0x0020 | 0x0040)             # SWP_NOSIZE | NOZORDER | FRAMECHANGED | SHOWWINDOW
+    return True
 
 
 # ── Windows (written from the API's documentation: the Studio's "Check it works" says what does and does not work on the machine) ──

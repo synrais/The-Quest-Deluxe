@@ -8,6 +8,7 @@ import os
 import shutil
 import sys
 import tempfile
+import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -127,6 +128,36 @@ def side_by_side(level, at, keys_to_press, label, save_to=None, loadout=None, kn
         c.close()
 
 
+def one_window():
+    """The real program, started as the Studio starts it: the original's DOSBox window ends up inside the compare window, in its right half."""
+    import subprocess
+    cmd = [sys.executable, os.path.join(ROOT, 'run_compare.py'), '--level', '1', '--at', '22,10', '--class', '1']
+    proc = subprocess.Popen(cmd, cwd=ROOT, env=DISPLAY_ENV, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    try:
+        found = None
+        for _ in range(120):
+            time.sleep(0.5)
+            tree = subprocess.run(['xwininfo', '-root', '-tree'], env=DISPLAY_ENV, capture_output=True, text=True).stdout
+            parent = [line for line in tree.splitlines() if 'compare to DOS' in line]
+            if parent:
+                kids = subprocess.run(['xwininfo', '-id', parent[0].split()[0], '-children'], env=DISPLAY_ENV, capture_output=True, text=True).stdout
+                if 'DOSBox' in kids and '640x480+640+0' in kids:
+                    found = kids
+                    break
+        if not found:
+            proc.terminate()
+            said = proc.communicate(timeout=10)[0].decode(errors='replace')[-800:]
+            raise AssertionError('the original\'s window did not end up inside the compare window: ' + said + repr(parent))
+        assert proc.poll() is None, 'the comparison stopped'
+    finally:
+        proc.terminate()
+        try:
+            proc.wait(10)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+    print('compare: the original\'s window is locked into the right half of the compare window: ok')
+
+
 def for_real():
     from compare import form, record, replay
     out = os.path.join(tempfile.mkdtemp(), 'compare zips')
@@ -136,6 +167,7 @@ def for_real():
     assert rolled > 10, f'the test saw only {rolled} dice rolls, so it did not test them'
     # the same on another level, with the hero somewhere else
     side_by_side(2, (10, 10), ['Right', 'Down', 'Down', 'Left', 'Up', 'Right', 'Right'], 'level 2')
+    one_window()
     # the check a person runs when it does not work: every step of what a comparison needs, said one by one
     from compare import check
     said = []
