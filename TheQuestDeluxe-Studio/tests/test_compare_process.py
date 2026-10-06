@@ -61,9 +61,22 @@ def not_blank(png):
     return len(colours) > 6
 
 
+LOGS = []
+
+
 def start(extra_env=None):
+    import tempfile
+    log = tempfile.NamedTemporaryFile('w+', suffix='.log', delete=False)
+    LOGS.append(log.name)
     cmd = [sys.executable, os.path.join(ROOT, 'run_compare.py'), '--level', '1', '--at', '22,10', '--class', '1']
-    return subprocess.Popen(cmd, cwd=ROOT, env=dict(ENV, **(extra_env or {})), stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    proc = subprocess.Popen(cmd, cwd=ROOT, env=dict(ENV, **(extra_env or {})), stdout=log, stderr=subprocess.STDOUT)
+    proc.log = log.name
+    return proc
+
+
+def said(proc):
+    with open(proc.log, errors='replace') as fh:
+        return ''.join(line for line in fh if 'ALSA' not in line)
 
 
 def wait_both(proc, limit=START_LIMIT):
@@ -74,7 +87,7 @@ def wait_both(proc, limit=START_LIMIT):
         if proc.poll() is not None:
             return None
         win = find('compare to DOS')
-        if win:
+        if win and 'compare: ready' in said(proc):                       # (the program says so when both games are loaded)
             kids = run('xwininfo', '-id', win[0], '-children')
             if 'DOSBox' in kids and '640x480+640+0' in kids:
                 return time.time() - t, win
@@ -108,7 +121,7 @@ def main():
     proc = start()
     got = wait_both(proc)
     if not got:
-        fail('the compare window with both games did not come up: ' + proc.communicate(timeout=15)[0].decode(errors='replace')[-600:])
+        fail('the compare window with both games did not come up in %ds: ' % START_LIMIT + said(proc)[-700:])
         clean_up()
         return finish()
     seconds, win = got
@@ -140,7 +153,7 @@ def main():
     run('xdotool', 'key', 'Left')
     time.sleep(8)
     if proc.poll() is not None:
-        fail('the compare program ended when the original died (our game vanished): ' + proc.communicate(timeout=10)[0].decode(errors='replace')[-300:])
+        fail('the compare program ended when the original died (our game vanished): ' + said(proc)[-400:])
     else:
         if find('compare to DOS') is None:
             fail('the compare window went away when the original died')

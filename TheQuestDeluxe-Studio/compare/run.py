@@ -208,6 +208,7 @@ def run(argv=None):
         if not comp.seed_ok:
             msg, colour = 'The dice cannot be matched (the original is laid out differently in memory).', (240, 190, 90)
         status(font, screen, msg, colour)
+        print('compare: ready', flush=True)
         clock = pygame.time.Clock()
         last_dock = last_mirror = 0.0
         while True:
