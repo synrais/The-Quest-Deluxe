@@ -133,13 +133,12 @@ class TablePage(Page):
         e.bind('<FocusOut>', lambda ev: self._rename())
         self.badge_row = ttk.Frame(col)
         self.badge_row.pack(anchor='w', pady=(px(6), 0))
-        bar = ttk.Frame(col)
-        bar.pack(anchor='w', pady=(px(8), 0))
-        ui.button(bar, 'Duplicate', self.duplicate, 'copy', 'TButton').pack(side='left')
-        ui.button(bar, '', self.delete, 'trash', 'Tool.TButton', f'Delete this {self.noun}').pack(side='left', padx=px(6))
+        bar = ui.Flow(col)
+        bar.pack(fill='x', pady=(px(8), 0))
+        bar.add(ui.button(bar, 'Duplicate', self.duplicate, 'copy', 'TButton'))
+        bar.add(ui.button(bar, '', self.delete, 'trash', 'Tool.TButton', f'Delete this {self.noun}'))
         if self.placeable and self.layer in ('mon', 'item', 'floor', 'wall', 'deco'):
-            ui.button(bar, 'Put on a map', self.put_on_map, 'map', 'TButton', f'Go to the World page with this {self.noun} ready to paint with').pack(
-                side='left')
+            bar.add(ui.button(bar, 'Put on a map', self.put_on_map, 'map', 'TButton', f'Go to the World page with this {self.noun} ready to paint with'))
         self.bar = bar
         self.uses_label = ttk.Label(col, text='', style='Faint.TLabel', wraplength=px(560), justify='left')
         self.uses_label.pack(anchor='w', pady=(px(6), 0))

@@ -356,6 +356,36 @@ class Segmented(ttk.Frame):
             self.command(key)
 
 
+class Flow(ttk.Frame):
+    """A row of things that goes on to a second row when the width is short (buttons beside a name, say). Make each thing a child of the
+    flow, then `add` it."""
+
+    def __init__(self, master, gap=6, **kw):
+        super().__init__(master, **kw)
+        self.items, self.gap, self._width = [], px(gap), None
+        self.bind('<Configure>', lambda e: self._layout(e.width))
+
+    def add(self, widget):
+        self.items.append(widget)
+        self._layout(self.winfo_width(), force=True)
+        return widget
+
+    def _layout(self, width, force=False):
+        if self._width == width and not force:
+            return
+        self._width = width
+        x = y = row_h = natural = 0
+        for w in self.items:
+            ww, wh = w.winfo_reqwidth(), w.winfo_reqheight()
+            if x and width > 1 and x + ww > width:
+                x, y, row_h = 0, y + row_h + self.gap, 0
+            w.place(x=x, y=y)
+            x += ww + self.gap
+            natural = max(natural, x - self.gap)
+            row_h = max(row_h, wh)
+        self.configure(height=max(1, y + row_h), width=max(1, natural) if width <= 1 else width)
+
+
 class ChoiceCards(ttk.Frame):
     """Big cards to choose one from: options [(key, title, text, icon)]."""
 

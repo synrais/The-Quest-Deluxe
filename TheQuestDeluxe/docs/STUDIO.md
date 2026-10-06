@@ -63,8 +63,8 @@ Creatures and wares get tougher and dearer from one level to the next, and a lev
 Undo, and everything it makes is ordinary levels, creatures and stories to change. **New quest** offers it as the way to start.
 
 ### Creatures, Items, Spells, Heroes, Tiles
-A gallery of pictures on the left, the chosen one on the right: its picture (Paint, Import), its name, and every
-field in groups that open and close. Sliders are for numbers worth dragging. **New** asks what kind it is:
+A gallery of pictures on the left, the chosen one on the right: its picture (Paint, Import), its name, **Put on a map**
+(the World page with this one ready to paint with) and every field in groups that open and close. Sliders are for numbers worth dragging. **New** asks what kind it is:
 
 * Creatures start from a kind that is already in the quest (brute, archer, mage, armoured, swarmer, thief, healer, undead,
   giant, boss, wild animal, villager), with numbers fitted to how tough you want it.
@@ -100,6 +100,13 @@ sidebar counts what needs you.
 **Mods** switches what The Quest Deluxe adds to the original on or off for this quest. **Settings** holds the title, author,
 first level, how classes change, the potions a hero starts with, potions 9 and 10, key colours, which of the original's bugs are
 fixed, and the Studio's own look (dark or light).
+
+### The painter
+**Paint** opens the painter: icon tools (pencil, eraser, line, rectangle, oval, fill, dither, swap a colour, select, pick), the
+16 colours plus see-through (left click is the left button's colour, right click the right button's, X swaps them), mirror,
+move, flip and turn, copy, cut and paste, undo and redo, and the picture standing on the quest's own floors beside it as you
+paint. The pictures of the quest sit on the right: drag one onto yours to stamp it, double-click to start from it. Keys: B E L R O
+G D W S I choose the tools.
 
 ## Keys
 

@@ -48,8 +48,7 @@ class ItemsPage(TablePage):
         self.dress = {'class': 1}
         self.hero_box = None
         super().build()
-        ui.button(self.bar, 'New ammo…', self.new_ammo_kind, 'plus', 'TButton', 'Make ammunition of a new kind, in stacks of 1 to 20').pack(
-            side='left', padx=px(6))
+        self.bar.add(ui.button(self.bar, 'New ammo…', self.new_ammo_kind, 'plus', 'TButton', 'Make ammunition of a new kind, in stacks of 1 to 20'))
         t = self.schema.t
         t._check_water = lambda: None                # the Studio asks about water itself (below), in its own window
 

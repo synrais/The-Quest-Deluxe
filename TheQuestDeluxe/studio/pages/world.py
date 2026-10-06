@@ -125,27 +125,30 @@ class WorldPage(Page):
 
     # middle: toolbar, map, status
     def _build_middle(self, mid):
-        bar = ttk.Frame(mid, padding=(px(10), px(6)))
+        outer = ttk.Frame(mid, padding=(px(10), px(6)))
+        outer.pack(fill='x')
+        bar = ui.Flow(outer, gap=16)                          # on a narrow window the groups go on to a second row
         bar.pack(fill='x')
-        self.tools = ui.ToolStrip(bar, TOOLS, self._tool_chosen, 'brush')
+        g1 = ttk.Frame(bar)
+        self.tools = ui.ToolStrip(g1, TOOLS, self._tool_chosen, 'brush')
         self.tools.pack(side='left')
-        ui.vsep(bar).pack(side='left', fill='y', padx=px(10), pady=px(2))
-        ui.button(bar, '', lambda: self.map.zoom_by(-1), 'minus', 'Tool.TButton', 'Zoom out (-)').pack(side='left')
-        self.zoom_label = ttk.Label(bar, text='', width=6, anchor='center')
+        g2 = ttk.Frame(bar)
+        ui.button(g2, '', lambda: self.map.zoom_by(-1), 'minus', 'Tool.TButton', 'Zoom out (-)').pack(side='left')
+        self.zoom_label = ttk.Label(g2, text='', width=6, anchor='center')
         self.zoom_label.pack(side='left')
-        ui.button(bar, '', lambda: self.map.zoom_by(1), 'plus', 'Tool.TButton', 'Zoom in (+)').pack(side='left')
-        ui.button(bar, '', self._fit, 'fit', 'Tool.TButton', 'See the whole level').pack(side='left', padx=(px(4), 0))
-        ui.vsep(bar).pack(side='left', fill='y', padx=px(10), pady=px(2))
-        self.grid_btn = ui.button(bar, '', self._toggle_grid, 'grid', 'Tool.TButton', 'Show or hide the grid lines')
+        ui.button(g2, '', lambda: self.map.zoom_by(1), 'plus', 'Tool.TButton', 'Zoom in (+)').pack(side='left')
+        ui.button(g2, '', self._fit, 'fit', 'Tool.TButton', 'See the whole level').pack(side='left', padx=(px(4), 0))
+        g3 = ttk.Frame(bar)
+        self.grid_btn = ui.button(g3, '', self._toggle_grid, 'grid', 'Tool.TButton', 'Show or hide the grid lines')
         self.grid_btn.pack(side='left')
-        self.marker_btn = ui.button(bar, '', self._toggle_markers, 'flag', 'Tool.TButton',
+        self.marker_btn = ui.button(g3, '', self._toggle_markers, 'flag', 'Tool.TButton',
                                     'Show or hide the markers (start, exits, shops, screens)')
         self.marker_btn.pack(side='left', padx=px(4))
-        right = ttk.Frame(bar)
-        right.pack(side='right')
-        ui.button(right, '', self.open_3d, 'cube', 'Tool.TButton', 'See this level as FPS mode shows it (3D view)').pack(side='left', padx=px(4))
-        ui.button(right, 'Play here', self.play_here, 'play', 'TButton',
+        ui.button(g3, '', self.open_3d, 'cube', 'Tool.TButton', 'See this level as FPS mode shows it (3D view)').pack(side='left', padx=px(4))
+        ui.button(g3, 'Play here', self.play_here, 'play', 'TButton',
                   'Start the game on this level at the square you last clicked (or the start)').pack(side='left')
+        for g in (g1, g2, g3):
+            bar.add(g)
         self.map = MapView(mid, self.s, self)
         self.map.pack(fill='both', expand=True)
         strip = ttk.Frame(mid, style='Bg.TFrame', padding=(px(10), px(5)))
