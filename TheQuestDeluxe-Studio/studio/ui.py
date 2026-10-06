@@ -224,17 +224,22 @@ class Switch(tk.Canvas):
 
 
 class Number(ttk.Frame):
-    """A whole number: a slider and a box. live(value) while dragging, commit(value) when let go or typed."""
+    """A whole number: a slider and a box. live(value) while dragging, commit(value) when let go or typed.
+
+    lo and hi are the real limits (huge when there is none). The slider only covers a handy stretch of them, soft_min to soft_max,
+    and stretches by itself: to hold a value typed beyond its ends, and further each time it is dragged to an end, so it never
+    stops anyone; the box takes any number between lo and hi."""
 
     def __init__(self, master, lo=0, hi=100, value=0, live=None, commit=None, width=5, slider=True, raised=False,
-                 soft_max=None):
+                 soft_max=None, soft_min=None):
         super().__init__(master, style='Raised.TFrame' if raised else 'TFrame')
         self.lo, self.hi, self.live, self.commit = lo, hi, live, commit
         self.soft = soft_max or hi
+        self.soft_lo = soft_min if soft_min is not None else (lo if lo > -1000 else min(0, int(value)))
         self.var = tk.StringVar(value=str(value))
         self.scale = None
         if slider:
-            self.scale = ttk.Scale(self, from_=lo, to=self.soft, orient='horizontal', length=px(170),
+            self.scale = ttk.Scale(self, from_=self.soft_lo, to=self.soft, orient='horizontal', length=px(170),
                                    style='Raised.Horizontal.TScale' if raised else 'Horizontal.TScale',
                                    command=self._slid)
             self.scale.pack(side='left', padx=(0, px(8)))
@@ -253,7 +258,20 @@ class Number(ttk.Frame):
         self._last = v
         self.var.set(str(v))
         if self.scale:
-            self.scale.set(min(v, self.soft))
+            self._fit(v)
+            self.scale.set(v)
+
+    def _fit(self, v, grow=False):
+        """Stretch the slider's ends to hold v (and, when dragged to an end, to go on past it)."""
+        hi, lo = self.soft, self.soft_lo
+        if v >= hi:
+            hi = max(v + max(10, abs(v) // 4), hi * 3 // 2 if grow else hi)
+        if v <= lo and lo < 0 or (v < lo):
+            lo = min(v - max(10, abs(v) // 4), lo * 3 // 2 if grow else lo)
+        hi, lo = min(hi, self.hi), max(lo, self.lo)
+        if (hi, lo) != (self.soft, self.soft_lo) and lo < hi:
+            self.soft, self.soft_lo = hi, lo
+            self.scale.configure(from_=lo, to=hi)
 
     def get(self) -> int:
         return self._last
@@ -270,6 +288,9 @@ class Number(ttk.Frame):
                 self.live(v)
 
     def _release(self):
+        if self.scale and (self._last >= self.soft or self._last <= self.soft_lo):
+            self._fit(self._last, grow=True)                 # dragged to an end: the slider reaches further for the next time
+            self.scale.set(self._last)
         if self.commit:
             self.commit(self._last)
 

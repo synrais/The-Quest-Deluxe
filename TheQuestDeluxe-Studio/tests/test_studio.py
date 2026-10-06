@@ -1055,3 +1055,22 @@ os.environ['SDL_VIDEODRIVER'] = 'x11'
 assert game_env()['SDL_VIDEODRIVER'] == 'x11', 'a real driver somebody set is kept'
 os.environ.clear(); os.environ.update(_keep)
 print('play: the game does not inherit the Studio dummy video driver: ok')
+
+import tkinter as _tk
+root = _tk.Tk()
+root.withdraw()
+# numbers: the slider is only a handy stretch; it never stops anyone, and a stat's slider does not start at minus a billion
+num = ui.Number(root, -10 ** 9, 10 ** 9, 100, soft_max=100, soft_min=0, commit=lambda v: None)
+assert float(num.scale.cget('from')) == 0 and float(num.scale.cget('to')) >= 100, 'a stat\'s slider starts at 0, not minus a billion'
+num.var.set('5000'); num._typed()
+assert num.get() == 5000 and float(num.scale.cget('to')) > 5000, 'a typed number past the end stretches the slider'
+num.set(100); num.scale.set(float(num.scale.cget('to'))); num._slid(float(num.scale.cget('to'))); num._release()
+assert float(num.scale.cget('to')) > 6000, 'dragged to the end, the slider reaches further for next time'
+bonus = ui.Number(root, -10 ** 9, 10 ** 9, 0, soft_max=100, soft_min=-100)
+assert float(bonus.scale.cget('from')) == -100
+bonus.var.set('-7000'); bonus._typed()
+assert bonus.get() == -7000 and float(bonus.scale.cget('from')) < -7000
+life = ui.Number(root, 0, 10 ** 9, 300, soft_max=300)
+life.var.set('999999'); life._typed()
+assert life.get() == 999999
+print('numbers: sliders stretch past their ends, no minus-a-billion start, typed values go as high as you like: ok')

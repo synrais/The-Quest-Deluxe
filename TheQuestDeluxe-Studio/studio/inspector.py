@@ -15,8 +15,8 @@ ITEM_REFS = {'hit_item'}
 BIG = 10 ** 9                       # no cap: the slider only reaches as far as is handy, a typed number goes as high as you like
 RANGES = {'life': (0, BIG, 300), 'power': (0, BIG, 100), 'atk': (0, BIG, 250), 'def': (0, BIG, 200), 'warm': (0, BIG, 60),
           'marm': (0, BIG, 60), 'range': (1, BIG, 12), 'exp': (0, BIG, 500), 'size': (1, BIG, 4), 'price': (0, BIG, 1500),
-          'req_str': (0, BIG, 40), 'req_int': (0, BIG, 40), 'str': (-BIG, BIG, 20), 'int': (-BIG, BIG, 20), 'dex': (-BIG, BIG, 20),
-          'acc': (-BIG, BIG, 20), 'atk.item': (-BIG, BIG, 100), 'mana': (0, BIG, 200), 'growth': (0, BIG, 20),
+          'req_str': (0, BIG, 40), 'req_int': (0, BIG, 40), 'str': (-BIG, BIG, 100), 'int': (-BIG, BIG, 100), 'dex': (-BIG, BIG, 100),
+          'acc': (-BIG, BIG, 100), 'atk.item': (-BIG, BIG, 100), 'mana': (0, BIG, 200), 'growth': (0, BIG, 20),
           'chase_range': (1, BIG, 20), 'flees_within': (1, BIG, 20), 'transforms_below': (1, 100, 100),
           'rise_limit': (1, BIG, 10), 'blood_range': (1, BIG, 30), 'hit_item_chance': (1, 100, 100)}
 
@@ -157,8 +157,10 @@ class Inspector(ttk.Frame):
         rng = _range(f.key)
         if rng and f.default is not None or (rng and value is not None):
             lo, hi, soft = rng
+            # a stat that can be negative only on an item's bonus: its slider reaches both ways; anywhere else it starts at 0
+            soft_min = (-soft if self.schema.table == 'items' else 0) if lo < 0 else None
             num = ui.Number(parent, lo, hi, value if value is not None else (f.default or lo),
-                            commit=lambda v, f=f: self.commit(f, v), soft_max=soft, width=6)
+                            commit=lambda v, f=f: self.commit(f, v), soft_max=soft, soft_min=soft_min, width=6)
             return num
         var = tk.StringVar(value='' if value is None else str(value))
         fr = ttk.Frame(parent)
