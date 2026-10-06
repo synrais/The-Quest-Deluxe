@@ -1,0 +1,177 @@
+"""The Tiles tab: floors, walls and doors, and decorations (tiles.json), with their pictures. Walls
+are solid or a door (plain, a fake wall that opens the same way, or locked with a key colour); floors
+and walls can colour the automap; decorations can have a role the engine puts them down for."""
+from __future__ import annotations
+
+
+from .base import Described, Field
+
+KINDS = [('floors', 'Floors', 'floor'), ('walls', 'Walls and doors', 'wall'), ('decos', 'Decorations', 'deco')]
+DOORS = [(None, '(not a door)'), ('plain', 'plain: opens when walked into'),
+         ('fake', 'fake: a secret wall that opens the same way'), ('locked', 'locked: needs a key')]
+WALL_LOOKS = [(None, '(by the picture: opaque = block)'), ('block', 'block: a solid cube'),
+              ('billboard', 'billboard: standing up (trees)'), ('flat', 'flat: on the ground (water)')]
+DECO_LOOKS = [(None, 'billboard: standing up'), ('flat', 'flat: on the ground (blood)')]
+KEYS = [('yellow', 'yellow'), ('red', 'red'), ('blue', 'blue')]
+
+
+def key_choices(quest, labels=None):
+    """The original's three key colours, then the pack's own (quest.json's \"keys\", set on the Quest tab)."""
+    out = [(k, (labels or {}).get(k, k)) for k, _ in KEYS]
+    return out + [(k, k) for k in (quest.get('keys') or {}) if k not in dict(KEYS)]
+ROLES = [(None, '(none)'), ('open_door', 'open door: where a door opened'),
+         ('open_chest', 'open chest: an emptied chest'), ('remains', 'remains: where a creature died'),
+         ('remains2', 'remains 2: the other kind of remains'), ('blood', 'blood: where a blow landed'),
+         ('bones', 'bones: where a hero died')]
+
+
+def fmt_colour(key):
+    def fmt(row):
+        c = row.get(key)
+        return '' if not c else f'{c[0]}, {c[1]}'
+    return fmt
+
+
+def parse_colour(text):
+    if not text.strip():
+        return None
+    parts = [int(v) for v in text.replace(',', ' ').split()]
+    if len(parts) != 2 or not 0 <= parts[0] <= 15:
+        raise ValueError('an EGA colour (0-15) and a priority, e.g. "8, 2"')
+    return parts
+
+
+def fmt_on_level(row):
+    return '; '.join(f'{n}: {c[0]}, {c[1]}' for n, c in (row.get('map_colour_on_level') or {}).items())
+
+
+def parse_on_level(text):
+    out = {}
+    for part in text.split(';'):
+        if part.strip():
+            level, colour = part.split(':')
+            out[str(int(level))] = parse_colour(colour)
+    return out or None
+
+
+class TilesTable(Described):
+    TABLE = 'tiles'
+    kind = 'floors'                          # which of the three lists is described (the Schema sets it)
+    INTRO = ('The squares of the map. Walls with numbers 1 and up are solid; doors take numbers below 0. '
+             'Automap colour: an EGA colour and a priority. The floor\'s or the wall\'s colour with the higher '
+             'priority wins; squares with neither are grass green.')
+
+
+    @property
+    def layer(self):
+        return next(layer for k, _, layer in KINDS if k == self.kind)
+
+    @property
+    def ICON_LAYER(self):
+        return self.layer
+
+    @property
+    def PICTURES(self):
+        return [('Picture', self.kind, False)]
+
+    @property
+    def rows(self):
+        return self.app.project.tiles.setdefault(self.kind, [])
+
+    def fields(self):
+        out = [Field('id', 'Number', 'readonly'), Field('name', 'Name', 'str')]
+        if self.kind == 'walls':
+            out += [Field('solid', 'Solid', 'bool', hint='blocks the way'),
+                    Field('door', 'Door', 'choice', DOORS),
+                    Field('key', 'Key', 'choice', key_choices(self.app.project.quest), when=lambda r: r.get('door') == 'locked',
+                          hint='the key colour that opens it')]
+        if self.kind == 'walls':
+            out.append(Field('water', 'Is water', 'bool', when=lambda r: r.get('solid'),
+                             hint='an item that lets him walk on water crosses it (walls that freeze count as water too)'))
+            walls = [(None, '(does not freeze)')] + [(w['id'], f'{w["id"]} {w.get("name", "")}')
+                                                    for w in sorted(self.app.project.tiles.get('walls', []),
+                                                                    key=lambda w: w['id'])]
+            out.append(Field('freezes_to', 'Freezes to', 'choice', walls,
+                             hint='water: the wall (ice, not solid) a freezing spell turns it into'))
+        if self.kind == 'walls':
+            items = [(None, '(nothing)')] + [(r['id'], f'{r["id"]} {r.get("name", "")}')
+                                              for r in sorted(self.app.project.tables['items'], key=lambda r: r['id'])]
+            walls = [(0, '(clear: nothing is left)')] + [(w['id'], f'{w["id"]} {w.get("name", "")}')
+                                                         for w in sorted(self.app.project.tiles.get('walls', []),
+                                                                         key=lambda w: w['id'])]
+            out += [Field('small_only', 'Only a shrunk hero passes', 'bool', when=lambda r: r.get('solid'),
+                          hint='a crack or a mouse hole: solid for everyone except a hero under a shrinking potion'),
+                    Field('giant_breaks', 'A giant smashes it', 'bool', when=lambda r: r.get('solid'),
+                          hint='solid for everyone but a hero under a potion of gigantism, who smashes it down'),
+                    Field('needs_item', 'Moved by the item', 'choice', items,
+                          hint='walked into with this item in the bag, the wall gives way (a boulder, rubble, a hedge)'),
+                    Field('becomes', 'Then it becomes', 'choice', walls,
+                          when=lambda r: r.get('needs_item') or r.get('giant_breaks'), default=0),
+                    Field('consumes', 'Uses the item up', 'bool', when=lambda r: r.get('needs_item')),
+                    Field('message', 'Message', 'str', when=lambda r: r.get('needs_item') or r.get('giant_breaks'),
+                          hint='in the combat log when it gives way (empty: "You use the <item>.")'),
+                    Field('blocked_message', 'Without the item', 'str', when=lambda r: r.get('needs_item'),
+                          hint='in the combat log when you walk into it without the item')]
+        if self.kind in ('floors', 'walls'):
+            out += [Field('map_colour', 'Automap colour', 'custom', fmt=fmt_colour('map_colour'),
+                          parse=parse_colour, hint='colour, priority (e.g. 8, 2); empty: none'),
+                    Field('map_colour_on_level', 'On a level', 'custom', fmt=fmt_on_level, parse=parse_on_level,
+                          hint='other colours on some levels: "5: 8, 2; 7: 1, 1"')]
+        if self.kind in ('floors', 'decos'):
+            out += [Field('hurts', 'Hurts each turn', 'int', hint='life lost every turn he stands on it (lava, thorns)'),
+                    Field('heals', 'Heals each turn', 'int', hint='life gained every turn he stands on it (a spring)')]
+        if self.kind == 'decos':
+            out.append(Field('role', 'Role', 'choice', ROLES, hint='what the engine puts it down for (one of each)'))
+        if self.kind == 'walls':
+            out.append(Field('view3d', 'In 3D', 'choice', WALL_LOOKS, hint='how FPS mode shows it'))
+        if self.kind == 'decos':
+            out.append(Field('view3d', 'In 3D', 'choice', DECO_LOOKS, hint='how FPS mode shows it'))
+        if self.kind == 'floors':
+            walls = [(None, '(open sky)')] + [(w['id'], f'{w["id"]} {w.get("name", "")}')
+                                             for w in sorted(self.app.project.tiles.get('walls', []),
+                                                             key=lambda w: w['id'])]
+            out.append(Field('roof', 'Roof in 3D', 'choice', walls,
+                             hint="indoors: FPS mode draws this wall's picture overhead"))
+        return out
+
+    def after_change(self, row, key, old):
+        if key == 'freezes_to' and row.get('freezes_to') is not None:
+            ice = next((w for w in self.app.project.tiles.get('walls', []) if w['id'] == row['freezes_to']), None)
+            if ice is not None and ice.get('solid') and self.ask(
+                    'Freezes to', f'"{ice.get("name")}" is solid, so nobody could walk on the ice. Make it walkable '
+                                  '(not solid)?'):
+                ice.pop('solid', None)                           # new walls start solid; ice has to be walked on
+                self.app.project.touch('tiles')
+        if key == 'door' and row.get('door') != 'locked':
+            row.pop('key', None)
+        if key == 'door' and row.get('door') == 'locked' and 'key' not in row:
+            row['key'] = 'yellow'
+        if key == 'role' and row.get('role'):
+            for r in self.rows:                       # a role belongs to one decoration
+                if r is not row and r.get('role') == row['role']:
+                    r.pop('role')
+        self.app.pictures_changed(self.layer, row['id'])
+
+
+    def next_free(self, start):
+        used = {r['id'] for r in self.rows}
+        v = start
+        while v in used or v == 0:
+            v += 1 if start > 0 else -1
+        return v
+
+    def duplicate_id(self, row):
+        return self.next_free(1 if row['id'] > 0 else -1)
+
+    def uses(self, row):
+        p, out = self.app.project, []
+        field = {'floors': 0, 'walls': 1, 'decos': 5}[self.kind]
+        from ..project import SIZE
+        for n in range(1, p.levels + 1):
+            g = p.grid(n)
+            count = sum(1 for x in range(1, SIZE + 1) for y in range(1, SIZE + 1) if g.sq[x][y][field] == row['id'])
+            if count:
+                out.append(f'level {n} map: {count} square{"s" if count > 1 else ""}')
+        if row.get('role'):
+            out.append(f'the engine puts it down as {row["role"]}')
+        return out

@@ -1,0 +1,24 @@
+{"_comment": "Spells (Spells.dat): required intelligence, mana, range (0 = on the caster), power, duration; effect (heal, bolt, teleport, shield, fire_shield, freeze, ward, dark_hour, invisibility, summon, drain, earthquake) and its settings: anim = [animation, arguments...], repeat, creature, fizzle (% chance), empties_mana, needs_target. Icons: sprites/spells/<id>.png.",
+ "spells": [
+ {"id": 1, "name": "Heal", "req_int": 10, "mana": 10, "range": 0, "power": 30, "duration": 0, "effect": "heal", "anim": ["aheal"]},
+ {"id": 2, "name": "Flame", "req_int": 15, "mana": 5, "range": 3, "power": 11, "duration": 0, "effect": "bolt", "anim": ["aflame", 0]},
+ {"id": 3, "name": "Teleport", "req_int": 15, "mana": 10, "range": 3, "power": 0, "duration": 0, "effect": "teleport"},
+ {"id": 4, "name": "Shield", "req_int": 20, "mana": 8, "range": 0, "power": 10, "duration": 10, "effect": "shield", "anim": ["ashield", 1], "absorb_power_of": 5},
+ {"id": 5, "name": "Ring of Ice", "req_int": 20, "mana": 5, "range": 3, "power": 10, "duration": 10, "effect": "freeze", "anim": ["aicering"], "freeze_power_of": 4},
+ {"id": 6, "name": "Black Ward", "req_int": 25, "mana": 9, "range": 0, "power": 12, "duration": 0, "effect": "ward", "anim": ["ablackward"]},
+ {"id": 7, "name": "Invisibility", "req_int": 25, "mana": 7, "range": 0, "power": 0, "duration": 30, "effect": "invisibility", "anim": ["ainvisibility"], "fizzle": 50},
+ {"id": 8, "name": "Summon Skeleton", "req_int": 30, "mana": 8, "range": 4, "power": 0, "duration": 0, "effect": "summon", "creature": -100, "anim": ["asskeleton", 1]},
+ {"id": 9, "name": "Inferno", "req_int": 30, "mana": 10, "range": 3, "power": 25, "duration": 0, "effect": "bolt", "anim": ["ainferno", 0]},
+ {"id": 10, "name": "Restore", "req_int": 30, "mana": 20, "range": 0, "power": 70, "duration": 0, "effect": "heal", "anim": ["arestore"]},
+ {"id": 11, "name": "Life Drain", "req_int": 35, "mana": 13, "range": 1, "power": 20, "duration": 0, "effect": "drain", "needs_target": true},
+ {"id": 12, "name": "Thunder Bolt", "req_int": 35, "mana": 25, "range": 4, "power": 40, "duration": 0, "effect": "bolt", "anim": ["athunder"], "repeat": 5},
+ {"id": 13, "name": "Shield of Fire", "req_int": 35, "mana": 15, "range": 0, "power": 8, "duration": 10, "effect": "fire_shield", "anim": ["ashield", 2]},
+ {"id": 14, "name": "Deteriorate", "req_int": 40, "mana": 1, "range": 1, "power": 100, "duration": 0, "effect": "bolt", "anim": ["adeteriorate", 40], "empties_mana": true, "needs_target": true},
+ {"id": 15, "name": "Summon Stone Knight", "req_int": 40, "mana": 18, "range": 4, "power": 0, "duration": 0, "effect": "summon", "creature": -101, "anim": ["astoneknight"]},
+ {"id": 16, "name": "Earthquake", "req_int": 45, "mana": 20, "range": 5, "power": 25, "duration": 0, "effect": "earthquake"},
+ {"id": 17, "name": "Cure", "req_int": 50, "mana": 30, "range": 0, "power": 120, "duration": 0, "effect": "heal", "anim": ["acure"]},
+ {"id": 18, "name": "Summon Scorpion", "req_int": 55, "mana": 25, "range": 4, "power": 0, "duration": 0, "effect": "summon", "creature": -102, "anim": ["asscorpion"]},
+ {"id": 19, "name": "Meteor", "req_int": 60, "mana": 35, "range": 9, "power": 60, "duration": 0, "effect": "bolt", "anim": ["adeaths"]},
+ {"id": 20, "name": "Dark Hour", "req_int": 60, "mana": 1, "range": 0, "power": 25, "duration": 0, "effect": "dark_hour", "anim": ["adarkhour"], "repeat": 6}
+ ]
+}

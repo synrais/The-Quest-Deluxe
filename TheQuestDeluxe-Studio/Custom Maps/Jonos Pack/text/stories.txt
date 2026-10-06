@@ -1,0 +1,164 @@
+0 8
+You were born in a large kingdom named Coholon. Its capital is
+Souter and King Varamon rules it. South of Coholon is Bamun,a
+smaller nation which recently experienced a revolution. To the
+north,is Cair - a wealthy nation with which Coholon does most
+of its trading. You were born in Pine Growth,a small town in
+the northwestern part of Coholon. Your father was a busy merchant
+and he was rarely home. Your mother was a teacher at the village
+school.
+1 9
+After a year and a half of training for your profession,you met
+a pretty girl named Marianne. You fell in love and decided to
+stop learning and marry her. Despite the disappointment of your
+parents and mentor,you bought a small farm and began a quiet
+life with your wife. A month later,you came home from a hard day
+of labor to find your wife missing. You became worried and waited
+for her through the night. The next day you decided to search for
+her. You put on your cloak and left the house to find the woman
+you love. And so the journey begins...
+2 8
+Having spent days in search of Marianne and still without a
+clue as to where she was,you come to a conclusion that she has
+been kidnapped. Seeing the countryside overrun by monsters and
+robbers,you can no longer neglect the seriousness of the situation.
+You clinch your teeth at the thought of anything happening to your
+beloved wife and continue searching. You decide to travel south
+toward Souter,hoping that whoever kidnapped your wife might be
+there...
+3 15
+A bit shaken by the sight of the undead,you wonder what ill purpose
+the Bamun refugees are serving in Coholon. You also question why the
+local lord,Hamen,does nothing to prevent the ransacking of the
+countryside by these monsters. Few soldiers were sent and most of
+them were killed. Still,no sign of where Marianne was taken. One
+of the peasants said that the desert tribes- the Golags,which are
+independent from Coholon,often kidnap people that travel close to
+their territory. Even though the desert is far from your home you
+choose to look there. After 2 days of travel,you reached the
+desert. You decided to stop during the night to rest. Unfortunately,
+you were spotted by a Golag scout and were captured before you
+realized what was going on. Your possessions were taken from you
+and you were placed in a jail cell. Nights and days passed as you sat
+in the dark,alone. Then one night,you woke up to some strange
+noise. The cell door was open and your equipment was on the floor...
+4 10
+The local people thanked you greatly for saving them from the Golag
+attack. After hearing about your troubles,they immediately started
+looking for some kind of information that might help you. Indeed,
+an old man that had recently visited the desert was heard saying
+that his daughter and many other women were captured by a group of
+mercenaries and that he was going to find them. He said he was
+headed for Souter. After hearing this,you thank the people of the
+desert and quickly head out toward the Coholon capital. Finally,
+you have found the first clue that might lead you toward you wife.
+And so the journey continues...
+5 9
+The death of lord Hamen had not gone unnoticed and a large portion
+of the army was sent to track you down. Following the old man's words,
+you found the north road after defeating the tribal soldiers who
+were sent to revenge the death of their leader. Despite being hunted,
+you moved as fast as you could to catch up to those that had taken your
+wife. As you traveled along the road,you heard rumors of army men
+ahead of you preparing a road block. Thus,you find yourself trapped
+between 2 armies with no peaceful way out. Therefore,you must spill
+the blood of these soldiers so that you can find Marianne...
+6 15
+That which you feared the most. The unspeakable evil. The murder of
+Marianne had been committed. Her youth,her innocence,all was taken.
+No one could help her as she along with the others was butchered. Is
+this the end to the journey? What is the point of life when all that
+was dear to you is gone? And yet...you can't plunge that fatal dagger
+into your chest. The old man. His last words ring in your head.
+Another innocent person in the claws of those murderers. Probably,
+she is already dead. But what if she at this minute is hoping that
+someone would save her,like Marianne could have hoped. Thus,you
+choose to continue your journey. You lift your gaze to the sky and
+proclaim that this time you will not be too late. As you look around
+you,you notice that more soldiers are slowly coming toward you. With
+the sea to your back,you lift your weapon,ready to slay them all
+despite the odds. However,their leader lowers his sword and walks
+toward you. He tells you that King Varamon wants to speak with you.
+10 15
+During your flight from Souter,a terrible event had occurred. An army
+of Bamun refugees was gathered by a demon named Fatebringer who
+had been exiled from Bamun. This fiend chose not to waste any time and
+decided to conquer Coholon so that he once more could hold the power
+he once possessed in Bamun. He swiftly lead the pestilent army of undead
+to Souter and attacked. The royal soldiers stationed there quickly
+set up defenses and a siege commenced which lasted for days. However,
+the demon used his dark arts to possess a human and opened the city
+gates for his army to march through. The battle continued,but the
+city was decimated and many civilians were killed. The king fled the
+city and decided to talk with you. 4 days later the two of you met.
+These are his words: "Let me make this brief. I greatly dislike you and
+had the circumstances been different,I would have wanted you dead.
+However,Coholon is in danger. Everyday,I lose more and more men
+while the Bamun exiles gain more and more ground.
+11 14
+Despite your unworthy deeds,I must ask a favor of you. I know you are
+a skilled fighter and I am sure that no other can do this task. We
+cannot stop the undead army,so their leader,Fatebringer,must be
+killed. My magicians have found out that the spell the demon used to
+possess a human has not worn off. It has also been reported to me that
+the demon did not rejoin his army but is still among the remaining
+people in Souter. Perhaps,he wants to watch how his army overruns
+us from our perspective. Even though I abhor his sick desire,it is
+the only chance we will have to destroy him. The task of finding him
+and then killing him will be given to you. Suspect everyone but do
+not attack a person until you are absolutely sure he is the demon.
+Not only will killing the wrong man worsen your already bad reputation,
+but it might also reveal the plan to Fatebringer and scare him away.
+For the sake of Coholon,you must accept this mission!" And so you did.
+7 15
+As you gaze upon Fatebringer's lifeless form,you feel no joy in your
+victory. Somewhere across the sea,a man breathes and lives,while his
+victims don't. Thus,you will not feel pleasure nor pain until that fiend
+is dead. By the time you reach King Varamon,the tide of the war has
+turned. Without their leader,the undead army quickly lost its momentum
+and began losing battles. As you approach the King's camp,you hear talk
+of the liberation of Souter. The soldiers rejoice all around you,but you
+ignore them as you make your way to the King's tent. You thrust a drunk
+guard out of the way and step in. King Varamon casually congratulates you
+on the success of your mission. As a reward,he lifts the charge of
+murder from you and declares you a free man. You neglect this gesture
+and bluntly request that he takes you across the sea to Cair. Glad to
+remove such a dangerous person from his kingdom,the King agrees to
+grant your wish. Thus,you find yourself on the shores of Cair,within
+reach of the man you must slay and the girl he had stolen.
+8 15
+Your enemy is dead. Blood flows from his corpse and there is no breath.
+After months of travel and misery you finally defeat the man who was the
+cause of it all. You are triumphant in your mission to slay your
+wife's murderer. You have revenged all that lost their lives. But you feel
+no happiness. There is no joy. Your world is ruined. You can never go back
+to that small farm. You can never be that young,innocent husband with a
+pretty wife. Marianne does not wait for you on that farm. She lies dead.
+There is no future. There is only what was and what is not. It is time.
+It is time for you to complete your quest. You pick up a bloody dagger
+and wipe off the sticky liquid on your shirt. You carefully eye its wicked
+blade. You slowly raise the hilt above your head. You hear a voice. But all
+is quiet. You hear it again,this time it's louder. It is the sound of
+Marianne's laughter. Then,there is silence. You listen but the voice is
+gone. With a roar,you swing the dagger and it sinks into your chest.
+Your vision fades as you fall to the floor.
+9 11
+Two dead bodies lie in the large hall. Suddenly,one of them disappears.
+In its place stands a man in a black cape. He wears a golden necklace
+and his eyes flash with fire. He smiles to himself and turns to the
+remaining corpse. "You were destined to lose!" He proclaims. As the
+Deceiver begins to turn away,the doors burst open and a man in a
+shining suit of armor runs in. He dashes forward with his broadsword high
+in his arms. The bewildered Deceiver tries to parry the upcoming thrust,
+but the knight is true in his aim. In a flash of light,the sword severed
+the Deceiver's head. Lightbringer turns to the corpse with a dagger through
+it and proclaims,"The debt I owed you has been paid!" He turns around
+and walks away...
+
+
+
+
+
+
+
+

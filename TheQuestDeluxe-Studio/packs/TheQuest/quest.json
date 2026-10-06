@@ -1,0 +1,39 @@
+{
+ "title": "The Quest",
+ "author": "Alex Kutsenok",
+ "year": 2001,
+ "engine": "deluxe",
+ "format": 1,
+ "levels": 7,
+ "first_level": 1,
+ "start_potions": {
+  "6": 1
+ },
+ "story_order": [
+  "amb",
+  "sch",
+  "mar",
+  "mem",
+  "bar",
+  "ras",
+  "cow",
+  "hon"
+ ],
+ "reclass": true,
+ "map_fixes": [
+  {
+   "level": 6,
+   "x": 24,
+   "y": 82,
+   "item": 0,
+   "why": "a decayed tree holding item -5, which is not an item"
+  },
+  {
+   "level": 7,
+   "x": 45,
+   "y": 65,
+   "item": 0,
+   "why": "item 311, a shield with no stats, picture or price"
+  }
+ ]
+}

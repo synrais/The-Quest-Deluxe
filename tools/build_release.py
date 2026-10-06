@@ -38,6 +38,10 @@ EDITIONS = {
     'deluxe': ('TheQuestDeluxe', 'TheQuestDeluxe', ['run_deluxe.py', 'settings.ini'], ['engine', 'packs'], ['run_editor.py', 'editor', 'docs'], {
         'Play The Quest Deluxe.bat': ('The Quest Deluxe', 'run_deluxe.py', False),
         'The Quest Deluxe Editor.bat': ('The Quest Deluxe Editor', 'run_editor.py', True)}),
+    'studio': ('TheQuestDeluxe-Studio', 'TheQuestDeluxe-Studio', ['run_deluxe.py', 'settings.ini'], ['engine', 'packs'],
+               ['run_studio.py', 'run_compare.py', 'core', 'studio', 'compare', 'dos', 'docs', 'tools'], {
+        'Play The Quest Deluxe.bat': ('The Quest Deluxe', 'run_deluxe.py', False),
+        'The Quest Studio.bat': ('The Quest Studio', 'run_studio.py', True)}),
 }
 TK_CHECK = '''%PY% -c "import tkinter" >nul 2>&1
 if errorlevel 1 (
@@ -102,6 +106,20 @@ settings.ini (open it in Notepad):
   items_on_top = on   gold and items drawn over whoever stands on them; off as the original
   floating_numbers = off   on: FPS mode's damage and misses also rise off whoever took them
 Saves: saves\\<pack>\\save01.dat to save20.dat.
+{{extra}}""",
+    'studio': f"""THE QUEST DELUXE AND THE QUEST STUDIO
+====================================
+
+To play: double-click "Play The Quest Deluxe.bat". To make quests (full zip): double-click
+"The Quest Studio.bat" - see docs\\STUDIO.md. To compare the game with the original in DOSBox
+(and record what differs for the brothers' questionnaire): docs\\COMPARE.md.
+
+{SETUP}
+
+{KEYS}
+
+The Quest Deluxe adds FPS mode (F), the combat log (D) and more: see README.md.
+Saves: saves\\<pack>\\save01.dat to save20.dat. Your quests are in Custom Maps.
 {{extra}}""",
 }
 

@@ -1,0 +1,41 @@
+{"_comment": "Walls: solid (blocks the way), or door: plain (opens when walked into), fake (a secret wall that opens the same way) or locked (needs the key of that colour). map_colour: [EGA colour, priority] on the automap (the higher priority of the floor and the wall wins; grass-green 2 at priority 0 otherwise); map_colour_on_level overrides it on one level. Decorations: role is what the engine uses them for (open_door, open_chest, remains, remains2, blood, bones). FPS mode: view3d is how a wall or decoration shows in 3D (block, billboard or flat; left out, opaque wall pictures are blocks and the rest billboards); roof is the wall picture drawn overhead on a floor (indoors).",
+ "floors": [
+  {"id": 1, "name": "Grass"},
+  {"id": 2, "name": "Pebbled Footpath", "map_colour": [8, 2]},
+  {"id": 3, "name": "Small Shrubs"},
+  {"id": 4, "name": "Red Carpet", "map_colour": [0, 5], "roof": 10},
+  {"id": 6, "name": "Grey Carpet", "map_colour": [0, 5], "roof": 10},
+  {"id": 7, "name": "Water Bridge", "map_colour": [6, 3]},
+  {"id": 8, "name": "Desert Sand", "map_colour": [6, 3]}
+ ],
+ "walls": [
+  {"id": -6, "name": "Fake Diamond Mesh Gray", "door": "fake"},
+  {"id": -5, "name": "Fake Stippled Dark Gray", "door": "fake"},
+  {"id": -4, "name": "Locked Blue Key Door", "door": "locked", "key": "blue"},
+  {"id": -3, "name": "Locked Red Key Door", "door": "locked", "key": "red"},
+  {"id": -2, "name": "Locked Gold Key Door", "door": "locked", "key": "yellow"},
+  {"id": -1, "name": "Door", "door": "plain", "map_colour": [0, 5]},
+  {"id": 1, "name": "Pine Trees", "solid": true},
+  {"id": 2, "name": "Water", "solid": true, "water": true, "map_colour": [1, 1], "view3d": "flat"},
+  {"id": 3, "name": "Pine Trees", "solid": true, "map_colour": [10, 4]},
+  {"id": 4, "name": "Diagonal Pinstripe White", "solid": true, "map_colour": [0, 5]},
+  {"id": 5, "name": "Boulder", "solid": true, "map_colour_on_level": {"5": [8, 2]}},
+  {"id": 6, "name": "Apple Tree", "solid": true},
+  {"id": 7, "name": "Wishing Well", "solid": true},
+  {"id": 8, "name": "Decayed Tree", "solid": true},
+  {"id": 9, "name": "Table", "solid": true},
+  {"id": 10, "name": "Stippled Dark Gray", "solid": true, "map_colour": [0, 5]},
+  {"id": 11, "name": "Diamond Mesh Gray", "solid": true, "map_colour": [0, 5]},
+  {"id": 12, "name": "Diagonal Pinstripe Amber", "solid": true, "map_colour": [0, 5]},
+  {"id": 13, "name": "Diamond Mesh Amber", "solid": true, "map_colour": [0, 5]},
+  {"id": 14, "name": "Diagonal Pinstripe Red", "solid": true, "map_colour": [0, 5]}
+ ],
+ "decos": [
+  {"id": 1, "name": "Opened Door", "role": "open_door"},
+  {"id": 2, "name": "Opened Chest", "role": "open_chest"},
+  {"id": 3, "name": "Blood with Limb", "role": "remains", "view3d": "flat"},
+  {"id": 4, "name": "Bloody Footprints", "role": "blood", "view3d": "flat"},
+  {"id": 5, "name": "Blood Puddle", "role": "remains2", "view3d": "flat"},
+  {"id": 6, "name": "Dark Blood Puddle", "role": "bones", "view3d": "flat"}
+ ]
+}
