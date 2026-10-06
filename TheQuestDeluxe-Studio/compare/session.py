@@ -41,14 +41,26 @@ class Report:
         return self.dos_draws == self.our_draws and self.pixels == 0
 
 
-def make_dos_save(out_dir: str, level: int, at, hero_file: str | None = None, cls: int = 1):
+def make_dos_save(out_dir: str, level: int, at, hero_file: str | None = None, cls: int = 1, loadout: dict | None = None):
     """Run the save tool on the original pack. (None, what was left out) when it worked, else (what went wrong, '')."""
     cmd = [sys.executable, '-m', 'compare.savetool', out_dir, str(level), str(at[0]), str(at[1]), '--class', str(cls)]
     if hero_file:
         cmd += ['--hero', hero_file]
+    gear_file = None
+    if loadout:
+        import json
+        import tempfile
+        fd, gear_file = tempfile.mkstemp(suffix='.json', prefix='quest_loadout_')
+        with os.fdopen(fd, 'w', encoding='utf-8') as fh:
+            json.dump(loadout, fh)
+        cmd += ['--loadout', gear_file]
     env = dict(os.environ, SDL_VIDEODRIVER='dummy', SDL_AUDIODRIVER='dummy')
     env.pop('QUEST_PACK', None)
-    r = subprocess.run(cmd, cwd=ROOT, env=env, capture_output=True, text=True, timeout=120)
+    try:
+        r = subprocess.run(cmd, cwd=ROOT, env=env, capture_output=True, text=True, timeout=120)
+    finally:
+        if gear_file:
+            os.remove(gear_file)
     removed = next((line[len('REMOVED '):] for line in r.stdout.splitlines() if line.startswith('REMOVED ')), '')
     if 'READY' in r.stdout:
         return None, removed
@@ -69,7 +81,8 @@ def count_draws(a: int, b: int, limit=4000):
 
 class Compare:
     def __init__(self, level: int, at, pack_root: str | None = None, hero_file: str | None = None, cls: int = 1,
-                 fixes: str = 'off', dos_env=None, log=print, same_things: bool = True, seed: int | None = None, hero_label: str = ''):
+                 fixes: str = 'off', dos_env=None, log=print, same_things: bool = True, seed: int | None = None, hero_label: str = '', loadout: dict | None = None):
+        self.loadout = loadout
         self.level, self.at, self.hero_file, self.cls, self.fixes = level, tuple(at), hero_file, cls, fixes
         self.pack_root = pack_root
         self.dos = dos.Dos(env=dos_env)
@@ -87,7 +100,7 @@ class Compare:
     # ── starting both ───────────────────────────────────────────────────────
     def start_dos(self):
         game_dir = self.dos.prepare()
-        problem, self.removed = make_dos_save(os.path.join(game_dir, 'data'), self.level, self.at, self.hero_file, self.cls)
+        problem, self.removed = make_dos_save(os.path.join(game_dir, 'data'), self.level, self.at, self.hero_file, self.cls, self.loadout)
         if problem:
             raise RuntimeError(problem)
         with open(os.path.join(game_dir, 'data', 'save01.dat'), 'rb') as fh:
@@ -111,7 +124,7 @@ class Compare:
             gone = hero_mod.strip_unknown(hero)
             if gone and not self.removed:
                 self.removed = hero_mod.describe(gone)
-        state.start(self.game, self.level, self.at, hero=hero, cls=self.cls)
+        state.start(self.game, self.level, self.at, hero=hero, cls=self.cls, loadout=self.loadout)
         self.sync_seed()
         hero_bytes = None
         if self.hero_file:
@@ -120,7 +133,7 @@ class Compare:
         meta = {'level': self.level, 'at': list(self.at), 'fixes': self.fixes, 'hero': self.hero_label or ('a new hero of class %d' % self.cls),
                 'class': self.cls, 'pack': os.environ.get('QUEST_PACK') or 'The Quest', 'removed': self.removed,
                 'seed': self.dos_seed(), 'dos_dice_matched': bool(self.seed_ok), 'dosbox': os.path.basename(self.dos.exe or ''),
-                'same_things': self.same_things, 'engine': engine_fingerprint()}
+                'same_things': self.same_things, 'engine': engine_fingerprint(), 'loadout': self.loadout}
         self.recorder = record.Recorder(meta, getattr(self, 'start_save', None), hero_bytes)
         self.draw()
         self.recorder.first(self.game.renderer.screen.copy(), self.dos_picture())

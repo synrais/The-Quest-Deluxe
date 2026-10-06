@@ -27,13 +27,19 @@ def place(game, level: int, at=None):
     game.messages = []
 
 
-def start(game, level: int, at=None, hero: savefile.SaveData | None = None, cls: int = 1):
-    """A hero (from a save, or a new one of class `cls`) on a level and square."""
+def start(game, level: int, at=None, hero: savefile.SaveData | None = None, cls: int = 1, loadout: dict | None = None):
+    """A hero (from a save, or a new one of class `cls`) on a level and square, wearing and carrying the loadout if there is one."""
     if hero is not None:
         game.from_save(hero, SLOT)
         game.overlay = None
     else:
         game.quick_start(cls, level, None)
+    if loadout:
+        from . import loadout as loadouts
+        data = game.to_save()
+        loadouts.apply(data, loadout)
+        game.from_save(data, SLOT)
+        game.overlay = None
     game.status.saveslot = SLOT
     place(game, level, at)
     game.status.saveslot = SLOT

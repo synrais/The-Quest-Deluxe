@@ -27,6 +27,7 @@ def parse(argv=None):
     ap.add_argument('--fixes', choices=('on', 'off'), default='off')
     ap.add_argument('--same-things', dest='same', choices=('on', 'off'), default='on')
     ap.add_argument('--hero-label', default='')
+    ap.add_argument('--loadout', help='a JSON file: the gear both heroes start in (compare/loadout.py)')
     ap.add_argument('--replay', help='a recording (a zip from compare zips) to run again and check')
     return ap.parse_args(argv)
 
@@ -99,8 +100,13 @@ def main(argv=None):
         from engine import savefile
         with open(a.hero_file, 'rb') as fh:
             hero = savefile.from_bytes(fh.read())
+    gear = None
+    if a.loadout:
+        import json
+        with open(a.loadout, encoding='utf-8') as fh:
+            gear = json.load(fh)
     comp = Compare(a.level, at, pack_root=a.pack, hero_file=a.hero_file, cls=a.cls, fixes=a.fixes, same_things=a.same == 'on',
-                   hero_label=a.hero_label)
+                   hero_label=a.hero_label, loadout=gear)
     try:
         comp.start_dos()
         put_beside(comp)

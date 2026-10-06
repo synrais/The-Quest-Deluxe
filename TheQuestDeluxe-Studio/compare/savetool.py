@@ -1,4 +1,4 @@
-"""(run as a child process, on the ORIGINAL pack) Make the save the original loads: python -m compare.savetool OUT_DIR LEVEL X Y [--hero FILE] [--class N]
+"""(run as a child process, on the ORIGINAL pack) Make the save the original loads: python -m compare.savetool OUT_DIR LEVEL X Y [--hero FILE] [--class N] [--loadout FILE]
 
 The engine reads its pack when it is imported, so this runs apart from the game being compared. It writes OUT_DIR/save01.dat and prints
 one line, 'READY'.
@@ -21,6 +21,7 @@ def main():
     ap.add_argument('y', type=int)
     ap.add_argument('--hero')
     ap.add_argument('--class', dest='cls', type=int, default=1)
+    ap.add_argument('--loadout')
     a = ap.parse_args()
     import pygame
     pygame.init()
@@ -37,7 +38,12 @@ def main():
         gone = hero_mod.strip_unknown(hero)                  # what the original does not have is left out (the others are told)
         if gone:
             print('REMOVED ' + hero_mod.describe(gone))
-    state.start(g, a.level, (a.x, a.y), hero=hero, cls=a.cls)
+    gear = None
+    if a.loadout:
+        import json
+        with open(a.loadout, encoding='utf-8') as fh:
+            gear = json.load(fh)
+    state.start(g, a.level, (a.x, a.y), hero=hero, cls=a.cls, loadout=gear)
     if (g.player.X, g.player.Y) != (a.x, a.y):
         print(f'BLOCKED {g.player.X} {g.player.Y}')
         return 2

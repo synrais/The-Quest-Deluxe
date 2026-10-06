@@ -9,7 +9,7 @@ import sys
 import tkinter as tk
 from tkinter import ttk
 
-from compare import dos
+from compare import dos, loadout as loadouts
 from engine import savefile
 from engine.pack import ROOT
 from core import custom
@@ -45,7 +45,7 @@ def problems() -> list:
     return out
 
 
-def command(pack_root, level, at, hero_path=None, cls=1, keep_bugs=True, same_things=True, hero_label='') -> list:
+def command(pack_root, level, at, hero_path=None, cls=1, keep_bugs=True, same_things=True, hero_label='', gear=None) -> list:
     cmd = [sys.executable, os.path.join(ROOT, 'run_compare.py'), '--level', str(level), '--at', f'{at[0]},{at[1]}',
            '--class', str(cls), '--fixes', 'off' if keep_bugs else 'on', '--pack', pack_root,
            '--same-things', 'on' if same_things else 'off']
@@ -53,6 +53,13 @@ def command(pack_root, level, at, hero_path=None, cls=1, keep_bugs=True, same_th
         cmd += ['--hero-label', hero_label]
     if hero_path:
         cmd += ['--hero-file', hero_path]
+    if gear:
+        import json
+        import tempfile
+        fd, path = tempfile.mkstemp(suffix='.json', prefix='quest_loadout_')
+        with os.fdopen(fd, 'w', encoding='utf-8') as fh:
+            json.dump(gear, fh)
+        cmd += ['--loadout', path]
     return cmd
 
 
@@ -97,11 +104,37 @@ class CompareDialog(ui.Dialog):
         if not self.heroes:
             ttk.Label(b, text='(No saved games for this pack yet: play, press V to save, and they will be here.)',
                       style='Faint.TLabel').pack(anchor='w', padx=px(24))
+        ttk.Label(b, text='Gear (both heroes wear and carry the same, from the original\'s own items)', style='H3.TLabel').pack(anchor='w', pady=(px(12), 0))
+        row = ttk.Frame(b)
+        row.pack(anchor='w', fill='x')
+        self.gear = ttk.Combobox(row, state='readonly', width=30)
+        self.gear.pack(side='left')
+        ttk.Button(row, text='Choose the gear…', command=self._edit_gear).pack(side='left', padx=px(8))
+        self._gear_names()
         ttk.Checkbutton(b, text="Keep the original's bugs in my game too (so the two match; leave on to compare)",
                         variable=self.keep).pack(anchor='w', pady=(px(12), 0))
         ttk.Checkbutton(b, text="Leave out of both what the original does not have (a hero's new items, spells and classes: it cannot hold them)",
                         variable=self.same).pack(anchor='w')
         self.add_buttons([('Cancel', None, 'TButton'), ('Start the comparison', 'go', 'Accent.TButton')], default='go')
+
+    NO_GEAR = "(as the hero is: no change)"
+
+    def _gear_names(self, pick=None):
+        names = [self.NO_GEAR] + list(loadouts.presets())
+        self.gear.configure(values=names)
+        want = pick or (self.gear.get() if self.gear.get() in names else None) or self.app.settings.get('compare_gear', 'Fighter')
+        self.gear.set(want if want in names else 'Fighter')
+
+    def _edit_gear(self):
+        d = LoadoutDialog(self, self.gear.get() if self.gear.get() != self.NO_GEAR else 'Fighter')
+        d.run()
+        self._gear_names(d.last)
+
+    def chosen_gear(self):
+        name = self.gear.get()
+        if name == self.NO_GEAR or name not in loadouts.presets():
+            return None
+        return dict(loadouts.presets()[name], name=name)
 
     def _level(self, key):
         self.level.set(int(key))
@@ -135,7 +168,117 @@ class CompareDialog(ui.Dialog):
             hero_path = next((p for n, t, p in self.heroes if str(n) == self.hero.get()), None)
         cls = int(self.cls.get().split()[0]) if self.cls.get() else 1
         label = next((t for n, t, p in self.heroes if str(n) == self.hero.get()), '') if self.hero.get() != 'new' else ''
-        return command(self.s.project.root, self.level.get(), self.at, hero_path, cls, self.keep.get(), self.same.get(), label)
+        self.app.settings['compare_gear'] = self.gear.get()
+        return command(self.s.project.root, self.level.get(), self.at, hero_path, cls, self.keep.get(), self.same.get(), label, self.chosen_gear())
+
+
+class LoadoutDialog(ui.Dialog):
+    """Choose the gear both heroes start in, from the original's items, and keep it as a named preset."""
+
+    def __init__(self, parent, name):
+        super().__init__(parent, 'Gear for the comparison', width=px(560))
+        self.items = loadouts.original_items()
+        self.last = name
+        b = self.body
+        ttk.Label(b, text='Gear for the comparison', style='H2.TLabel').pack(anchor='w')
+        ttk.Label(b, text='Only things the original game has, so it can hold every one. Both heroes get exactly this: what they wear and what is in '
+                          'the bag. Save it with a name to use it again; the built-in ones can be changed by saving over them.',
+                  style='Dim.TLabel', wraplength=px(520), justify='left').pack(anchor='w', pady=(px(6), px(10)))
+        top = ttk.Frame(b)
+        top.pack(fill='x')
+        ttk.Label(top, text='Loadout').pack(side='left')
+        self.name = ttk.Combobox(top, width=26, values=list(loadouts.presets()))
+        self.name.pack(side='left', padx=px(8))
+        self.name.bind('<<ComboboxSelected>>', lambda e: self.show(self.name.get()))
+        self.worn = {}
+        for slot, label in loadouts.SLOTS:
+            r = ttk.Frame(b)
+            r.pack(fill='x', pady=2)
+            ttk.Label(r, text=label, width=20).pack(side='left')
+            box = ttk.Combobox(r, state='readonly', width=44, values=self.choices(slot))
+            box.pack(side='left')
+            self.worn[slot] = box
+        ttk.Label(b, text='In the bag', style='H3.TLabel').pack(anchor='w', pady=(px(10), 0))
+        r = ttk.Frame(b)
+        r.pack(fill='x')
+        self.bag = tk.Listbox(r, height=7, width=46, exportselection=False)
+        self.bag.pack(side='left')
+        side = ttk.Frame(r)
+        side.pack(side='left', padx=px(8), anchor='n')
+        self.add_box = ttk.Combobox(side, state='readonly', width=34, values=self.choices(None))
+        self.add_box.pack()
+        ttk.Button(side, text='Add to the bag', command=self.add).pack(anchor='w', pady=2)
+        ttk.Button(side, text='Take out the selected', command=self.take).pack(anchor='w')
+        self.say = ttk.Label(b, text='', style='Dim.TLabel')
+        self.say.pack(anchor='w', pady=(px(8), 0))
+        self.add_buttons([('Close', None, 'TButton'), ('Delete', 'delete', 'TButton'), ('Save', 'save', 'Accent.TButton')], default='save')
+        self.show(name)
+
+    def label(self, n):
+        r = self.items[n]
+        bits = [f'{k} {r[k]}' for k in ('atk', 'def', 'power') if r.get(k)]
+        return f'{n}  {r.get("name") or "(no name)"}' + (f'  ({", ".join(bits)})' if bits else '')
+
+    def choices(self, slot):
+        fits = loadouts.FITS.get(slot) if slot else None
+        out = [] if slot is None else ['(nothing)']
+        for n, r in sorted(self.items.items()):
+            if n > 0 and r.get('name') and ((fits and r.get('type') in fits) or (not fits and r.get('type') not in ('exit', 'ladder', 'rope', 'stairs',
+                                                                                                                     'hole', 'jump_pad', 'teleporter', 'chest'))):
+                out.append(self.label(n))
+        return out
+
+    @staticmethod
+    def number(text):
+        return int(text.split()[0]) if text and text[0].isdigit() else 0
+
+    def show(self, name):
+        p = loadouts.presets().get(name) or {'worn': {}, 'bag': []}
+        self.name.set(name)
+        for slot, box in self.worn.items():
+            n = (p.get('worn') or {}).get(slot)
+            box.set(self.label(n) if n in self.items else '(nothing)')
+        self.bag.delete(0, 'end')
+        for n in p.get('bag') or []:
+            if n in self.items:
+                self.bag.insert('end', self.label(n))
+
+    def add(self):
+        if self.add_box.get() and self.bag.size() < loadouts.BAG_ROOM:
+            self.bag.insert('end', self.add_box.get())
+
+    def take(self):
+        for i in reversed(self.bag.curselection()):
+            self.bag.delete(i)
+
+    def current(self):
+        return ({slot: self.number(box.get()) for slot, box in self.worn.items() if self.number(box.get())},
+                [self.number(self.bag.get(i)) for i in range(self.bag.size())])
+
+    def close(self, value):
+        name = self.name.get().strip()
+        if value == 'save':
+            worn, bag = self.current()
+            try:
+                loadouts.save_preset(name, worn, bag)
+            except ValueError as e:
+                self.say.configure(text=str(e), style='Bad.TLabel')
+                return
+            self.last = name
+            self.say.configure(text=f'Saved "{name}".', style='Dim.TLabel')
+            self.name.configure(values=list(loadouts.presets()))
+            return
+        if value == 'delete':
+            loadouts.delete_preset(name)
+            self.name.configure(values=list(loadouts.presets()))
+            if name in loadouts.presets():
+                self.show(name)
+                self.say.configure(text='That is a built-in loadout; its original gear is back.')
+            else:
+                self.show('Fighter')
+                self.last = 'Fighter'
+            return
+        super().close(value)
 
 
 def open_compare(app):

@@ -22,7 +22,8 @@ def replay(path: str, window, log=print, delay: float = 0.0, only_first: int | N
             fh.write(rec['hero_save'])
         hero = savefile.from_bytes(rec['hero_save'])
     c = session.Compare(meta['level'], tuple(meta['at']), hero_file=hero_file, cls=meta.get('class', 1), fixes=meta.get('fixes', 'off'),
-                        same_things=meta.get('same_things', True), seed=meta.get('seed'), log=log, dos_env=dos_env)
+                        same_things=meta.get('same_things', True), seed=meta.get('seed'), log=log, dos_env=dos_env,
+                        loadout=meta.get('loadout'))
     bad = []
     try:
         c.start_dos()

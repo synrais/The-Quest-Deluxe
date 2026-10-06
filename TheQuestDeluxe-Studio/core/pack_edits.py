@@ -255,6 +255,10 @@ def gather(deluxe: str = DELUXE, include_all: bool = False, when: float | None =
             lines += [f'{CUSTOM}/compare zips: {len(zips)} recording{"s" if len(zips) != 1 else ""} of comparisons to the DOS game:'] + \
                      [f'    {f}' for f in zips] + ['']
             files += [(os.path.join(recs, f), f'{PREFIX}/{CUSTOM}/compare zips/{f}') for f in zips]
+    gear = os.path.join(custom, 'compare loadouts.json')            # the gear presets of the comparison (compare/loadout.py)
+    if os.path.isfile(gear):
+        lines += [f'{CUSTOM}/compare loadouts.json: the gear presets for comparisons with the DOS game', '']
+        files.append((gear, f'{PREFIX}/{CUSTOM}/compare loadouts.json'))
     if not files:
         return [], 'Nothing has been added or changed since the game came: there is nothing to pack.'
     lines += ['', f'{len(files)} files in all.']

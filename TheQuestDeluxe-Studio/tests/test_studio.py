@@ -479,6 +479,9 @@ from studio import comparedos  # noqa: E402
 check('the top bar has a Compare to DOS button', hasattr(app, 'compare_btn'))
 
 
+tmp_gear = tempfile.mkdtemp()
+
+
 def compare_window(d):
     d._level('3')
     d.at = (30, 40)
@@ -489,6 +492,26 @@ def compare_window(d):
           and cmd[cmd.index('--fixes') + 1] == 'off', str(cmd))
     d.keep.set(False)
     check('and can leave the original\'s bugs out of our game', d.launch()[d.launch().index('--fixes') + 1] == 'on')
+    # the gear: a preset is the default, it travels as a file, and the gear window keeps a new one under a name
+    import json as _json
+    from compare import loadout as _lo
+    _lo.file_path = lambda: os.path.join(tmp_gear, 'compare loadouts.json')
+    d._gear_names()
+    check('the gear box offers the built-in loadouts', d.gear.get() == 'Fighter' and 'Archer' in d.gear['values'] and d.NO_GEAR in d.gear['values'])
+    cmd = d.launch()
+    gear = _json.load(open(cmd[cmd.index('--loadout') + 1]))
+    check('the chosen gear is handed to the comparison', gear['worn']['weapon'] == 216 and gear['name'] == 'Fighter', str(gear))
+    d.gear.set(d.NO_GEAR)
+    check('no gear means no loadout file', '--loadout' not in d.launch())
+    g = comparedos.LoadoutDialog(d, 'Mage')
+    check('the gear window shows the loadout', g.number(g.worn['weapon'].get()) == 214 and g.bag.size() == 4)
+    g.name.set('Tank'); g.worn['weapon'].set(g.label(213)); g.worn['armor'].set(g.label(108)); g.add_box.set(g.label(2)); g.add()
+    g.close('save')
+    check('a loadout is saved under its name', _lo.presets()['Tank']['worn'] == {'weapon': 213, 'armor': 108, 'helmet': 403, 'amulet': 505}
+          or _lo.presets()['Tank']['worn']['weapon'] == 213, str(_lo.presets().get('Tank')))
+    g.close('delete')
+    check('and deleted again', 'Tank' not in _lo.presets())
+    g.destroy()
     d.close(None)
 
 

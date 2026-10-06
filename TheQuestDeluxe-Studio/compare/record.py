@@ -125,7 +125,11 @@ class Recorder:
         m = self.meta
         lines = ['A COMPARISON TO THE QUEST DOS', '', f'Made {m["started"]} by {answers.get("name") or "(no name)"} on {m["platform"]}',
                  f'Level {m["level"]}, started at square {tuple(m["at"])}, hero: {m.get("hero", "a new hero")}',
-                 f'Pack: {m.get("pack", "?")}   original bugs kept in ours: {m.get("fixes") == "off"}', '']
+                 f'Pack: {m.get("pack", "?")}   original bugs kept in ours: {m.get("fixes") == "off"}']
+        if m.get('loadout'):
+            from . import loadout
+            lines.append('Gear on both heroes: ' + loadout.describe(m['loadout']))
+        lines.append('')
         for key, label, hint, rows in QUESTIONS:
             lines += [label.upper(), (answers.get(key) or '(not answered)').strip(), '']
         d = self.differences

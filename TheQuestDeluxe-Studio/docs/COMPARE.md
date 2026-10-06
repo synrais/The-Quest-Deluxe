@@ -26,6 +26,11 @@ difference side by side. `report.txt` reads like a letter, `steps.csv` opens in 
 and says whether every dice roll and every picture on both sides came out the same as recorded (THE SAME, or the first key that did not).
 The original's dice state is set from the recording (written into DOSBox's memory), which is what makes the replay exact.
 
+**Gear.** The window's Gear box puts the same loadout on both heroes (what they wear and what is in the bag), chosen from the original's own items so the
+original can hold every piece. Built in: Fighter, Archer, Mage and Light and quick; **Choose the gear…** edits one (a slot for each worn place, a list for the
+bag) and **Save** keeps it under a name, in `Custom Maps/compare loadouts.json` (which Send my edits sends). The recording remembers it, and the report says what
+was worn and carried.
+
 Things the original does not have (a hero's new items, spells past the 20th, a class the original lacks, Deluxe's extra potions and keys) cannot
 be in its save. They are left out of what the original is given, and, unless you untick it, out of ours too so the two heroes match; the bottom
 line of our window and the report say what was left out.
@@ -47,6 +52,10 @@ line of our window and the report say what was left out.
 ## What it has found
 * The character sheet (C) closed only on Esc, C, Space or Enter in our game, but on **any key** in the original. Fixed here.
   (`TheQuestClassic/` has the same code and was left alone.)
+* **Closing the inventory takes a turn in the original** (the creatures move, the dice are rolled once); ours does not. Found by pressing `i` then
+  `Esc` (or `i` again), with or without gear. Not fixed yet.
+* **A worn armour's hatching** is drawn from the screen's corner by the original, so in the Body slot its pattern is one step out of phase with ours: a few
+  hundred pixels in that slot (the other worn things match to the pixel). Not fixed yet.
 * Small ones it reports and that are not fixed: the strip under the sheet (the skills line) is drawn one pixel wider by the original, and
   the original leaves a piece of the map frame on the right of the sheet. They show up as a few hundred pink pixels on those screens.
 

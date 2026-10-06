@@ -19,6 +19,34 @@ os.environ.pop('QUEST_PACK', None)
 from compare import dos, keys, session, state  # noqa: E402
 
 
+def loadouts_unit():
+    from compare import loadout, state
+    from engine import savefile, state as est
+    assert all(loadout.problems(dict(v)) == [] for v in loadout.BUILT_IN.values()), 'every built-in loadout is original items in the right places'
+    assert loadout.problems({'worn': {'weapon': 99999, 'armor': 216}, 'bag': [1] * 17}) != []
+    d = savefile.SaveData()
+    d.bag = {c: 5 for c in savefile.BAG_CELLS}
+    loadout.apply(d, loadout.BUILT_IN['Archer'])
+    assert d.bag[est.SLOT_WEAPON] == 232 and d.bag[est.SLOT_OFFHAND] == 0 and d.bag[est.SLOT_ARMOR] == 101
+    assert [d.bag[c] for c in est.BACKPACK[:5]] == [640, 640, 1, 2, 7] and d.bag[est.BACKPACK[5]] == 0, 'the bag is emptied, then filled'
+    mine = os.path.join(tempfile.mkdtemp(), 'loadouts.json')
+    loadout.save_preset('Tank', {'weapon': 213, 'armor': 108}, [2, 0, 2], mine)
+    assert loadout.presets(mine)['Tank'] == {'worn': {'weapon': 213, 'armor': 108}, 'bag': [2, 2]} and 'Fighter' in loadout.presets(mine)
+    loadout.save_preset('Fighter', {'weapon': 201}, [], mine)
+    assert loadout.presets(mine)['Fighter']['worn'] == {'weapon': 201}, 'a saved one replaces a built-in'
+    loadout.delete_preset('Fighter', mine)
+    assert loadout.presets(mine)['Fighter'] == loadout.BUILT_IN['Fighter'] and 'gone' not in loadout.describe(None)
+    from engine.game import Game
+    import pygame
+    pygame.init()
+    g = Game(pygame.display.set_mode((640, 480)), settings={'fixes': 'off', 'sound': 'off'})
+    state.start(g, 1, (22, 10), cls=1, loadout=dict(loadout.BUILT_IN['Fighter']))
+    assert g.player.bag[est.SLOT_WEAPON] == 216 and g.player.bag[est.SLOT_ARMOR] == 104 and g.player.bag[est.BACKPACK[0]] == 1
+    raw = savefile.from_bytes(state.save_bytes(g))
+    assert raw.bag[est.SLOT_WEAPON] == 216 and raw.bag[est.BACKPACK[6]] == 14, 'the save the original loads has the gear'
+    print('compare: loadouts: presets kept, applied to the worn places and the bag, in the save: ok')
+
+
 def pieces():
     # the original is as it was found, and a comparison never writes to it
     assert dos.manifest_ok() == [], dos.manifest_ok()
@@ -75,11 +103,12 @@ def can_run_for_real():
     return not dos.WINDOWS
 
 
-def side_by_side(level, at, keys_to_press, label, save_to=None):
+def side_by_side(level, at, keys_to_press, label, save_to=None, loadout=None, known=None):
+    """known: {key number: most pixels that may differ} for a difference already found and written down (see docs/COMPARE.md)."""
     import pygame
     pygame.init()
     window = pygame.display.set_mode((640, 480))
-    c = session.Compare(level, at, dos_env=DISPLAY_ENV, seed=20240607)
+    c = session.Compare(level, at, dos_env=DISPLAY_ENV, seed=20240607, loadout=loadout)
     try:
         c.start_dos()
         assert c.seed_ok, 'could not find the original\'s dice in DOSBox memory'
@@ -91,7 +120,7 @@ def side_by_side(level, at, keys_to_press, label, save_to=None):
             k, u = keys.to_pygame(name)
             r = c.press(name, k, u)
             total += r.dos_draws or 0
-            assert r.same, (label, name, r.notes, c.save_recording({'name': 'test'}, os.path.join(ROOT, 'compare reports'), 'testfailed'))
+            assert r.same or r.pixels <= (known or {}).get(len(c.recorder.steps) - 1, -1), (label, name, r.notes, c.save_recording({'name': 'test'}, os.path.join(ROOT, 'compare reports'), 'testfailed'))
         zip_path = c.save_recording({'name': 'Tester', 'seen': 'nothing'}, save_to, label) if save_to else None
         return total, zip_path
     finally:
@@ -107,6 +136,12 @@ def for_real():
     assert rolled > 10, f'the test saw only {rolled} dice rolls, so it did not test them'
     # the same on another level, with the hero somewhere else
     side_by_side(2, (10, 10), ['Right', 'Down', 'Down', 'Left', 'Up', 'Right', 'Right'], 'level 2')
+    # the same gear on both heroes (worn and in the bag, from the original's own items): the pictures and the dice stay equal, and the
+    # inventory shows it (closing it is not pressed: the original takes a turn then, ours does not: docs/COMPARE.md)
+    from compare import loadout
+    gear = dict(loadout.BUILT_IN['Fighter'], name='Fighter')
+    # (the original draws a worn armour's hatching from the screen's corner, ours from the picture's: a few hundred pixels in its slot)
+    side_by_side(1, (22, 10), ['Right', 'Right', 'i'], 'with gear', loadout=gear, known={2: 400})
     assert dos.manifest_ok() == []
     # the recording: the zip holds everything, and run again it comes out the same, to the pixel
     rec = record.read(zip_path)
@@ -152,6 +187,7 @@ def for_real():
 
 if __name__ == '__main__':
     pieces()
+    loadouts_unit()
     if can_run_for_real():
         for_real()
     else:
