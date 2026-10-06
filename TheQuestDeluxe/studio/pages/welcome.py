@@ -32,8 +32,8 @@ def make_quest(name: str, blank: bool) -> str:
     return dest
 
 
-def new_pack_dialog(parent):
-    """Ask for a name and what to start from; the folder made, or None."""
+def new_pack_dialog(parent, want=None):
+    """Ask for a name and what to start from; the folder made, or None. `want` (a list) gets 'wizard' if the quest wizard should open."""
     d = ui.Dialog(parent, 'New quest', width=px(520))
     ttk.Label(d.body, text='Make a new quest', style='H2.TLabel').pack(anchor='w')
     ttk.Label(d.body, text='Name it (letters, numbers, spaces):', style='Dim.TLabel').pack(anchor='w', pady=(px(10), px(2)))
@@ -41,8 +41,10 @@ def new_pack_dialog(parent):
     e = ttk.Entry(d.body, textvariable=var, width=40)
     e.pack(fill='x')
     e.focus_set()
-    kind = tk.StringVar(value='blank')
-    for value, title, about in (('blank', 'Start blank', 'One empty level. The same creatures, items, spells and heroes as The Quest to build with, but none of its '
+    kind = tk.StringVar(value='wizard')
+    for value, title, about in (('wizard', 'Make one with the wizard', 'A blank quest, then the quest wizard builds the levels for you: pick a journey, '
+                                                                       'how many levels and how hard, and look at every level before it exists.'),
+                                ('blank', 'Start blank', 'One empty level. The same creatures, items, spells and heroes as The Quest to build with, but none of its '
                                                          'levels or story. Best for making your own game.'),
                                 ('copy', 'Start from The Quest', 'A copy of the 7 levels, all the stories and people, to change and build on.')):
         row = ttk.Frame(d.body)
@@ -59,10 +61,12 @@ def new_pack_dialog(parent):
             msg.configure(text=problem)
             return
         try:
-            made.append(make_quest(var.get(), kind.get() == 'blank'))
+            made.append(make_quest(var.get(), kind.get() in ('blank', 'wizard')))
         except (OSError, ValueError) as ex:
             msg.configure(text=f"Couldn't make it: {ex}")
             return
+        if kind.get() == 'wizard' and want is not None:
+            want.append('wizard')
         d.close(True)
     d.add_buttons([('Cancel', None, 'TButton'), ('Make it', 'x', 'Accent.TButton')])
     for b in d.foot.winfo_children():

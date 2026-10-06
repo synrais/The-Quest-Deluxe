@@ -76,9 +76,10 @@ class Pictures:
 
     def level_thumb(self, grid, width: int = 160):
         """The whole 100 x 100 level as a small map: floors and walls in colour."""
-        key = ('level', id(grid), width)
         side = width
         s = pygame.Surface((100, 100))
+        x0 = y0 = 101
+        x1 = y1 = 0
         floors = {f['id']: f for f in self.project.tiles.get('floors', [])}
         walls = {w['id']: w for w in self.project.tiles.get('walls', [])}
         for x in range(1, 101):
@@ -92,7 +93,17 @@ class Pictures:
                 elif it:
                     col = (250, 220, 80)
                 s.set_at((x - 1, y - 1), col)
-        return photo(pygame.transform.scale(s, (side, side)))
+                if wa or it or mo or de or go > 0:
+                    x0, x1, y0, y1 = min(x0, x), max(x1, x), min(y0, y), max(y1, y)
+        if x1 - x0 < 9 or y1 - y0 < 9:                                  # nothing much on it: the whole level
+            return photo(pygame.transform.scale(s, (side, side)))
+        w, h = x1 - x0 + 1, y1 - y0 + 1                                 # a level made smaller than 100 x 100: just the part that is used
+        k = side / max(w, h)
+        crop = pygame.transform.scale(s.subsurface((x0 - 1, y0 - 1, w, h)), (max(1, int(w * k)), max(1, int(h * k))))
+        out = pygame.Surface((side, side))
+        out.fill((8, 10, 14))
+        out.blit(crop, ((side - crop.get_width()) // 2, (side - crop.get_height()) // 2))
+        return photo(out)
 
     def level_surface(self, sq, x0, y0, w, h, scale):
         """A part of a level drawn with the real pictures, `scale` pixels a square (a pygame surface)."""

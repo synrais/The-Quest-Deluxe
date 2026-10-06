@@ -742,6 +742,99 @@ check('the game started on level 2', alive and '--level 2' in log and '--at 10,1
 done('quests: a new blank one, the wizard into it, switching back, the locked game refused, the game started from the quest: ok')
 
 
+# ── the quest wizard: a whole quest, level after level ──
+from studio import questwizard, worldgen  # noqa: E402
+from studio import storytext  # noqa: E402
+app.open(welcome.make_quest('Wizzed', True)); pump(40)
+S = app.session
+check('a fresh blank quest to make a quest in', S.levels == 1 and S.project.name == 'Wizzed', str(S.levels))
+app.go('world'); pump(20)
+W = app.pages['world']
+seen = {}
+
+
+def walls_of(project):
+    return {w['id']: w for w in project.tiles.get('walls', [])}
+
+
+def can_walk(project, n):
+    """The hero can walk from START to the way out (an item of the type exit) on level n; the locked doors do not count."""
+    g = project.grid(n)
+    walls = walls_of(project)
+    exits = {it['id'] for it in project.tables['items'] if it.get('type') == 'exit'}
+    sx, sy = project.constant(n, 'START', (1, 1))
+    seen_, todo = {(sx, sy)}, [(sx, sy)]
+    ways = []
+    while todo:
+        x, y = todo.pop()
+        if g.sq[x][y][2] in exits:
+            ways.append((x, y))
+        for nx, ny in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
+            if (nx, ny) in seen_ or not (1 <= nx <= 100 and 1 <= ny <= 100):
+                continue
+            wa = g.sq[nx][ny][1]
+            w = walls.get(wa, {}) if wa else {}
+            if wa and (w.get('solid') or w.get('door') in ('locked', 'fake')) and w.get('door') != 'plain':
+                continue
+            seen_.add((nx, ny))
+            todo.append((nx, ny))
+    return bool(ways)
+
+
+def drive_quest(d):
+    seen['d'] = d
+    check('the quest wizard knows the quest is blank', d.blank and d.p.target == 'blank')
+    d.title_var.set('Wizard Quest')
+    d.author_var.set('A Brother')
+    d._journey('depths')
+    d._set('count', 3)
+    check('three levels, caves and fortresses', [sp['theme'] for sp in d.specs] == ['cave', 'dungeon', 'cave'] or
+          [sp['theme'] for sp in d.specs][0] == 'cave', str([sp['theme'] for sp in d.specs]))
+    d._pick_size('3')
+    d._ramp('steep')
+    d.refresh_now()
+    for _ in range(200):
+        pump(5)
+        if all(r is not None for r in d.results):
+            break
+    check('every level was drawn for the picture', len(d.results) == 3 and all(r is not None for r in d.results))
+    check('levels get harder: the difficulty and the creatures climb', worldgen.difficulty_for('steep', 0) == 'normal' and
+          worldgen.difficulty_for('steep', 1) == 'deadly')
+    d._theme_of(1, 'maze')
+    check('choosing a place by hand keeps it', d.specs[1]['theme'] == 'maze' and d.custom)
+    d._name_of(1, 'The Twisty Bit')
+    d.go(1); pump(10)
+    d.go(2); pump(10)
+    d.opening_text = 'Opening words.'
+    d.opening_edited = True
+    d.go(3); pump(10)
+    check('the final level has the boss in its summary', 'at the end' in ' '.join(w.cget('text') for w in all_widgets(d.page) if isinstance(w, ttk.Label)))
+    d.create()
+
+
+dialog_later(drive_quest, tries=120)
+W.quest_wizard(); pump(30)
+check('the wizard made three levels, the empty one becoming the first', S.levels == 3, str(S.levels))
+check('the quest took the title and author', S.project.quest['title'] == 'Wizard Quest' and S.project.quest['author'] == 'A Brother',
+      str(S.project.quest))
+for n in (1, 2, 3):
+    check(f'level {n} has creatures or a maze, a start and a way out', can_walk(S.project, n), str(n))
+    check(f'level {n} has a story page before it', bool(S.project.constant(n, 'STORIES', [])), str(S.project.constant(n, 'STORIES', None)))
+check('the maze kept its name', S.project.constant(2, 'TITLE', None) == 'The Twisty Bit', str(S.project.constant(2, 'TITLE', None)))
+check('the hand-written opening is story 0', storytext.get(S.project, 0).lines == ['Opening words.'], str(storytext.get(S.project, 0).lines))
+check('there is an ending (story 8)', len(storytext.get(S.project, 8).lines) > 1)
+check('level 3 holds the boss', any(S.project.grid(3).sq[x][y][3] > 0 and (S.row('creatures', S.project.grid(3).sq[x][y][3]) or {}).get('life', 0) >= 120
+                                   for x in range(1, 101) for y in range(1, 101)))
+check('no problems that stop the game', not [p for p in (app.run_doctor() or app.problems) if p.severity == 'error'],
+      str([p.title for p in app.problems if p.severity == 'error']))
+app._undo(False); pump(10)
+check('undo takes the whole quest back out in one step', S.levels == 1 and not any(S.project.grid(1).sq[x][y][3] for x in range(1, 101) for y in range(1, 101)),
+      str(S.levels))
+app._undo(True); pump(10)
+check('redo puts it back', S.levels == 3, str(S.levels))
+done('the quest wizard makes a whole quest: journeys, hand-picked places, stories, a boss, one undo')
+
+
 # ── the history keeps maps as the squares that changed, and a removed level comes back even after it was saved away ──
 from studio import levels as levels_mod  # noqa: E402
 app.go('world'); pump(20)

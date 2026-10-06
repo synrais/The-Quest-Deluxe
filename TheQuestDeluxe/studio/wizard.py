@@ -7,10 +7,10 @@ import tkinter as tk
 from tkinter import ttk
 
 from editor.art import photo
-from editor.project import LEVEL_SCRIPT
 
-from . import levelmeta, theme, ui, worldgen
+from . import levels, theme, ui, worldgen
 from .gallery import Entry, Picker
+from .stepdialog import StepDialog
 from .theme import C, px
 
 STEPS = [('place', 'Place', 'map'), ('land', 'Land', 'tree'), ('life', 'Life', 'skull'), ('loot', 'Loot', 'coin'),
@@ -19,7 +19,8 @@ THEME_CARDS = [('country', 'Countryside', 'Open fields, forest and a river, a fe
                ('village', 'Village', 'Streets of houses, a well, villagers and a shop.', 'home'),
                ('dungeon', 'Fortress', 'Rooms and corridors with doors, and a great room at the end.', 'door'),
                ('wilderness', 'Wilderness', 'Thick forest and a winding trail, with clearings where trouble waits.', 'tree'),
-               ('maze', 'Maze', 'A twisting maze to get lost in, with the way out at the far end.', 'grid')]
+               ('maze', 'Maze', 'A twisting maze to get lost in, with the way out at the far end.', 'grid'),
+               ('cave', 'Caves', 'Winding caverns of rock, with wide chambers to fight in and the way out deep inside.', 'mountain')]
 SIZES = [('3', 'Small  3 × 3'), ('5', 'Medium  5 × 5'), ('7', 'Large  7 × 7'), ('10', 'Huge  10 × 10')]
 CORNER_NAMES = [('sw', 'Bottom left'), ('nw', 'Top left'), ('ne', 'Top right'), ('se', 'Bottom right')]
 LEVELS_OF = {'gentle': 'Gentle: few and weak, for a first level.', 'normal': 'Normal: about as busy as the original levels.',
@@ -29,7 +30,7 @@ NAMES_A = ['Whispering', 'Broken', 'Silent', 'Sunken', 'Crimson', 'Forgotten', '
            'Lonely', 'Thorny', 'Drowned', 'Ancient', 'Shattered']
 NAMES_B = {'country': ['Meadows', 'Crossing', 'Fields', 'Downs', 'Marches'], 'village': ['Hollow', 'Green', 'Vale', 'Stead', 'Ford'],
            'dungeon': ['Keep', 'Halls', 'Vault', 'Bastion', 'Crypt'], 'wilderness': ['Woods', 'Trail', 'Thicket', 'Wilds', 'Pines'],
-           'maze': ['Maze', 'Labyrinth', 'Warren', 'Tangle', 'Gardens']}
+           'maze': ['Maze', 'Labyrinth', 'Warren', 'Tangle', 'Gardens'], 'cave': ['Caverns', 'Depths', 'Hollows', 'Grotto', 'Deeps']}
 STORY_TEMPLATES = {
     'country': ['The road leaves the village behind and runs out across open country. Rivers cut it, forests crowd it, and '
                 'here and there a lonely house stands in the fields.',
@@ -43,19 +44,24 @@ STORY_TEMPLATES = {
     'wilderness': ['The trees close in until the sky is a thin grey line. A narrow trail winds between the trunks, and '
                    'things move in the clearings.',
                    '{boss_line}You follow the trail into the dark.'],
+    'cave': ['The daylight shrinks to a coin behind you. Water drips somewhere in the dark, and the tunnels split and split again '
+             'between walls of wet rock.',
+             '{boss_line}You keep one hand on the stone and go deeper.'],
     'maze': ['Walls rise on every side, too high to see over. Every turn looks like the last, and you are sure you hear '
              'something breathing round the next corner.',
              '{boss_line}You pick a way and walk.'],
 }
 
 
-class LevelWizard(ui.Dialog):
+class LevelWizard(StepDialog):
+    STEPS = STEPS
+    HEADING = 'Make a level'
+    MAKE_LABEL = 'Make the level'
+
     def __init__(self, app, on_done=None):
-        self.app = app
-        self.s = app.session
         width = min(px(1120), app.root.winfo_screenwidth() - px(60))
         height = min(px(760), app.root.winfo_screenheight() - px(100))
-        super().__init__(app.root, 'Make a level', width=width, height=height)
+        super().__init__(app, 'Make a level', width, height)
         self.on_done = on_done
         self.p = worldgen.Params(seed=random.randint(1, 99999))
         self.p.screens = (5, 5)
@@ -66,57 +72,11 @@ class LevelWizard(ui.Dialog):
         self.step = 0
         self._job = None
         self._photo = None
-        self.guard = False
-        self._build()
+        self.build_frame()
         self.go(0)
         self.refresh_now()
 
-    # ── frame ───────────────────────────────────────────────────────────────
-    def _build(self):
-        self.frame.configure(padding=0)
-        top = ttk.Frame(self.body)
-        top.pack(fill='both', expand=True)
-        left = ttk.Frame(top, width=px(170))
-        left.pack(side='left', fill='y')
-        left.pack_propagate(False)
-        ttk.Label(left, text='Make a level', style='H2.TLabel').pack(anchor='w', padx=px(16), pady=(px(16), px(10)))
-        self.step_labels = []
-        for i, (key, title, icon) in enumerate(STEPS):
-            row = tk.Frame(left, bg=C['panel'], cursor='hand2')
-            row.pack(fill='x', padx=px(8), pady=1)
-            num = tk.Label(row, text=str(i + 1), width=2, bg=C['panel'], fg=C['dim'], font=(theme.FONT, 10, 'bold'))
-            num.pack(side='left', padx=(px(8), px(4)), pady=px(7))
-            txt = tk.Label(row, text=title, bg=C['panel'], fg=C['dim'], anchor='w', font=(theme.FONT, 10))
-            txt.pack(side='left', fill='x', expand=True)
-            for w in (row, num, txt):
-                w.bind('<Button-1>', lambda e, i=i: self.go(i))
-            self.step_labels.append((row, num, txt))
-        ui.vsep(top).pack(side='left', fill='y')
-        right = ttk.Frame(top, width=px(440))
-        right.pack(side='right', fill='y')
-        right.pack_propagate(False)
-        ui.vsep(top).pack(side='right', fill='y')
-        self._preview_pane(right)
-        mid = ttk.Frame(top)
-        mid.pack(side='left', fill='both', expand=True)
-        self.title_label = ttk.Label(mid, text='', style='H1.TLabel')
-        self.title_label.pack(anchor='w', padx=px(22), pady=(px(14), 0))
-        self.sub_label = ttk.Label(mid, text='', style='Dim.TLabel', wraplength=px(480), justify='left')
-        self.sub_label.pack(anchor='w', padx=px(22), pady=(px(2), px(6)))
-        self.scroll = ui.Scrolled(mid)
-        self.scroll.pack(fill='both', expand=True)
-        self.page = self.scroll.body
-        foot = self.foot
-        foot.pack_configure(padx=px(18), pady=px(12))
-        self.back_btn = ttk.Button(foot, text='Back', command=lambda: self.go(self.step - 1))
-        self.back_btn.pack(side='left')
-        self.make_btn = ttk.Button(foot, text='Make the level', style='Accent.TButton', command=self.create)
-        self.make_btn.pack(side='right')
-        self.next_btn = ttk.Button(foot, text='Next', style='Accent.TButton', command=lambda: self.go(self.step + 1))
-        self.next_btn.pack(side='right', padx=px(8))
-        ttk.Button(foot, text='Cancel', command=lambda: self.close(None)).pack(side='right')
-
-    def _preview_pane(self, right):
+    def preview_pane(self, right):
         ttk.Label(right, text='What you are making', style='H3.TLabel').pack(anchor='w', padx=px(16), pady=(px(16), px(6)))
         self.canvas = tk.Canvas(right, width=px(408), height=px(408), bg=C['canvas'], highlightthickness=1,
                                 highlightbackground=C['line'])
@@ -135,73 +95,6 @@ class LevelWizard(ui.Dialog):
         self.stats.pack(anchor='w', padx=px(16))
         self.warn = ttk.Label(right, text='', style='Bad.TLabel', wraplength=px(400), justify='left')
         self.warn.pack(anchor='w', padx=px(16), pady=(px(4), 0))
-
-    # ── steps ───────────────────────────────────────────────────────────────
-    def go(self, i):
-        i = max(0, min(len(STEPS) - 1, i))
-        self.step = i
-        for k, (row, num, txt) in enumerate(self.step_labels):
-            on = k == i
-            bg = C['select'] if on else C['panel']
-            for w in (row, num, txt):
-                w.configure(bg=bg)
-            num.configure(fg=C['accent'] if on else C['dim'])
-            txt.configure(fg=C['text'] if on else C['dim'], font=(theme.FONT, 10, 'bold' if on else 'normal'))
-        self.scroll.clear()
-        key = STEPS[i][0]
-        getattr(self, f'_step_{key}')()
-        self.scroll.to_top()
-        self.back_btn.state(['!disabled'] if i else ['disabled'])
-        last = i == len(STEPS) - 1
-        if last:
-            self.next_btn.pack_forget()
-            self.make_btn.pack(side='right')
-        else:
-            self.make_btn.pack_forget()
-            self.next_btn.pack(side='right', padx=px(8))
-
-    def head(self, title, sub=''):
-        self.title_label.configure(text=title)
-        self.sub_label.configure(text=sub)
-
-    def h(self, text, sub=''):
-        f = ttk.Frame(self.page)
-        f.pack(fill='x', padx=px(22), pady=(px(16), px(4)))
-        ttk.Label(f, text=text, style='H3.TLabel').pack(anchor='w')
-        if sub:
-            ttk.Label(f, text=sub, style='Faint.TLabel', wraplength=px(470), justify='left').pack(anchor='w')
-        return f
-
-    def line(self, label, tip=''):
-        r = ttk.Frame(self.page)
-        r.pack(fill='x', padx=px(22), pady=3)
-        lab = ttk.Label(r, text=label)
-        lab.pack(side='left')
-        if tip:
-            ui.tip(lab, tip)
-        return r
-
-    def switch(self, label, key, tip='', store=None):
-        r = self.line(label, tip)
-        d = store if store is not None else self.p
-
-        def flip(v):
-            if isinstance(d, dict):
-                d[key] = v
-            else:
-                setattr(d, key, v)
-            self.refresh()
-        sw = ui.Switch(r, d[key] if isinstance(d, dict) else getattr(d, key), flip)
-        sw.pack(side='right')
-        return sw
-
-    def number(self, label, key, lo, hi, tip='', scale=1, slider=True):
-        r = self.line(label, tip)
-        cur = getattr(self.p, key)
-        num = ui.Number(r, lo, hi, int(round(cur * scale)), live=lambda v: self._set(key, v / scale),
-                        commit=lambda v: self._set(key, v / scale), width=4, slider=slider)
-        num.pack(side='right')
-        return num
 
     def _set(self, key, v):
         if self.guard:
@@ -225,13 +118,8 @@ class LevelWizard(ui.Dialog):
 
     def _theme(self, key):
         self.p.theme = key
-        defaults = {'country': dict(rivers=1, lakes=1, forest=0.30, buildings=4), 'village': dict(rivers=0, lakes=0, forest=0.14, buildings=8),
-                    'dungeon': dict(rivers=0, lakes=0, forest=0, buildings=0), 'wilderness': dict(rivers=1, lakes=1, forest=0.5, buildings=2),
-                    'maze': dict(rivers=0, lakes=0, forest=0, buildings=0)}[key]
-        for k, v in defaults.items():
+        for k, v in worldgen.theme_defaults(key).items():
             setattr(self.p, k, v)
-        self.p.shop = key in ('country', 'village', 'wilderness')
-        self.p.villagers = 6 if key == 'village' else 3 if key != 'maze' else 0
         self.p.dark = False
         self.refresh()
 
@@ -263,9 +151,9 @@ class LevelWizard(ui.Dialog):
             self.h('Extras')
         if t in ('country', 'wilderness', 'village'):
             self.switch('Paths between things', 'paths', 'Pave the routes between the start, the buildings and the way out.')
-        if t == 'dungeon':
-            self.switch('Some rooms are dark', 'dark', 'Dark screens show only the hero and his light.')
-        if t != 'maze':
+        if t in ('dungeon', 'cave'):
+            self.switch('Some parts are dark' if t == 'cave' else 'Some rooms are dark', 'dark', 'Dark screens show only the hero and his light.')
+        if t not in ('maze', 'cave'):
             self.switch('A locked door and its key', 'puzzle', 'A door that needs a key, with the key hidden elsewhere on the level. '
                         'It guards the last room of a fortress or the farthest house.')
         self._materials()
@@ -390,7 +278,7 @@ class LevelWizard(ui.Dialog):
         self.number('Potions (%)', 'potions', 0, 300, scale=100)
         self.number('Weapons and armour (%)', 'gear', 0, 300, 'Better ones the farther from the start.', scale=100)
         self.switch('Chests in the buildings', 'chests', 'Closed chests that hold gold.')
-        if t not in ('maze', 'dungeon'):
+        if t not in ('maze', 'dungeon', 'cave'):
             self.h('A shop')
             self.switch('Make one house a shop', 'shop', 'A shopkeeper in a house near the start sells potions and gear that '
                         'suit the level. You can change what he sells on the Shops page.')
@@ -571,26 +459,7 @@ class LevelWizard(ui.Dialog):
         if story_lines:
             scopes.append('texts')
         with s.edit('Make a level with the wizard', *dict.fromkeys(scopes)):
-            if target == 'new':
-                p.add_level()
-                p.scripts[n] = LEVEL_SCRIPT.format(n=n)
-            from editor.project import Grid
-            p.grids[n] = Grid(list(r.rows()))
-            for what in ('quest', ('map', n), ('script', n), ('shops', n)):
-                p.dirty.add(what)
-            levelmeta.raw_put(p, n, 'START', tuple(r.start))
-            levelmeta.raw_put(p, n, 'SHOPS', dict(r.shop_screens) or {})
-            levelmeta.raw_put(p, n, 'PEACEFUL_SCREENS', list(r.peaceful))
-            levelmeta.raw_put(p, n, 'DARK_SCREENS', list(r.dark))
-            levelmeta.raw_put(p, n, 'TITLE', title or None)
-            if r.shops:
-                p.shops[n] = dict(r.shops)
-            elif target == 'new':
-                p.shops[n] = {}
-            if story_lines:
-                from .storytext import add_story
-                no = add_story(p, story_lines)
-                levelmeta.raw_put(p, n, 'STORIES', [no] + [k for k in (levelmeta.get(s, n, 'STORIES', []) or []) if k != no])
+            levels.put_generated(s, n, r, title, story_lines, new=target == 'new')
         done = self.on_done
         play = e['play']
         want_open = e['open']

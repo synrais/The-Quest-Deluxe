@@ -64,6 +64,7 @@ class CommandPalette(tk.Toplevel):
                 ('Play the game from here', 'F5', 'play', a.play),
                 ('Play from the title screen', '', 'play', lambda: a.play(from_start=True)),
                 ('Run the Quest Doctor', 'finds what is missing', 'check', lambda: a.go('doctor')),
+                ('New quest with the wizard', 'level after level, start to end', 'sparkle', lambda: a.go('world', quest=True)),
                 ('New level with the wizard', 'a whole level, start to end', 'wand', lambda: a.go('world', wizard=True)),
                 ('New blank level', '', 'plus', lambda: a.go('world', new_level=True)),
                 ('New creature', '', 'skull', lambda: a.go('creatures', new=True)),

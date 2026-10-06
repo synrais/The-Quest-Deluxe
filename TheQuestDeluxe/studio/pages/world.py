@@ -334,6 +334,7 @@ class WorldPage(Page):
         m.add_command(label='A blank level', command=self.add_blank)
         m.add_command(label=f'A copy of level {self.level}', command=self.add_copy)
         m.add_command(label='Make a level with the wizard…', command=self.wizard)
+        m.add_command(label='Make a whole quest with the wizard…', command=self.quest_wizard)
         w = self.winfo_toplevel()
         m.tk_popup(w.winfo_pointerx(), w.winfo_pointery())
 
@@ -354,6 +355,10 @@ class WorldPage(Page):
             ui.inform(self, 'Level wizard', 'The level wizard is not ready yet.')
             return
         open_wizard(self.app, on_done=self._after_structure)
+
+    def quest_wizard(self):
+        from ..questwizard import open_quest_wizard
+        open_quest_wizard(self.app, on_done=self._after_structure)
 
     def _remove_last(self):
         n = self.s.levels
@@ -425,7 +430,7 @@ class WorldPage(Page):
             self._fill_list()
 
     # ── life cycle ──────────────────────────────────────────────────────────
-    def on_show(self, level=None, at=None, tool=None, panel=None, wizard=False, new_level=False, **where):
+    def on_show(self, level=None, at=None, tool=None, panel=None, wizard=False, new_level=False, quest=False, **where):
         if getattr(self, '_dirty_list', True) or level:
             self._dirty_list = False
             self._fill_list()
@@ -443,6 +448,8 @@ class WorldPage(Page):
         self.app.set_hint(HINTS.get(self.map.tool, ''))
         if wizard:
             self.after(150, self.wizard)
+        if quest:
+            self.after(150, self.quest_wizard)
         if new_level:
             self.after(150, self.add_blank)
 

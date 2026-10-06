@@ -39,17 +39,28 @@ Every level as a card on the left; the map in the middle; Paint, Level and Place
 * **Places**: start, **exits** (each can lead to *any* level: its start, a named entry, or an exact square picked on a map of
   that level), stairs, ladders, ropes, holes and jump pads (with the way back made too if you like), named entries, the wake
   spot, shops and peaceful or dark screens.
-* **+** makes a blank level, a copy of the one you are on, or runs the wizard. **Play here** starts the game on the square
+* **+** makes a blank level, a copy of the one you are on, or runs the level wizard or the quest wizard. **Play here** starts the game on the square
   you last clicked; **3D view** shows the level as FPS mode does.
 
 ### The level wizard
-Six steps and a live picture that changes as you choose: the **place** (countryside, village, fortress, wilderness or maze;
+Six steps and a live picture that changes as you choose: the **place** (countryside, village, fortress, wilderness, maze or caves;
 how many screens; which corner the hero starts in), the **land** (rivers, lakes, forest, buildings, paths, a locked door and
 its key, and exactly which of the quest's own tiles to use), **who lives there** (how hard; which creatures, or "the crowd
 of level 3"; a boss; villagers), **loot** (gold, potions, gear, chests, a shop), the **story** (a name and the words shown
 before the level) and a last look. **Roll again** makes a different level with the same settings, and the seed gets one
 back. The result is whole and fair: the hero starts on open ground, the exit can be reached (with the key, if there is
 one), nothing lies inside a wall, and shops have wares. The game's own engine has walked every kind from start to exit.
+
+### The quest wizard
+A whole quest in four steps, with a picture of every level before it exists. **Adventure**: a title (for a blank quest), a
+journey (the classic road from a village through country, wilds and caves to a fortress; into the depths; the wild lands;
+lost in the mazes; or surprise me), how many levels (2 to 12), how big each is, how hard it gets (a gentle climb, steady, or
+steep) and whether the last level has a boss. **Levels**: the kind of place, size and name of each one, and a dice to roll
+a different level of the same kind. **Story**: an opening, a page before each level and an ending, written from the places
+and all editable (a page holds 15 lines; the ending is story 8, the opening story 0). **Make it**: where it goes (a blank
+quest gets them as levels 1, 2, 3 ...; any other quest gets them after its last level) and whether to play the first one.
+Creatures and wares get tougher and dearer from one level to the next, and a level's exit leads on to the next. It is one
+Undo, and everything it makes is ordinary levels, creatures and stories to change. **New quest** offers it as the way to start.
 
 ### Creatures, Items, Spells, Heroes, Tiles
 A gallery of pictures on the left, the chosen one on the right: its picture (Paint, Import), its name, and every
@@ -107,7 +118,8 @@ fixed, and the Studio's own look (dark or light).
 * The Studio reads every field of items, creatures, spells and classes from the old editor's descriptions
   (`editor/*_tab.py`), so the two can never disagree about what a field is. Everything it writes is the same pack format
   ([QUEST_PACKS.md](QUEST_PACKS.md)); a level's name is a `TITLE` line in its script, which the game ignores.
-* `studio/worldgen.py` is the level generator, `studio/doctor.py` the Quest Doctor and `studio/fightcalc.py` the fight
+* `studio/worldgen.py` is the level generator (and plans a whole quest: `quest_params`), `studio/questwizard.py` and
+  `studio/wizard.py` are its two wizards (both built on `studio/stepdialog.py`), `studio/doctor.py` the Quest Doctor and `studio/fightcalc.py` the fight
   check; none of them touches a window, and they are tested on their own.
 * Tests: `xvfb-run python tests/test_studio.py` drives every page; `python tests/test_worldgen.py` generates levels and has
-  the real game walk them.
+  the real game walk them, and play a whole generated quest from the first start to the credits.

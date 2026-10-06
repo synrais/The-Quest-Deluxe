@@ -97,6 +97,9 @@ class HomePage(Page):
         nopic = [c for c in mons if p.picture('creatures', c['id']) is None]
         if nopic:
             steps.append(('skull', f'{nopic[0].get("name") or "A creature"} has no picture yet', 'Paint it', lambda c=nopic[0]: self.app.go('creatures', select=c['id'])))
+        if not steps and s.levels == 1 and not any(p.grid(1).sq[x][y][1] or p.grid(1).sq[x][y][3] for x in range(1, 101) for y in range(1, 101)):
+            steps.append(('sparkle', 'A blank quest: let the wizard make a whole one, level after level, and look at every level before it exists',
+                          'Quest wizard', lambda: self.app.go('world', quest=True)))
         if not steps:
             steps.append(('sparkle', 'Make a new level with the wizard: pick a place, the creatures and the treasure, and look at it before it exists', 'Level wizard',
                           lambda: self.app.go('world', wizard=True)))
@@ -151,7 +154,8 @@ class HomePage(Page):
         ttk.Label(body, text='Make something', style='H2.TLabel').pack(anchor='w', padx=px(28), pady=(px(20), px(6)))
         row = ttk.Frame(body)
         row.pack(fill='x', padx=px(24))
-        acts = (('wand', 'Level wizard', 'A whole level, start to end, in a few clicks', lambda: self.app.go('world', wizard=True)),
+        acts = (('sparkle', 'Quest wizard', 'A whole quest, level after level, in a few clicks', lambda: self.app.go('world', quest=True)),
+                ('wand', 'Level wizard', 'A whole level, start to end, in a few clicks', lambda: self.app.go('world', wizard=True)),
                 ('skull', 'New creature', 'A monster, a person or an ally', lambda: self.app.go('creatures', new=True)),
                 ('sword', 'New item', 'A weapon, armour, a charm, food ...', lambda: self.app.go('items', new=True)),
                 ('wand', 'New spell', 'Fire, frost, healing, summoning ...', lambda: self.app.go('spells', new=True)))

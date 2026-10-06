@@ -16,7 +16,7 @@ from collections import deque
 from dataclasses import dataclass, field
 
 SIZE = 100
-THEMES = ('country', 'village', 'dungeon', 'wilderness', 'maze')
+THEMES = ('country', 'village', 'dungeon', 'wilderness', 'maze', 'cave')
 DIFFICULTY = {'gentle': 2.0, 'normal': 4.0, 'tough': 6.5, 'deadly': 10.0}      # hostile creatures per full screen
 CORNERS = ('sw', 'nw', 'ne', 'se')
 INF = 10 ** 9
@@ -145,7 +145,21 @@ class Params:
     villagers: int = 3
     puzzle: bool = False
     dark: bool = False
+    tier: float | None = None             # how far along a whole quest this level is (0 first .. 1 last): shifts creatures and wares
     style: dict = field(default_factory=dict)
+
+
+DEFAULTS = {'country': dict(rivers=1, lakes=1, forest=0.30, buildings=4), 'village': dict(rivers=0, lakes=0, forest=0.14, buildings=8),
+            'dungeon': dict(rivers=0, lakes=0, forest=0, buildings=0), 'wilderness': dict(rivers=1, lakes=1, forest=0.5, buildings=2),
+            'maze': dict(rivers=0, lakes=0, forest=0, buildings=0), 'cave': dict(rivers=0, lakes=0, forest=0, buildings=0)}
+
+
+def theme_defaults(theme: str) -> dict:
+    """What suits a kind of place: rivers, lakes, forest and buildings, and whether it gets a shop and how many villagers."""
+    d = dict(DEFAULTS[theme])
+    d['shop'] = theme in ('country', 'village', 'wilderness')
+    d['villagers'] = 6 if theme == 'village' else 0 if theme in ('maze', 'cave') else 3
+    return d
 
 
 @dataclass
@@ -166,6 +180,41 @@ class Result:
             for y in range(1, SIZE + 1):
                 fl, wa, it, mo, go, de = self.sq[x][y]
                 yield x, y, fl, wa, it, mo, go, de
+
+
+# ── a whole quest: which places, how hard, level after level ──────────────────
+JOURNEYS = {'classic': ['village', 'country', 'wilderness', 'cave', 'dungeon'], 'depths': ['cave', 'dungeon', 'cave', 'dungeon'],
+            'wild': ['country', 'wilderness', 'village', 'country', 'wilderness'], 'maze': ['maze'], 'mix': None}
+RAMP_LEVELS = {'easy': ('gentle', 'gentle', 'normal'), 'steady': ('gentle', 'normal', 'tough'), 'steep': ('normal', 'tough', 'deadly')}
+
+
+def difficulty_for(ramp: str, tier: float) -> str:
+    """The difficulty of a level that far along a quest (tier 0 the first level, 1 the last)."""
+    seq = RAMP_LEVELS.get(ramp, RAMP_LEVELS['steady'])
+    return seq[min(len(seq) - 1, int(tier * len(seq)))]
+
+
+def journey_themes(journey: str, count: int, rng: random.Random) -> list:
+    """The kind of place of each of `count` levels along a journey (a list of places stretched over the levels)."""
+    seq = JOURNEYS.get(journey)
+    if seq is None:
+        pool = [t for t in THEMES if t != 'village']
+        out = [rng.choice(['village', 'country', 'wilderness']) if count > 1 else rng.choice(pool)]
+        while len(out) < count:
+            out.append(rng.choice([t for t in pool if t != out[-1]]))
+        return out[:count]
+    return [seq[min(len(seq) - 1, int(i * len(seq) / count))] for i in range(count)]
+
+
+def quest_params(i: int, count: int, theme: str, seed: int, size: int, ramp: str, boss: int | None = None, puzzles: bool = True) -> Params:
+    """The settings of level i of a whole quest of `count` levels: tougher creatures and dearer wares the farther along."""
+    tier = i / (count - 1) if count > 1 else 0.0
+    q = Params(seed=seed, theme=theme, screens=(size, size), tier=tier, difficulty=difficulty_for(ramp, tier), boss=boss)
+    for k, v in theme_defaults(theme).items():
+        setattr(q, k, v)
+    q.puzzle = bool(puzzles and theme == 'dungeon' and i > 0)
+    q.dark = theme in ('dungeon', 'cave') and tier > 0.4
+    return q
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────
@@ -914,8 +963,129 @@ def build_maze(g):
                 g.tag[(x, y)] = 'trail'
 
 
+def _stone(g):
+    """Walls that look like rock: grey and stone ones if the pack has them, else whatever builds its houses."""
+    info = g.walls_info
+    pool = [i for i in (g.style.building + g.style.rocks) if i != g.style.door and info.get(i, {}).get('solid')]
+    rocky = [i for i in pool if any(k in _name(info[i]) for k in ('gray', 'grey', 'stone', 'rock', 'cave', 'stipple', 'mesh'))
+             and 'boulder' not in _name(info[i])]
+    return rocky or pool or g.style.trees or [1]
+
+
+def build_cave(g):
+    """Winding caverns, found with a few rounds of cellular automaton, with the way out at the far end and wide caverns for fights."""
+    q, s, rng = g.q, g.style, g.rng
+    w, h = g.w, g.h
+    stone = _stone(g)
+    tbl = {f['id']: f for f in g.project.tiles.get('floors', [])}
+    grey = [i for i, f in tbl.items() if any(k in _name(f) for k in ('stone', 'gray', 'grey', 'cobble', 'gravel', 'cave', 'rock', 'slate'))]
+    floors = grey or ([s.path] if s.path is not None else []) or [s.ground]
+    spots = [f for f in s.ground_alt if f in tbl and any(k in _name(tbl[f]) for k in ('sand', 'dirt', 'mud', 'moss'))]
+    base = rng.choice(stone)
+    fill = 0.45
+    best = None
+    for attempt in range(10):
+        wall = [[True] * (h + 2) for _ in range(w + 2)]
+        for x in range(2, w):
+            for y in range(2, h):
+                wall[x][y] = rng.random() < fill
+        for it in range(5):
+            new = [row[:] for row in wall]
+            for x in range(2, w):
+                for y in range(2, h):
+                    n = sum(1 for dx in (-1, 0, 1) for dy in (-1, 0, 1) if wall[x + dx][y + dy])           # the square and its neighbours
+                    new[x][y] = n >= 5
+            wall = new
+        seen, comps = set(), []
+        for x in range(2, w):
+            for y in range(2, h):
+                if wall[x][y] or (x, y) in seen:
+                    continue
+                comp, stack = [], [(x, y)]
+                seen.add((x, y))
+                while stack:
+                    cx, cy = stack.pop()
+                    comp.append((cx, cy))
+                    for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                        nb = (cx + dx, cy + dy)
+                        if nb not in seen and 2 <= nb[0] < w and 2 <= nb[1] < h and not wall[nb[0]][nb[1]]:
+                            seen.add(nb)
+                            stack.append(nb)
+                comps.append(comp)
+        comps.sort(key=len, reverse=True)
+        if comps and (best is None or len(comps[0]) > len(best[1])):
+            best = (wall, comps[0])
+        if comps and len(comps[0]) >= w * h * 0.30:
+            break
+        fill = max(0.38, fill - 0.015)
+    wall, main = best
+    openset = set(main)
+    for x in range(1, w + 1):
+        for y in range(1, h + 1):
+            cell = g.sq[x][y]
+            if (x, y) in openset:
+                cell[1] = 0
+                cell[0] = rng.choice(spots) if spots and rng.random() < 0.12 else rng.choice(floors)
+                g.tag[(x, y)] = 'trail'
+            else:
+                cell[1] = base if rng.random() > 0.05 else rng.choice(stone)
+                cell[0] = s.ground
+                g.tag[(x, y)] = 'house'
+    c = q.start if q.start in CORNERS else 'sw'
+    cx = 2 if c[1] == 'w' else w - 1
+    cy = 2 if c[0] == 'n' else h - 1
+    start = min(main, key=lambda p: abs(p[0] - cx) + abs(p[1] - cy))
+    dist = {start: 0}
+    queue = [start]
+    for pt in queue:
+        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            nb = (pt[0] + dx, pt[1] + dy)
+            if nb in openset and nb not in dist:
+                dist[nb] = dist[pt] + 1
+                queue.append(nb)
+    far = max(dist, key=lambda p: dist[p])
+
+    def cavern(centre, r):
+        """Open a round cavern so there is room to move (and for a boss)."""
+        for x in range(centre[0] - r, centre[0] + r + 1):
+            for y in range(centre[1] - r, centre[1] + r + 1):
+                if 2 <= x < w and 2 <= y < h and math.hypot(x - centre[0], y - centre[1]) <= r + 0.3:
+                    cell = g.sq[x][y]
+                    cell[1] = 0
+                    cell[0] = rng.choice(floors)
+                    g.tag[(x, y)] = 'trail'
+                    openset.add((x, y))
+    cavern(start, 2)
+    cavern(far, 4)
+    g.start = start
+    g.exit_pos = g.exit = far
+    if s.exit_item is not None:
+        g.sq[far[0]][far[1]][2] = s.exit_item
+    else:
+        g.warnings.append('The quest has no item of the type "exit", so this level has no way out yet.')
+    g.reserved |= {(x, y) for x in range(start[0] - 2, start[0] + 3) for y in range(start[1] - 2, start[1] + 3)}
+    # wide caverns to hold fights and chests: 5 x 5 squares of open floor, apart from each other
+    rooms = []
+    wanted = max(2, (w // 10) * (h // 10))
+    cand = [p for p in openset if all((p[0] + i, p[1] + j) in openset for i in range(-2, 3) for j in range(-2, 3))]
+    rng.shuffle(cand)
+    for p in cand:
+        if len(rooms) >= wanted:
+            break
+        rect = (p[0] - 2, p[1] - 2, p[0] + 2, p[1] + 2)
+        if all(abs(p[0] - r[0] - 2) > 6 or abs(p[1] - r[1] - 2) > 6 for r in rooms) and abs(p[0] - start[0]) + abs(p[1] - start[1]) > 8 \
+                and abs(p[0] - far[0]) + abs(p[1] - far[1]) > 8:
+            rooms.append(rect)
+    for r in rooms:
+        g.interiors.append({'rect': r, 'kind': 'room', 'door': None, 'porch': None})
+    g.interiors.append({'rect': (far[0] - 2, far[1] - 2, far[0] + 2, far[1] + 2), 'kind': 'boss', 'door': None, 'porch': None})
+    g.rooms = rooms
+    if q.dark:
+        g.dark = sorted({screen_of(x, y) for (x, y) in openset if rng.random() < 0.02} - {screen_of(*start)})
+
+
 BUILDERS = {'country': build_country, 'village': build_village, 'dungeon': build_dungeon, 'wilderness': build_wilderness,
-            'maze': build_maze}
+            'maze': build_maze, 'cave': build_cave}
 
 
 # ── people, creatures and treasure ───────────────────────────────────────────
@@ -939,6 +1109,11 @@ def _produced(project) -> set:
     return out
 
 
+def progress_of(q: Params, prog: float) -> float:
+    """How far along the quest the things at this spot should be: the walk through the level, lifted by the level's place in the quest."""
+    return max(0.0, min(1.0, prog)) if q.tier is None else max(0.0, min(1.0, 0.65 * q.tier + 0.35 * prog))
+
+
 def monster_pool(project, q: Params):
     """(regular creatures sorted by how hard they are, bosses) for the level."""
     made = _produced(project)
@@ -949,6 +1124,11 @@ def monster_pool(project, q: Params):
         pool = [c for c in allh if c['id'] in q.creatures and int(c.get('size') or 1) == 1]
     else:
         lo, hi = {'gentle': (0, .4), 'normal': (.12, .62), 'tough': (.35, .85), 'deadly': (.55, 1.0)}.get(q.difficulty, (.12, .62))
+        if q.tier is not None:                                    # a whole quest: the weak ones first, the strong ones last
+            t = max(0.0, min(1.0, q.tier))
+            off = {'gentle': -.08, 'normal': 0, 'tough': .08, 'deadly': .16}.get(q.difficulty, 0)
+            lo = max(0.0, min(.62, .55 * t + off))
+            hi = min(1.0, lo + .42 + .1 * t)
         n = len(regular)
         a = int(lo * n)
         pool = regular[a:max(a + 3, int(hi * n))]
@@ -1032,7 +1212,7 @@ def populate(g, dist, maxd):
             continue
         d = min((dist[s] for s in spots), default=0)
         prog = max(0.0, min(1.0, d / maxd))
-        if q.theme == 'dungeon':
+        if q.theme in ('dungeon', 'cave'):
             chance, many = 0.8, rng.randint(1, 3)
         else:
             chance, many = (0.35 if q.difficulty != 'gentle' else 0.12), 1
@@ -1102,7 +1282,7 @@ def treasure(g, dist, maxd):
     for _ in range(int(round(1.3 * screens * q.gold))):
         pt = spot()
         if pt:
-            prog = min(1.0, dist[pt] / maxd)
+            prog = progress_of(q, dist[pt] / maxd)
             g.sq[pt[0]][pt[1]][4] = max(1, int((6 + 90 * prog) * rng.uniform(0.5, 1.6)))
             stats['gold'] += 1
     items = p.tables['items']
@@ -1118,7 +1298,7 @@ def treasure(g, dist, maxd):
     for _ in range(int(round(0.3 * screens * q.gear))):
         pt = spot(0.75)
         if pt and gear:
-            target = 60 + 900 * min(1.0, dist[pt] / maxd)
+            target = 60 + 900 * progress_of(q, dist[pt] / maxd)
             r = _pick_weighted(rng, gear, [math.exp(-(((r_.get('price') or 0) - target) / (target * 0.7 + 50)) ** 2) for r_ in gear])
             g.sq[pt[0]][pt[1]][2] = r['id']
             stats['items'] += 1
@@ -1130,7 +1310,7 @@ def treasure(g, dist, maxd):
             x0, y0, x1, y1 = it['rect']
             if it['kind'] in ('start', 'shop'):
                 continue
-            if rng.random() < (0.5 if q.theme == 'dungeon' else 0.45):
+            if rng.random() < (0.5 if q.theme in ('dungeon', 'cave') else 0.45):
                 spots = [(x, y) for x in range(x0, x1 + 1) for y in range(y0, y1 + 1)
                          if (x, y) in dist and _spot(g, x, y) and not g.sq[x][y][3] and _blocked_around(g, x, y) >= 3]
                 if spots:
@@ -1146,7 +1326,7 @@ def shop_wares(g, progress):
     out = []
     potions = sorted((r for r in items if r.get('type') == 'potion' and r['id'] > 0), key=lambda r: r.get('price') or 0)
     out += [r['id'] for r in potions[:5]]
-    target = 60 + 700 * progress + {'gentle': 0, 'normal': 80, 'tough': 160, 'deadly': 260}.get(g.q.difficulty, 80)
+    target = 60 + 700 * progress_of(g.q, progress) + {'gentle': 0, 'normal': 80, 'tough': 160, 'deadly': 260}.get(g.q.difficulty, 80)
     for ty in ('weapon', 'armour', 'shield', 'helmet', 'amulet'):
         rows = [r for r in items if r.get('type') == ty and r['id'] > 0 and (r.get('price') or 0) > 0 and not r.get('quest')]
         rows.sort(key=lambda r: abs((r.get('price') or 0) - target))
@@ -1252,7 +1432,7 @@ def ensure_connected(g):
     for _ in range(3):
         dist = g.reach()
         targets = []
-        if g.exit and g.q.theme not in ('dungeon', 'maze'):
+        if g.exit and g.q.theme not in ('dungeon', 'maze', 'cave'):
             targets.append(g.exit_porch or g.exit)
         for _, porch in g.doors:
             if g.inside(*porch):
@@ -1290,7 +1470,7 @@ def generate(project, params: Params) -> Result:
     maxd = max(dist.values()) or 1
     if q.calm_start:
         g.peaceful.append(screen_of(*g.start))
-    if q.shop and q.theme not in ('maze', 'dungeon'):
+    if q.shop and q.theme not in ('maze', 'dungeon', 'cave'):
         make_shop(g, dist, maxd)
     placed = populate(g, dist, maxd)
     tre = treasure(g, dist, maxd)

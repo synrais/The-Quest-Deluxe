@@ -309,8 +309,6 @@ class _FakeGen:
     def __init__(self, project):
         self.project = project
 
-        class Q:
-            difficulty = 'normal'
-        self.q = Q()
+        self.q = worldgen.Params(difficulty='normal')
         import random
         self.rng = random.Random(1)

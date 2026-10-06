@@ -379,9 +379,12 @@ class Studio:
 
     def new_pack(self):
         from .pages.welcome import new_pack_dialog
-        path = new_pack_dialog(self.root)
+        want = []
+        path = new_pack_dialog(self.root, want)
         if path:
             self.open(path)
+            if 'wizard' in want and not self.closed:
+                self.go('world', quest=True)
 
     def _main_menu(self):
         m = tk.Menu(self.root, tearoff=False)
