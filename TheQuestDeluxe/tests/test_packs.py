@@ -108,6 +108,8 @@ press(pygame.K_DOWN, pygame.K_RETURN)                   # onto the sword, pick i
 assert 1001 in game.player.bag.values()
 cell = next(c for c, v in game.player.bag.items() if v == 1001)
 assert cell == (14, 8), cell                            # the Rogue's sling and pebbles fill the first two cells
+from engine import rules  # noqa: E402
+rules._seed[0] = 3                                      # (closing the inventory takes a turn, in which the shopkeeper may wander: the same dice every time)
 press(pygame.K_i, pygame.K_RIGHT, pygame.K_RIGHT, pygame.K_RETURN, pygame.K_ESCAPE)   # wear it
 assert game.player.item((12, 4)) == 1001 and game.player.hero.power == 20, (game.player.item((12, 4)),
                                                                               game.player.hero.power)
