@@ -414,7 +414,7 @@ class WorldPage(Page):
             self._fill_list()
 
     # ── life cycle ──────────────────────────────────────────────────────────
-    def on_show(self, level=None, at=None, tool=None, panel=None, **where):
+    def on_show(self, level=None, at=None, tool=None, panel=None, wizard=False, new_level=False, **where):
         if getattr(self, '_dirty_list', True) or level:
             self._dirty_list = False
             self._fill_list()
@@ -429,6 +429,10 @@ class WorldPage(Page):
         self.on_view_changed()
         self.map.schedule()
         self.map.canvas.focus_set()
+        if wizard:
+            self.after(150, self.wizard)
+        if new_level:
+            self.after(150, self.add_blank)
 
     def reload(self):
         self._thumbs.clear()

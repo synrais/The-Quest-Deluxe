@@ -65,6 +65,8 @@ class Studio:
         self.current = None
         self.toasts = ui.Toasts(root)
         self.closed = False
+        self.problems = []
+        self._doctor_job = None
         root.protocol('WM_DELETE_WINDOW', self.quit)
         root.report_callback_exception = self._crashed
         self.shell = None
@@ -118,6 +120,7 @@ class Studio:
     # ── the window ──────────────────────────────────────────────────────────
     def _build_shell(self):
         self.session.listeners.clear()               # the pages below are made afresh and listen again
+        self.session.on('any', lambda scope, source: self.changed_world())
         for w in self.root.winfo_children():
             if w is not self.toasts.box:
                 w.destroy()
@@ -149,6 +152,7 @@ class Studio:
             self.pages[key] = page
         self._history_changed()
         self._status_changed()
+        self.changed_world()
 
     def _topbar(self, top):
         r = ttk.Frame(top, style='Bg.TFrame', padding=(px(14), px(8)))
@@ -269,10 +273,36 @@ class Studio:
             pass
 
     def changed_world(self):
-        """Something on a level changed that the Doctor and Home may care about."""
-        doc = self.pages.get('doctor')
-        if doc is not None and hasattr(doc, 'schedule'):
-            doc.schedule()
+        """Something in the quest changed that the Doctor and Home may care about: read it again a moment after the last change."""
+        if self._doctor_job is not None:
+            self.root.after_cancel(self._doctor_job)
+        self._doctor_job = self.root.after(900, self.run_doctor)
+
+    def run_doctor(self):
+        from . import doctor
+        self._doctor_job = None
+        if self.session is None or self.closed:
+            return
+        try:
+            self.problems = doctor.check(self.session)
+        except Exception as e:                                         # noqa: BLE001 - the Doctor must never stop the Studio
+            import traceback
+            traceback.print_exc()
+            self.problems = []
+        self.update_badges()
+        for key in ('doctor', 'home'):
+            page = self.pages.get(key)
+            if page is not None and page.built and page.visible:
+                page.render() if hasattr(page, 'render') else page.reload()
+
+    def update_badges(self):
+        ign = set(self.settings.get('ignored', {}).get(self.session.project.root, []))
+        live = [p for p in self.problems if p.key not in ign and p.severity in ('error', 'warn')]
+        self.set_badge('doctor', len(live))
+        try:
+            self.doctor_btn.configure(text=f'Check  ({len(live)})' if live else 'Check')
+        except tk.TclError:
+            pass
 
     def set_badge(self, key, n):
         if key in self.nav_buttons:
@@ -288,6 +318,12 @@ class Studio:
         self.current = key
         page = self.pages[key]
         page.pack(fill='both', expand=True)
+        try:                                           # a box on the page just left may still hold the keyboard
+            w = self.root.focus_get()
+            if w is not None and not w.winfo_viewable():
+                self.root.focus_set()
+        except (KeyError, tk.TclError):
+            pass
         page.show(**where)
         self._nav_paint_all()
         self.set_hint('')
@@ -303,7 +339,8 @@ class Studio:
     # ── commands ────────────────────────────────────────────────────────────
     def _undo(self, redo):
         w = self.root.focus_get()
-        if isinstance(w, (tk.Text, tk.Entry, ttk.Entry, ttk.Combobox, ttk.Spinbox)):
+        if isinstance(w, (tk.Text, tk.Entry, ttk.Entry, ttk.Spinbox)) and not (isinstance(w, ttk.Combobox) and str(w.cget('state')) == 'readonly') \
+                and w.winfo_viewable():
             return                                     # a box being typed in has its own undo
         label = self.session.redo() if redo else self.session.undo()
         if label:

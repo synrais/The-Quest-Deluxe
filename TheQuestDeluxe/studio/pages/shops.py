@@ -233,15 +233,15 @@ class ShopsPage(Page):
         n = self.shop[0] if self.shop else min(levelmeta_level(self), self.s.levels)
         d = ui.Dialog(self, 'A new shop', width=px(380))
         ttk.Label(d.body, text='Which level is it on?', style='H3.TLabel').pack(anchor='w')
-        box = ttk.Combobox(d.body, state='readonly', values=[f'{k}   {levelmeta.title(self.s, k)}' for k in range(1, self.s.levels + 1)], width=34)
-        box.set(f'{n}   {levelmeta.title(self.s, n)}')
+        pick = tk.StringVar(value=f'{n}   {levelmeta.title(self.s, n)}')
+        box = ttk.Combobox(d.body, state='readonly', textvariable=pick, values=[f'{k}   {levelmeta.title(self.s, k)}' for k in range(1, self.s.levels + 1)], width=34)
         box.pack(anchor='w', pady=(px(6), 0))
         ttk.Label(d.body, text='Then put it on a screen with the Shop tool on the World page.', style='Dim.TLabel',
                   wraplength=px(340)).pack(anchor='w', pady=(px(10), 0))
         d.add_buttons([('Cancel', None, 'TButton'), ('Make it', 'make', 'Accent.TButton')], default='make')
         if d.run() != 'make':
             return
-        n = int(box.get().split()[0])
+        n = int(pick.get().split()[0])
         have = self.s.project.shops.setdefault(n, {})
         k = next((i for i in range(1, 10) if i not in have), None)
         if k is None:

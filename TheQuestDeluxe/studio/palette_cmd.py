@@ -91,6 +91,12 @@ class CommandPalette(tk.Toplevel):
             out.append((r.get('name') or f'#{r["id"]}', f'Spell {r["id"]}', 'wand', lambda i=r['id']: a.go('spells', select=i), 3))
         for r in p.tables['classes']:
             out.append((r.get('name') or f'#{r["id"]}', f'Hero {r["id"]}', 'helmet', lambda i=r['id']: a.go('heroes', select=i), 3))
+        from . import storytext
+        for st in storytext.stories(p):
+            first = (st.lines[0] if st.lines else '')[:50]
+            out.append((f'Story {st.number}: {first}', 'Story', 'book', lambda n=st.number: a.go('story', tab='stories', select=n), 3))
+        for n in range(0, s.levels + 1):
+            out.append(('Events of every level' if n == 0 else f'Events of level {n}', 'Events', 'bolt', lambda n=n: a.go('events', level=n), 3))
         for kind, title in (('floors', 'Floor'), ('walls', 'Wall'), ('decos', 'Decoration')):
             for r in p.tiles.get(kind, []):
                 out.append((r.get('name') or f'#{r["id"]}', f'{title} {r["id"]}', 'tiles',

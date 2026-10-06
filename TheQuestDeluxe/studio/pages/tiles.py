@@ -12,6 +12,7 @@ from .tablepage import TablePage
 
 KINDS = [('floors', 'Floors'), ('walls', 'Walls and doors'), ('decos', 'Decorations')]
 LAYER = {'floors': 'floor', 'walls': 'wall', 'decos': 'deco'}
+KIND_KEYS = ('floors', 'walls', 'decos')
 NOUN = {'floors': 'floor', 'walls': 'wall', 'decos': 'decoration'}
 GROUPS = {
     'floors': [('Floor', True, 'what stepping on it does', ['hurts', 'heals']),
@@ -60,6 +61,16 @@ class TilesPage(TablePage):
         pass
 
     # the three kinds are the filter ---------------------------------------------
+    def on_show(self, kind=None, **where):
+        if kind in KIND_KEYS and kind != self.table:
+            self.table = kind
+            self.app.settings['tiles_kind'] = kind
+            self.schema.set_kind(kind)
+            self.schema.groups_override = GROUPS[kind]
+            self.rid = None
+            self.seg.choose(kind, run=False)
+        super().on_show(**where)
+
     def category(self, row):
         return self.table
 

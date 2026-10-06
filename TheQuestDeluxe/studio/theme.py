@@ -71,7 +71,6 @@ def apply(root, name: str | None = None):
         except tk.TclError:
             pass
     root.configure(bg=C['bg'])
-    root.option_add('*Font', (FONT, 10))
     root.option_add('*Menu.background', C['panel'])
     root.option_add('*Menu.foreground', C['text'])
     root.option_add('*Menu.activeBackground', C['accent'])

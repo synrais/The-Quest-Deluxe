@@ -405,6 +405,89 @@ class ToolStrip(ttk.Frame):
         self.choose(self.value, run=False)
 
 
+class CodeText(ttk.Frame):
+    """A monospaced text box with line numbers, a scroll bar and red lines for errors. `.text` is the Text widget."""
+
+    def __init__(self, master, height=20, width=80):
+        super().__init__(master)
+        self.text = tk.Text(self, height=height, width=width, wrap='none', undo=False, bg=C['input'], fg=C['text'], insertbackground=C['text'],
+                            relief='flat', highlightthickness=1, highlightbackground=C['line'], highlightcolor=C['accent'],
+                            font=('Courier', 11), padx=8, pady=6, tabs=(px(32),), selectbackground=C['accent'],
+                            selectforeground=C['accent_text'])
+        self.gutter = tk.Canvas(self, width=px(46), bg=C['panel'], highlightthickness=0)
+        self.ybar = ttk.Scrollbar(self, orient='vertical', command=self._yview)
+        self.xbar = ttk.Scrollbar(self, orient='horizontal', command=self.text.xview)
+        self.text.configure(yscrollcommand=self._yset, xscrollcommand=self.xbar.set)
+        self.gutter.grid(row=0, column=0, sticky='ns')
+        self.text.grid(row=0, column=1, sticky='nsew')
+        self.ybar.grid(row=0, column=2, sticky='ns')
+        self.xbar.grid(row=1, column=1, sticky='ew')
+        self.rowconfigure(0, weight=1)
+        self.columnconfigure(1, weight=1)
+        self.text.tag_configure('error', background='#5a2328')
+        self.text.bind('<KeyRelease>', lambda e: self._numbers(), add='+')
+        self.text.bind('<Configure>', lambda e: self._numbers(), add='+')
+        self.text.bind('<MouseWheel>', lambda e: self.after(10, self._numbers), add='+')
+        self.text.bind('<Button-4>', lambda e: self.after(10, self._numbers), add='+')
+        self.text.bind('<Button-5>', lambda e: self.after(10, self._numbers), add='+')
+        self.text.bind('<Tab>', self._tab)
+        self.text.bind('<Return>', self._enter)
+
+    def _yview(self, *a):
+        self.text.yview(*a)
+        self._numbers()
+
+    def _yset(self, a, b):
+        self.ybar.set(a, b)
+        self._numbers()
+
+    def _tab(self, e):
+        self.text.insert('insert', '    ')
+        return 'break'
+
+    def _enter(self, e):
+        """A new line starts as indented as the one above (one more after a colon)."""
+        line = self.text.get('insert linestart', 'insert')
+        indent = line[:len(line) - len(line.lstrip(' '))]
+        if line.rstrip().endswith(':'):
+            indent += '    '
+        self.text.insert('insert', '\n' + indent)
+        self.text.see('insert')
+        self._numbers()
+        return 'break'
+
+    def _numbers(self):
+        g = self.gutter
+        g.delete('all')
+        i = self.text.index('@0,0')
+        while True:
+            d = self.text.dlineinfo(i)
+            if d is None:
+                break
+            g.create_text(px(40), d[1] + d[3] // 2, text=i.split('.')[0], anchor='e', fill=C['faint'], font=('Courier', 10))
+            nxt = self.text.index(f'{i}+1line')
+            if nxt == i:
+                break
+            i = nxt
+
+    def set(self, value):
+        self.text.delete('1.0', 'end')
+        self.text.insert('1.0', value)
+        self.text.edit_reset()
+        self.after(10, self._numbers)
+
+    def get(self):
+        return self.text.get('1.0', 'end-1c')
+
+    def mark_errors(self, lines):
+        self.text.tag_remove('error', '1.0', 'end')
+        for n in lines:
+            if n:
+                self.text.tag_add('error', f'{n}.0', f'{n}.end')
+        if lines and lines[0]:
+            self.text.see(f'{lines[0]}.0')
+
+
 class Badge(tk.Label):
     """A little coloured pill of text."""
 

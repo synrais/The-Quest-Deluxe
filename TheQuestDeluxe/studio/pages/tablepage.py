@@ -385,7 +385,7 @@ class TablePage(Page):
         rows = sorted(self.rows(), key=self.order)
         return rows[0]['id'] if rows else None
 
-    def on_show(self, select=None, **where):
+    def on_show(self, select=None, new=False, **where):
         self.fill()
         if select is not None and self.s.row(self.table, select) is not None:
             self.rid = select
@@ -393,6 +393,8 @@ class TablePage(Page):
             self.rid = self.first_id()
         self.gallery.select(self.rid, scroll=True)
         self.show_row()
+        if new:
+            self.after(150, self.new)
 
     def reload(self):
         self.fill()
