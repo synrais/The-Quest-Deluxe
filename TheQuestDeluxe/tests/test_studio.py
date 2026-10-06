@@ -458,6 +458,85 @@ pump(30)
 done('creatures: editing, the fight check, balancing, the wizard, loot' + ': ok')
 
 
+# ── the painter ──
+from studio.painter import StudioPainter  # noqa: E402
+from editor.art import EGA  # noqa: E402
+for old_window in [w for w in all_widgets(root) if isinstance(w, StudioPainter)]:      # the creature wizard opened some
+    old_window.destroy()
+app.go('creatures', select=2); pump(20)
+C = app.pages['creatures']
+C.paint('creatures', False, 'Picture'); pump(20)
+found = [w for w in all_widgets(root) if isinstance(w, StudioPainter)]
+check('the painter opens in the Studio look', len(found) == 1, str(found))
+P = found[0]
+
+
+def cell_xy(cx, cy):
+    return int(cx * P.zoom + P.zoom // 2), int(cy * P.zoom + P.zoom // 2)
+
+
+def pev(kind, cx, cy, **kw):
+    x, y = cell_xy(cx, cy)
+    P.canvas.event_generate(kind, x=x, y=y, **kw)
+    pump(2)
+
+
+def stroke(a, b, button=1):
+    pev(f'<ButtonPress-{button}>', *a)
+    pev(f'<B{button}-Motion>', *b)
+    pev(f'<ButtonRelease-{button}>', *b)
+
+
+P._choose(4, 'left')
+P._choose(14, 'right')
+P._tool_chosen('pencil')
+was = P.cells[3][3]
+stroke((3, 3), (3, 3))
+check('the pencil paints the left colour', P.cells[3][3] == 4, str(P.cells[3][3]))
+stroke((3, 3), (3, 3), button=3)
+check('the pencil with the right button puts the pixel back', P.cells[3][3] == was, str(P.cells[3][3]))
+P._tool_chosen('rect')
+patch = [[P.cells[x][y] for y in range(10, 13)] for x in range(10, 15)]
+P._choose(6, 'left')
+stroke((10, 10), (14, 12))
+check('a rectangle is filled with the left colour', all(P.cells[x][y] == 6 for x in range(10, 15) for y in range(10, 13)))
+P.undo()
+check('undo takes the rectangle back', [[P.cells[x][y] for y in range(10, 13)] for x in range(10, 15)] == patch)
+P._choose(4, 'left')
+P.filled.set(False)
+P._tool_chosen('oval')
+stroke((20, 20), (30, 28))
+check('a hollow oval leaves its middle alone', P.cells[25][24] != 4 and P.cells[20][24] == 4, f'{P.cells[25][24]} {P.cells[20][24]}')
+P.undo()
+P._swap_sides()
+check('the two colours swap', (P.left, P.right) == (14, 4), str((P.left, P.right)))
+P._key_tool('fill')
+check('a key chooses a tool', P.tool.get() == 'fill')
+P._tool_chosen('line')
+stroke((0, 39), (39, 39))
+check('a line in the new left colour', all(P.cells[x][39] == 14 for x in range(40)))
+P.mirror.set(True)
+P._tool_chosen('pencil')
+stroke((5, 5), (5, 5))
+check('mirror paints the other side too', P.cells[5][5] == 14 and P.cells[34][5] == 14)
+P.mirror.set(False)
+P.flip(True)
+check('flip turns it round', P.cells[34][5] == 14 and P.cells[5][5] == 14)
+P.shift(1, 0)
+check('shift moves it one pixel', P.cells[35][5] == 14 or P.cells[6][5] == 14)
+orig_pixel = tuple(S.project.picture('creatures', 2).get_at((6, 39))[:3])
+P.save(); pump(10)
+pic = S.project.picture('creatures', 2)
+check('saving keeps the picture in the quest', pic is not None and tuple(pic.get_at((6, 39))[:3]) == EGA[14], str(pic.get_at((6, 39)) if pic else None))
+check('the Studio can undo the picture', 'picture' in str(S.history.can_undo()).lower())
+P.close(); pump(5)
+check('the painter closes once saved', not P.winfo_exists())
+app._undo(False); pump(10)
+pic = S.project.picture('creatures', 2)
+check('undo gives the old picture back', tuple(pic.get_at((6, 39))[:3]) == orig_pixel, str(pic.get_at((6, 39))))
+done('the painter: tools, colours, mirror, flip, undo, save and close')
+
+
 # ── the Quest Doctor finds and fixes what is broken ──
 from studio import doctor, levelmeta
 app.run_doctor(); pump(5)

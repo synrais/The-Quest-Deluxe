@@ -285,7 +285,7 @@ class TablePage(Page):
                 for r in sorted(self.rows(), key=lambda r: r['id']) if r['id'] != row['id'] and p.picture(folder, r['id']) is not None]
 
     def paint(self, folder, is_bag, label):
-        from editor.painter import Painter
+        from ..painter import StudioPainter as Painter
         r = self.row()
         if r is None:
             return
