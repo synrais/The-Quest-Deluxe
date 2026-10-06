@@ -533,8 +533,8 @@ def _win_embed(child, parent, x, y):
 
 
 # ── Windows (written from the API's documentation: the Studio's "Check it works" says what does and does not work on the machine) ──
-def _win_find(pid):
-    """DOSBox's window: the visible top-level window of that process whose title starts with DOSBox."""
+def _win_find(pid, prefix='dosbox'):
+    """A window of a process: its visible top-level window whose title starts with `prefix` (DOSBox's own by default)."""
     import ctypes
     from ctypes import wintypes
     u, _g = _api()
@@ -544,7 +544,7 @@ def _win_find(pid):
     def each(h, _):
         owner = wintypes.DWORD()
         u.GetWindowThreadProcessId(h, ctypes.byref(owner))
-        if owner.value == pid and u.IsWindowVisible(h) and _win_title(h).lower().startswith('dosbox'):
+        if owner.value == pid and u.IsWindowVisible(h) and _win_title(h).lower().startswith(prefix):
             found.append(h)
         return True
     u.EnumWindows(each, 0)

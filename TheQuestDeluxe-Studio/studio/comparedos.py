@@ -292,17 +292,52 @@ class LoadoutDialog(ui.Dialog):
 LOG = os.path.join(os.path.expanduser('~'), '.quest_compare_log.txt')
 
 
-def watch(app, proc, log_path=LOG, seconds=8, every=500):
-    """If the comparison stops within its first seconds, say so and show why (it used to stop without a word)."""
+def note(log_path, text):
+    """A line from the Studio's side in the same log the comparison writes."""
+    try:
+        with open(log_path, 'a', encoding='utf-8') as fh:
+            fh.write('studio: ' + text + '\n')
+    except OSError:
+        pass
+
+
+def watch(app, proc, log_path=LOG, seconds=8, every=500, wait_for_window=120):
+    """Looks after a comparison that has been started: if it stops within its first seconds, says so and shows why; and on Windows finds its window and brings it
+    to the front. (A program started by another is left behind other windows, and only the one the person is using, this, may bring it forward.)"""
     started = [0]
+    state = {'raised': False, 'said': False}
+
+    def window():
+        if not sys.platform.startswith('win'):
+            return None
+        from compare import dos
+        return dos._win_find(proc.pid, 'the quest deluxe')
 
     def look():
         code = proc.poll()
         started[0] += every / 1000
         if code is None:
-            if started[0] < seconds:
+            if not state['raised'] and sys.platform.startswith('win'):
+                h = window()
+                if h:
+                    from compare import dos
+                    try:
+                        u = dos._api()[0]
+                        u.SetWindowPos(h, None, 40, 40, 0, 0, 0x0001 | 0x0004)       # onto the screen, whatever the saved position
+                        dos.bring_to_front(h)
+                        note(log_path, 'the compare window was found and brought to the front')
+                    except Exception as e:                                       # noqa: BLE001
+                        note(log_path, f'the compare window was found but could not be brought forward: {e}')
+                    state['raised'] = True
+                elif started[0] > 40 and not state['said']:
+                    state['said'] = True
+                    note(log_path, 'no compare window after 40 seconds')
+                    ui.inform(app.root, 'The comparison has no window',
+                              'The compare program is running but has opened no window after 40 seconds.\nThe lines it wrote are in %s: please send that file.' % log_path)
+            if started[0] < (wait_for_window if sys.platform.startswith('win') else seconds):
                 app.root.after(every, look)
             return
+        note(log_path, f'the compare program ended (exit code {code})')
         if code == 0:
             return
         try:
