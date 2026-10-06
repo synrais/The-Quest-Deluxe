@@ -31,6 +31,7 @@ os.makedirs(os.path.dirname(pack))
 shutil.copytree(os.path.join(ROOT, 'packs', 'TheQuest'), pack)
 os.chdir(ROOT)
 
+os.environ['QUEST_NO_UPDATE_CHECK'] = '1'          # (the test asks for the update check itself, with a pretend GitHub)
 from studio.app import Studio  # noqa: E402
 from studio import ui  # noqa: E402
 
@@ -1192,6 +1193,27 @@ app.settings['last'] = os.path.join(pack)
 assert app._first_pack() == 'chosen' and _asked == [os.path.basename(pack)], _asked
 _welcome.choose_pack = _real_choose
 print('studio: it asks which quest to open every time, with the last one selected: ok')
+
+# updates: silent unless there is one; when there is, it asks (and "not now" changes nothing)
+from core import updates as _up
+_asked = []
+_confirm = ui.confirm
+ui.confirm = lambda parent, title, text, yes='OK', no='Cancel', danger=False: (_asked.append((title, text)), False)[1]
+_mine = os.path.join(ROOT, 'run_studio.py')
+_sha = _up.blob_sha(open(_mine, 'rb').read())
+
+
+def _fake(sha):
+    return lambda path, token='': (200, {'tree': [{'path': 'run_studio.py', 'type': 'blob', 'sha': sha}], 'truncated': False})
+app._look_for_updates(_fake(_sha)); pump(10); time.sleep(0.6); pump(10)
+assert not _asked, 'nothing new: not a word'
+app._look_for_updates(lambda path, token='': (403, {})); pump(10); time.sleep(0.6); pump(10)
+assert not _asked, 'GitHub refusing (or no internet): not a word'
+app._look_for_updates(_fake('0' * 40)); pump(10); time.sleep(0.6); pump(10)
+assert len(_asked) == 1 and 'run_studio.py' in _asked[0][1] and 'Custom Maps' in _asked[0][1], _asked
+assert open(_mine, 'rb').read() and _up.blob_sha(open(_mine, 'rb').read()) == _sha, '"Not now" changes nothing'
+ui.confirm = _confirm
+print('studio: it looks for updates in the background, says nothing unless there is one, and asks first: ok')
 
 # numbers: the slider is only a handy stretch; it never stops anyone, and a stat's slider does not start at minus a billion
 num = ui.Number(root, -10 ** 9, 10 ** 9, 100, soft_max=100, soft_min=0, commit=lambda v: None)

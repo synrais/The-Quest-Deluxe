@@ -121,6 +121,9 @@ class Studio:
         self._build_shell()
         self.session.history_hooks.append(self._history_changed)
         self.go('home')
+        if not getattr(self, '_update_looked', False) and self.settings.get('check_updates', True) and not os.environ.get('QUEST_NO_UPDATE_CHECK'):
+            self._update_looked = True                                   # once each time the Studio is started
+            self.root.after(3000, self._look_for_updates)
 
     # ── the window ──────────────────────────────────────────────────────────
     def _build_shell(self):
@@ -532,6 +535,81 @@ class Studio:
             self.say('Something went wrong, but your work is saved. (studio_crash.txt has the details)', 'bad')
         except Exception:                              # noqa: BLE001
             pass
+
+    # ── updates ─────────────────────────────────────────────────────────────
+    def _look_for_updates(self, get=None):
+        """Looks, in the background, for a newer Studio. It says nothing at all unless there is one (no internet, nothing new: silence)."""
+        import threading
+        from core import send_edits, updates
+        from engine.pack import ROOT
+        token = send_edits.load_settings().get('key', '')
+
+        box = {}
+
+        def work():
+            try:
+                box['found'] = updates.check(ROOT, token, get or updates.http)
+            except Exception:                                            # noqa: BLE001 - offline, rate limited, anything: not worth a word
+                box['found'] = []
+        threading.Thread(target=work, daemon=True).start()
+
+        def poll(n=0):                                                   # (the window's own thread picks the answer up: Tk is not called from the other)
+            if 'found' in box:
+                if box['found']:
+                    self._offer_update(box['found'], get)
+            elif n < 200:
+                self.root.after(150, lambda: poll(n + 1))
+        self.root.after(150, poll)
+
+    def _offer_update(self, found, get=None):
+        from core import send_edits, updates
+        from engine.pack import ROOT
+        if self.closed or self.session is None:
+            return
+        new = sum(1 for _, _, why in found if why == 'new')
+        names = ', '.join(rel for rel, _, _ in found[:6]) + (' ...' if len(found) > 6 else '')
+        if not ui.confirm(self.root, 'A new Studio is ready',
+                          f'There is an update: {len(found)} file{"s" if len(found) != 1 else ""} ({new} new).\n\n{names}\n\n'
+                          'Everything in Custom Maps is copied to a zip in the backups folder first, and your quests and settings are not touched.\n\nUpdate now?',
+                          yes='Update now', no='Not now'):
+            return
+        import threading
+        token = send_edits.load_settings().get('key', '')
+        self.session.autosave()
+        box = {'said': ''}
+
+        def work():
+            try:
+                box['result'] = updates.apply(ROOT, found, token, get or updates.http, progress=lambda t: box.__setitem__('said', t))
+            except Exception as e:                                       # noqa: BLE001
+                box['error'] = str(e)
+        threading.Thread(target=work, daemon=True).start()
+        shown = ['']
+
+        def poll():
+            if box['said'] != shown[0]:
+                shown[0] = box['said']
+                self.say(shown[0], 'ok')
+            if 'result' in box or 'error' in box:
+                self._updated(box)
+            else:
+                self.root.after(200, poll)
+        self.root.after(200, poll)
+
+    def _updated(self, box):
+        if 'error' in box:
+            ui.inform(self.root, 'Not updated', f'Nothing was changed: {box["error"]}')
+            return
+        r = box['result']
+        text = f'Updated {len(r["done"])} file{"s" if len(r["done"]) != 1 else ""}.'
+        if r['backup']:
+            text += f'\nYour quests are backed up in {r["backup"]}'
+        if r['kept']:
+            text += f'\nThe files that were replaced are kept in {r["kept"]}'
+        if r['failed']:
+            text += '\n\nNot updated (in use or refused): ' + ', '.join(f'{p}' for p, _ in r['failed'][:5])
+        if ui.confirm(self.root, 'Updated', text + '\n\nClose the Studio now, and open it again to use the new one?', yes='Close the Studio', no='Later'):
+            self.quit()
 
     def quit(self):
         if self.session is not None:

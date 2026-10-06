@@ -133,6 +133,15 @@ G D W S I choose the tools.
 | Ctrl+C, Ctrl+X, Ctrl+V, Ctrl+A | Copy, cut, paste, select all (on the map) |
 | + and - | Zoom the map |
 
+## Updates
+Each time the Studio starts it looks, quietly and in the background, for a newer Studio in the game's repository (it compares each file's checksum with the
+repository's, so no version number is needed). If there is nothing new, or there is no internet, it says nothing. If there is an update it asks first.
+
+**Update now** first copies ALL of Custom Maps into `backups/Custom Maps <date>.zip` and reads the zip back to check it (if that fails, nothing is changed). Then it
+brings in only the files that differ, keeping each replaced file in `backups/replaced files <date>`. Your quests (Custom Maps), your saves and `settings.ini`
+are never part of an update. Close the Studio and open it again to use the new one. To turn the check off, set `"check_updates": false` in `.quest_studio.json`
+in your user folder.
+
 ## For the curious
 
 * Every field of items, creatures, spells, classes and tiles is described once, in `core/fields/` (no windows there); the
