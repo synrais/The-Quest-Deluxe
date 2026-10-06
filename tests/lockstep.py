@@ -37,7 +37,7 @@ def load_edition(alias: str, folder: str):
 
 
 load_edition('classic', 'TheQuestClassic')             # classic.game, classic.rules ...: The Quest, the faithful port
-load_edition('deluxe', 'TheQuestDeluxe')       # deluxe.game, deluxe.rules ...: The Quest Deluxe
+load_edition('deluxe', 'TheQuestDeluxe-Studio')       # deluxe.game, deluxe.rules ...: The Quest Deluxe (the folder that has the Studio)
 
 pygame.init()
 pygame.display.set_mode((640, 480))

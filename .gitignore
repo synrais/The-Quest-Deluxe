@@ -1,6 +1,6 @@
 __pycache__/
 *.pyc
-# made when playing: The Quest Deluxe's saves (TheQuestDeluxe/saves/)
+# made when playing: The Quest Deluxe's saves (TheQuestDeluxe-Studio/saves/)
 saves/
 # the reverse-engineering tools' output, and test output
 TheQuestClassic/tools/re/out/
@@ -13,4 +13,4 @@ dist/
 TheQuestClassic/packs/TheQuest/data/[sS][aA][vV][eE]*.[dD][aA][tT]
 TheQuestClassic/packs/TheQuest/data/trash*.dat
 # the editor's saved zips of additions (and the last play log)
-TheQuestDeluxe/Custom Maps/zips/
+TheQuestDeluxe-Studio/Custom Maps/zips/

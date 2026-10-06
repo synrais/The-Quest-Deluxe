@@ -1,16 +1,16 @@
 """Build the Windows release zips: one for each edition, each standing on its own.
 
     python tools/build_release.py 7            ->  dist/TheQuestClassic-7.zip    (the faithful port)
-                                                   dist/TheQuestDeluxe-7.zip      (engine, editor, packs, docs)
+                                                   dist/TheQuestDeluxe-Studio-7.zip (the game, the Studio, DOSBox, packs, docs)
     python tools/build_release.py 7 --play     ->  dist/TheQuestClassic-7.zip
-                                                   dist/TheQuestDeluxe-7-play.zip (engine and packs only)
+                                                   dist/TheQuestDeluxe-Studio-7-play.zip (engine and packs only)
     python tools/build_release.py 7 notes.txt  ->  the same, with "what is new" in each READ ME FIRST.txt
-    --classic / --deluxe                           only that edition
+    --classic / --studio                           only that edition
     python tools/build_release.py --launchers  ->  only (re)write the launchers in the edition folders
 
 Each zip holds one folder: TheQuestClassic/ (run_quest2.py, engine/, sprites/, packs/TheQuest/, the
-original as released) or TheQuestDeluxe/ (run_deluxe.py, engine/, packs/, and in the full zip
-run_editor.py, editor/, docs/).
+original as released) or TheQuestDeluxe-Studio/ (run_deluxe.py, engine/, packs/, and in the full zip
+run_studio.py, studio/, core/, compare/, dos/, docs/). The earlier TheQuestDeluxe/ is in archive/ and is not built.
 The Quest Deluxe needs nothing of the classic edition. The launchers ("Play The Quest.bat", "Play The Quest
 Deluxe.bat", "The Quest Deluxe Editor.bat") live in the edition folders too, made from
 tools/launcher.bat by write_launchers(), so a copy of the repository plays on Windows as well (without
@@ -35,9 +35,6 @@ PY_VERSIONS = ('3.12', '3.13')         # 3.12 is what the launcher installs; oth
 EDITIONS = {
     'classic': ('TheQuestClassic', 'TheQuestClassic', ['run_quest2.py'], ['engine', 'sprites', 'packs'], [], {
         'Play The Quest.bat': ('The Quest', 'run_quest2.py', False)}),
-    'deluxe': ('TheQuestDeluxe', 'TheQuestDeluxe', ['run_deluxe.py', 'settings.ini'], ['engine', 'packs'], ['run_editor.py', 'editor', 'docs'], {
-        'Play The Quest Deluxe.bat': ('The Quest Deluxe', 'run_deluxe.py', False),
-        'The Quest Deluxe Editor.bat': ('The Quest Deluxe Editor', 'run_editor.py', True)}),
     'studio': ('TheQuestDeluxe-Studio', 'TheQuestDeluxe-Studio', ['run_deluxe.py', 'settings.ini'], ['engine', 'packs'],
                ['run_studio.py', 'run_compare.py', 'Stop everything.bat', 'core', 'studio', 'compare', 'dos', 'docs', 'tools'], {
         'Play The Quest Deluxe.bat': ('The Quest Deluxe', 'run_deluxe.py', False),
@@ -81,31 +78,6 @@ The original game is in packs\\TheQuest, as it was released (TheQuest.exe, data,
 the port reads its files from there. Saves go where the original keeps them, in
 packs\\TheQuest\\data (save01.dat to save20.dat, the original's own format), so saves from the
 original The Quest load here too.
-{{extra}}""",
-    'deluxe': f"""THE QUEST DELUXE
-============
-
-To play: double-click "Play The Quest Deluxe.bat". It plays a quest pack; packs\\TheQuest is the original
-quest, converted, and it plays the same as the original.
-To make quests (full zip): double-click "The Quest Deluxe Editor.bat" - see docs\\QUEST_PACKS.md.
-
-{SETUP}
-
-{KEYS}
-
-The Quest Deluxe adds:
-  F               FPS mode: the world through the hero's eyes. Up/Down walk, Left/Right turn,
-                  Q/E or , and . step sideways; the Map box shows this screen from
-                  above, M switches it to the level map
-  D               the combat log: who hit whom for how much, what you pick up, locked doors
-
-settings.ini (open it in Notepad):
-  fixes = on      the original's bugs are fixed (the title screen says "Bug fixes: on"); off keeps
-                  them, exactly as the original plays; pack does what each quest pack says
-  sound = on      PC-speaker tones like the original; off for none
-  items_on_top = on   gold and items drawn over whoever stands on them; off as the original
-  floating_numbers = off   on: FPS mode's damage and misses also rise off whoever took them
-Saves: saves\\<pack>\\save01.dat to save20.dat.
 {{extra}}""",
     'studio': f"""THE QUEST DELUXE AND THE QUEST STUDIO
 ====================================

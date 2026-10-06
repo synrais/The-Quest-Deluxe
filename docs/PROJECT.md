@@ -11,9 +11,9 @@ found to differ from the original.
 to read everything the original hardcodes from **quest packs**: items, creatures and their special
 behaviours (named traits), classes and skills, spells and their effects, tiles, the story and
 dialogue, shops and the level scripts. Its `packs/TheQuest` is the original quest, converted by
-`TheQuestDeluxe/tools/make_pack.py`, and plays exactly like the classic port: the repository's
+`TheQuestDeluxe-Studio/tools/make_pack.py`, and plays exactly like the classic port: the repository's
 lockstep test and the exe verifiers check that. It is **standalone**: a copy of its folder alone plays
-(`TheQuestDeluxe/tests/test_standalone.py` proves it on every run).
+(`TheQuestDeluxe-Studio/tests/test_standalone.py` proves it on every run).
 
 Why two: the frozen classic port keeps Deluxe honest. While Deluxe still plays Quest I exactly, the
 lockstep test shows any change to it that isn't meant to change the game; and whatever Deluxe grows
@@ -25,7 +25,7 @@ into, the original survives unchanged.
   locked. A future option is a "classic" profile for packs that only use what the original could
   express, with an export back to the original's file formats.
 - **Everything a quest is made of is plain files** (JSON, text, PNG), so packs can be read, compared and
-  kept in git by hand. [QUEST_PACKS.md](../TheQuestDeluxe/docs/QUEST_PACKS.md) documents every field.
+  kept in git by hand. [QUEST_PACKS.md](../TheQuestDeluxe-Studio/docs/QUEST_PACKS.md) documents every field.
 - **Level scripts** replace the original's hardcoded checks: a small, safe subset of Python with
   handlers for the moments the original checks (talking, a death, a step, a new screen...).
   [EVENTS.md](../TheQuestDeluxe/docs/EVENTS.md).
