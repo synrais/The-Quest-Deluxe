@@ -256,6 +256,11 @@ def run(argv=None):
                 if ev.key == pygame.K_F12:
                     save_recording(comp, font, screen, a)
                     continue
+                if ev.key == pygame.K_F11:                                      # bring the original's window into view, beside this one (Windows)
+                    beside[0] = True
+                    shown = comp.dos.show_beside(pygame.display.get_wm_info().get('window'))
+                    status(font, screen, 'The original is in its own window beside this one.' if shown else 'F11 puts the original beside this window (Windows only).', (240, 190, 90))
+                    continue
                 name = keys.from_pygame(ev.key)
                 if not keys.sendable(name):
                     continue

@@ -61,6 +61,10 @@ line of our window and the report say what was left out.
 * Small ones it reports and that are not fixed: the strip under the sheet (the skills line) is drawn one pixel wider by the original, and
   the original leaves a piece of the map frame on the right of the sheet. They show up as a few hundred pink pixels on those screens.
 
+## If the original's window cannot be seen
+Press **F11** in the compare window: DOSBox's window is brought to the front, to the right of it. Otherwise, in Windows: click its taskbar icon, then
+Alt+Space, M (Move) and an arrow key, or end `dosbox.exe` in Task Manager (it also ends by itself when the compare window closes).
+
 ## If nothing happens
 Press **Check it works...** in the Compare window (or run `python run_compare.py --check`). It starts DOSBox the way a comparison does and tries each
 thing in turn: DOSBox found and started, its window found, its picture taken, keys reaching it, its memory read (for the dice). Each line says OK or FAIL
