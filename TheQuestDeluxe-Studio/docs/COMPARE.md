@@ -60,6 +60,16 @@ line of our window and the report say what was left out.
 * Small ones it reports and that are not fixed: the strip under the sheet (the skills line) is drawn one pixel wider by the original, and
   the original leaves a piece of the map frame on the right of the sheet. They show up as a few hundred pink pixels on those screens.
 
+## If nothing happens
+Press **Check it works...** in the Compare window (or run `python run_compare.py --check`). It starts DOSBox the way a comparison does and tries each
+thing in turn: DOSBox found and started, its window found, its picture taken, keys reaching it, its memory read (for the dice). Each line says OK or FAIL
+and what to do; **Copy this** puts the whole report on the clipboard to send on. If a comparison stops at once, the Studio now says so and shows what the
+program said (also kept in `.quest_compare_log.txt` in your user folder). No administrator rights are needed: the program only looks at the DOSBox it
+started itself.
+
+On Windows the comparison starts DOSBox with plain Windows drawing (so its window can be photographed and takes posted keys), takes its picture with a
+copy of the window's own drawing, and if posted keys do not reach it, brings DOSBox forward and types into it instead.
+
 ## Needs
 * **DOSBox 0.74.** On Windows it is bundled in `dos/dosbox` (the official 0.74-3 files, GPL). On Linux/macOS install it
   (`apt install dosbox`). Linux also needs `xdotool` and ImageMagick (`apt install xdotool imagemagick`) to send keys and take

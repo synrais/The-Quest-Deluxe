@@ -131,8 +131,10 @@ class Dos:
         with open(conf, 'w', encoding='utf-8') as fh:
             fh.write(CONF.format(w=self.size[0], h=self.size[1], cycles=self.cycles, path=self.game_dir))
         env = dict(self.env, SDL_AUDIODRIVER='dummy')
+        if WINDOWS:
+            env['SDL_VIDEODRIVER'] = 'windib'              # plain Windows drawing: its window can be photographed and takes posted keys
         self.proc = subprocess.Popen([self.exe, '-conf', conf, '-noconsole'] if WINDOWS else [self.exe, '-conf', conf], env=env,
-                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                                     cwd=self.scratch, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)   # (it writes stdout.txt where it runs)
         t = time.time()
         while time.time() - t < wait:
             self.window = self._find_window()
@@ -172,7 +174,7 @@ class Dos:
 
     def _find_window(self):
         if WINDOWS:
-            return _win_find('DOSBox')
+            return _win_find(self.proc.pid)
         ids = self._x('search', '--pid', str(self.proc.pid)).split() + self._x('search', '--name', 'DOSBox').split()
         for i in dict.fromkeys(ids):                          # the one that is the picture (some are only helpers of the toolkit)
             m = re.search(r'Geometry: (\d+)x(\d+)', self._x('getwindowgeometry', i))
@@ -204,8 +206,11 @@ class Dos:
 
     def picture_bytes(self) -> bytes | None:
         """The window's pixels (PNG) without a file, to see whether the screen is still changing."""
-        if WINDOWS or not self.window:
+        if not self.window:
             return None
+        if WINDOWS:
+            shot = _win_capture(self.window)
+            return shot[2] if shot else None
         r = subprocess.run(['import', '-window', self.window, 'png:-'], env=self.env, capture_output=True)
         return r.stdout if r.returncode == 0 else None
 
@@ -216,11 +221,17 @@ class Dos:
         t = time.time()
         while before is not None and time.time() - t < change_within and self.picture_bytes() == before:
             time.sleep(0.1)
+        if WINDOWS and before is not None and self.picture_bytes() == before and os.environ.get('DOS_INPUT') != 'focus':
+            os.environ['DOS_INPUT'] = 'focus'                  # posted keys did not reach it: bring DOSBox forward and type into it instead
+            self.key(name)
+            t = time.time()
+            while time.time() - t < change_within and self.picture_bytes() == before:
+                time.sleep(0.1)
         self.wait_still(quiet, limit)
 
     def wait_still(self, quiet=1.0, limit=15.0):
         """Wait until the picture has stopped changing for `quiet` seconds (or `limit` passes). Without pictures, just wait."""
-        if WINDOWS or not self.window:
+        if not self.window or (WINDOWS and self.picture_bytes() is None):
             time.sleep(min(limit, quiet + 2))
             return
         t = time.time()
@@ -234,8 +245,15 @@ class Dos:
             time.sleep(0.1)
 
     def screenshot(self, path: str) -> bool:
-        if WINDOWS or not self.window:
+        if not self.window:
             return False
+        if WINDOWS:
+            shot = _win_capture(self.window)
+            if not shot:
+                return False
+            import pygame
+            pygame.image.save(shot[3], path)
+            return True
         r = subprocess.run(['import', '-window', self.window, path], env=self.env, capture_output=True)
         return r.returncode == 0
 
@@ -245,7 +263,8 @@ class Dos:
             return
         if WINDOWS:
             self._mem = _WinMem(self.proc.pid)
-            self.base, self.size_hint = self._mem.find_base()
+            self.candidates = self._mem.find_all()
+            self.base = self.candidates[-1][0]
             return
         self._mem = open(f'/proc/{self.proc.pid}/mem', 'rb', 0)
         self.candidates = []
@@ -277,9 +296,12 @@ class Dos:
         """Find `marker` in DOS memory (the first 640 KB) and remember where: self.marker_at."""
         self._open_memory()
         if WINDOWS:
-            i = self._mem.read(self.base, self.size_hint).find(marker)
-            self.marker_at = i
-            return i >= 0
+            for a, size in self.candidates:
+                i = self._mem.read(a, size).find(marker)
+                if i >= 0:
+                    self.base, self.marker_at = a, i
+                    return True
+            return False
         for a, size in self.candidates:                        # (the DOS memory is not always at the start of the block)
             self._mem.seek(a)
             try:
@@ -316,14 +338,22 @@ class Dos:
         return self.read(0, size)
 
 
-# ── Windows (written from the API's documentation: not tried on a Windows machine) ─────────────────────────────────────────────────
-def _win_find(title):
+# ── Windows (written from the API's documentation: the Studio's "Check it works" says what does and does not work on the machine) ──
+def _win_find(pid):
+    """DOSBox's window: the visible top-level window of that process whose title starts with DOSBox."""
     import ctypes
+    from ctypes import wintypes
     u = ctypes.windll.user32
     found = []
-    cb = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_void_p)(
-        lambda h, _: (found.append(h) if title.lower() in _win_title(h).lower() else None) or True)
-    u.EnumWindows(cb, 0)
+
+    @ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+    def each(h, _):
+        owner = wintypes.DWORD()
+        u.GetWindowThreadProcessId(h, ctypes.byref(owner))
+        if owner.value == pid and u.IsWindowVisible(h) and _win_title(h).lower().startswith('dosbox'):
+            found.append(h)
+        return True
+    u.EnumWindows(each, 0)
     return found[0] if found else None
 
 
@@ -336,7 +366,67 @@ def _win_title(h):
 
 def _win_focus(h):
     import ctypes
-    ctypes.windll.user32.SetForegroundWindow(h)
+    u = ctypes.windll.user32
+    if u.IsIconic(h):
+        u.ShowWindow(h, 9)                                        # SW_RESTORE
+    u.SetForegroundWindow(h)
+
+
+def _win_capture(h):
+    """(width, height, raw pixels, a 640 x 480 pygame surface) of the window's client area, or None. GDI copy of the window's own drawing."""
+    import ctypes
+    from ctypes import wintypes
+    u, g = ctypes.windll.user32, ctypes.windll.gdi32
+    rect = wintypes.RECT()
+    if not u.GetClientRect(h, ctypes.byref(rect)):
+        return None
+    w, hh = rect.right - rect.left, rect.bottom - rect.top
+    if w < 100 or hh < 100:
+        return None
+
+    class BIH(ctypes.Structure):
+        _fields_ = [('biSize', wintypes.DWORD), ('biWidth', wintypes.LONG), ('biHeight', wintypes.LONG), ('biPlanes', wintypes.WORD),
+                    ('biBitCount', wintypes.WORD), ('biCompression', wintypes.DWORD), ('biSizeImage', wintypes.DWORD),
+                    ('biXPelsPerMeter', wintypes.LONG), ('biYPelsPerMeter', wintypes.LONG), ('biClrUsed', wintypes.DWORD),
+                    ('biClrImportant', wintypes.DWORD)]
+    u.GetDC.restype = wintypes.HDC
+    g.CreateCompatibleDC.restype = wintypes.HDC
+    g.CreateCompatibleBitmap.restype = wintypes.HBITMAP
+    g.SelectObject.restype = wintypes.HGDIOBJ
+    for fn, args in ((g.CreateCompatibleDC, [wintypes.HDC]), (g.CreateCompatibleBitmap, [wintypes.HDC, ctypes.c_int, ctypes.c_int]),
+                     (g.SelectObject, [wintypes.HDC, wintypes.HGDIOBJ]), (g.DeleteObject, [wintypes.HGDIOBJ]), (g.DeleteDC, [wintypes.HDC]),
+                     (u.GetDC, [wintypes.HWND]), (u.ReleaseDC, [wintypes.HWND, wintypes.HDC]),
+                     (g.BitBlt, [wintypes.HDC, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, wintypes.HDC, ctypes.c_int, ctypes.c_int, wintypes.DWORD]),
+                     (u.PrintWindow, [wintypes.HWND, wintypes.HDC, wintypes.UINT])):
+        fn.argtypes = args
+    hdc = u.GetDC(h)
+    if not hdc:
+        return None
+    mdc = g.CreateCompatibleDC(hdc)
+    bmp = g.CreateCompatibleBitmap(hdc, w, hh)
+    old = g.SelectObject(mdc, bmp)
+    info = BIH(ctypes.sizeof(BIH), w, -hh, 1, 32, 0, 0, 0, 0, 0, 0)
+    buf = ctypes.create_string_buffer(w * hh * 4)
+
+    def grab(how):
+        if how == 'blt':
+            g.BitBlt(mdc, 0, 0, w, hh, hdc, 0, 0, 0x00CC0020)                 # SRCCOPY
+        else:
+            u.PrintWindow(h, mdc, 1)                                          # PW_CLIENTONLY
+        g.GetDIBits(mdc, bmp, 0, hh, buf, ctypes.byref(info), 0)
+        return any(buf.raw[i] for i in range(0, w * hh * 4, 4099))            # not all black
+    ok = grab('blt') or grab('print')
+    g.SelectObject(mdc, old)
+    g.DeleteObject(bmp)
+    g.DeleteDC(mdc)
+    u.ReleaseDC(h, hdc)
+    if not ok:
+        return None
+    import pygame
+    shot = pygame.image.frombuffer(buf.raw, (w, hh), 'BGRA').convert()
+    if (w, hh) != (640, 480):
+        shot = pygame.transform.scale(shot, (640, 480))
+    return w, hh, buf.raw, shot
 
 
 VK = {'Insert': 0x2D, 'Return': 0x0D, 'Escape': 0x1B, 'space': 0x20, 'Up': 0x26, 'Down': 0x28, 'Left': 0x25, 'Right': 0x27, 'BackSpace': 0x08,
@@ -363,25 +453,46 @@ def _win_key(h, name, hold):
 
 
 class _WinMem:
+    """DOSBox's memory, read (and the dice written) through the Windows process calls. A program may do this to a process it started itself, as an
+    ordinary user (no administrator needed); if Windows says no, the message says so."""
+
     def __init__(self, pid):
         import ctypes
-        self.k = ctypes.windll.kernel32
+        from ctypes import wintypes
+        k = self.k = ctypes.WinDLL('kernel32', use_last_error=True)
+        k.OpenProcess.restype = wintypes.HANDLE
+        k.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+        k.ReadProcessMemory.argtypes = [wintypes.HANDLE, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_size_t, ctypes.POINTER(ctypes.c_size_t)]
+        k.WriteProcessMemory.argtypes = [wintypes.HANDLE, ctypes.c_void_p, ctypes.c_char_p, ctypes.c_size_t, ctypes.POINTER(ctypes.c_size_t)]
+        k.VirtualQueryEx.argtypes = [wintypes.HANDLE, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_size_t]
+        k.VirtualQueryEx.restype = ctypes.c_size_t
+        k.CloseHandle.argtypes = [wintypes.HANDLE]
         self.pid = pid
-        self.h = self.k.OpenProcess(0x0410, False, pid)           # query information, read memory
+        self.h = k.OpenProcess(0x0410, False, pid)                # query information, read memory
+        if not self.h:
+            err = ctypes.get_last_error()
+            raise RuntimeError(f'Windows would not let this program look at DOSBox (error {err}'
+                               + ('; access denied: is the Studio or DOSBox running as administrator, or is a security program blocking it?)' if err == 5 else ')'))
 
-    def find_base(self):
+    def find_all(self):
+        """[(address, size)] of the committed blocks of 16 to 40 MB: the emulated DOS memory is one of them."""
         import ctypes
         from ctypes import wintypes
 
         class MBI(ctypes.Structure):
             _fields_ = [('BaseAddress', ctypes.c_void_p), ('AllocationBase', ctypes.c_void_p), ('AllocationProtect', wintypes.DWORD),
-                        ('RegionSize', ctypes.c_size_t), ('State', wintypes.DWORD), ('Protect', wintypes.DWORD), ('Type', wintypes.DWORD)]
-        addr, mbi = 0, MBI()
+                        ('PartId', wintypes.WORD), ('RegionSize', ctypes.c_size_t), ('State', wintypes.DWORD), ('Protect', wintypes.DWORD),
+                        ('Type', wintypes.DWORD)]
+        addr, mbi, found = 0, MBI(), []
         while self.k.VirtualQueryEx(self.h, ctypes.c_void_p(addr), ctypes.byref(mbi), ctypes.sizeof(mbi)):
-            if mbi.State == 0x1000 and 16 * 1024 * 1024 <= mbi.RegionSize < 40 * 1024 * 1024:
-                return mbi.BaseAddress, mbi.RegionSize
+            if mbi.State == 0x1000 and 16 * 1024 * 1024 <= mbi.RegionSize < 40 * 1024 * 1024 and not mbi.Protect & 0x101:
+                found.append((mbi.BaseAddress, mbi.RegionSize))           # (committed, and not no-access / guard pages)
             addr = (mbi.BaseAddress or 0) + mbi.RegionSize
-        raise RuntimeError('could not find the emulated memory of DOSBox')
+            if addr >= 1 << 47:
+                break
+        if not found:
+            raise RuntimeError('could not find the emulated memory of DOSBox')
+        return found
 
     def read(self, address, n):
         import ctypes
@@ -392,9 +503,13 @@ class _WinMem:
 
     def write(self, address, data):
         import ctypes
+        from ctypes import wintypes
+        self.k.OpenProcess.restype = wintypes.HANDLE
         h = self.k.OpenProcess(0x0038, False, self.pid)               # query, write and operate on memory
+        if not h:
+            return False
         done = ctypes.c_size_t()
-        ok = self.k.WriteProcessMemory(h, ctypes.c_void_p(address), data, len(data), ctypes.byref(done))
+        ok = self.k.WriteProcessMemory(h, ctypes.c_void_p(address), bytes(data), len(data), ctypes.byref(done))
         self.k.CloseHandle(h)
         return bool(ok) and done.value == len(data)
 

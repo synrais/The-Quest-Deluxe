@@ -136,6 +136,11 @@ def for_real():
     assert rolled > 10, f'the test saw only {rolled} dice rolls, so it did not test them'
     # the same on another level, with the hero somewhere else
     side_by_side(2, (10, 10), ['Right', 'Down', 'Down', 'Left', 'Up', 'Right', 'Right'], 'level 2')
+    # the check a person runs when it does not work: every step of what a comparison needs, said one by one
+    from compare import check
+    said = []
+    assert check.run(said.append, env=DISPLAY_ENV), said
+    assert any('keys reach it' in s for s in said) and any('its memory can be read' in s for s in said) and said[-1] == 'EVERYTHING WORKS', said
     # the same gear on both heroes (worn and in the bag, from the original's own items): pictures and dice stay equal through the inventory,
     # which shows it (and whose closing takes a turn, as in the original), and a worn armour's hatching is the original's phase (up to a few
     # pixels where the shape's edge is hatching or outline: docs/COMPARE.md)

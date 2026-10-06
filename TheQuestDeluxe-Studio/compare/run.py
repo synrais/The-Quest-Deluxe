@@ -28,6 +28,7 @@ def parse(argv=None):
     ap.add_argument('--same-things', dest='same', choices=('on', 'off'), default='on')
     ap.add_argument('--hero-label', default='')
     ap.add_argument('--loadout', help='a JSON file: the gear both heroes start in (compare/loadout.py)')
+    ap.add_argument('--check', action='store_true', help='try each thing the comparison needs on this computer and say what works')
     ap.add_argument('--replay', help='a recording (a zip from compare zips) to run again and check')
     return ap.parse_args(argv)
 
@@ -73,7 +74,32 @@ def save_recording(comp, font, screen, a):
 
 
 def main(argv=None):
+    """Run it; whatever goes wrong is written down (the Studio shows it) and shown in a window, never left silent."""
+    try:
+        return run(argv)
+    except SystemExit:
+        raise
+    except BaseException as e:                                     # noqa: BLE001
+        import traceback
+        text = traceback.format_exc()
+        print(text, file=sys.stderr, flush=True)
+        try:
+            import tkinter
+            from tkinter import messagebox
+            root = tkinter.Tk()
+            root.withdraw()
+            messagebox.showerror('Compare to DOS', f'The comparison stopped: {e}\n\nThe details are in {os.path.join(os.path.expanduser("~"), ".quest_compare_log.txt")}')
+            root.destroy()
+        except Exception:                                          # noqa: BLE001
+            pass
+        return 1
+
+
+def run(argv=None):
     a = parse(argv)
+    if a.check:
+        from . import check
+        return 0 if check.run() else 1
     if a.pack:
         os.environ['QUEST_PACK'] = a.pack                  # before the engine is loaded
     os.environ.setdefault('SDL_VIDEO_WINDOW_POS', '40,40')

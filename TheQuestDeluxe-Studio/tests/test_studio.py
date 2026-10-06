@@ -517,6 +517,26 @@ def compare_window(d):
 
 dialog_later(compare_window)
 app.compare_dos(); pump(10)
+# a comparison that stops at once says so and shows why (it used to stop without a word); the check window shows the check's words
+import subprocess as _sp
+told = []
+_inform = ui.inform
+ui.inform = lambda parent, title, text: told.append((title, text))
+_log = os.path.join(tmp_gear, 'log.txt')
+open(_log, 'w').write('Traceback: pygame is not installed')
+_proc = _sp.Popen([sys.executable, '-c', 'import sys; sys.exit(3)'])
+_proc.wait()
+comparedos.watch(app, _proc, _log, every=50)
+pump(10)
+import time as _t
+_t.sleep(0.2); pump(10)
+ui.inform = _inform
+check('a comparison that stops at once says why', told and 'did not start' in told[0][0] and 'pygame is not installed' in told[0][1], str(told))
+_ok = _sp.Popen([sys.executable, '-c', 'pass']); _ok.wait()
+told.clear(); ui.inform = lambda parent, title, text: told.append((title, text))
+comparedos.watch(app, _ok, _log, every=50); _t.sleep(0.2); pump(10); ui.inform = _inform
+check('and one that ends well says nothing', not told)
+cd = comparedos.CheckDialog(app); cd.show('OK  DOSBox is there'); check('the check window shows what the check said', 'DOSBox is there' in cd.text.get('1.0', 'end')); cd.destroy()
 check('the Compare to DOS window opened and closed', True)
 
 

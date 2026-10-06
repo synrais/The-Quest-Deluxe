@@ -115,7 +115,13 @@ class CompareDialog(ui.Dialog):
                         variable=self.keep).pack(anchor='w', pady=(px(12), 0))
         ttk.Checkbutton(b, text="Leave out of both what the original does not have (a hero's new items, spells and classes: it cannot hold them)",
                         variable=self.same).pack(anchor='w')
+        ttk.Button(b, text='Check it works…', command=self._check).pack(anchor='w', pady=(px(10), 0))
         self.add_buttons([('Cancel', None, 'TButton'), ('Start the comparison', 'go', 'Accent.TButton')], default='go')
+
+    def _check(self):
+        c = CheckDialog(self.app)
+        c.after(100, c.start)
+        c.run()
 
     NO_GEAR = "(as the hero is: no change)"
 
@@ -281,6 +287,73 @@ class LoadoutDialog(ui.Dialog):
         super().close(value)
 
 
+LOG = os.path.join(os.path.expanduser('~'), '.quest_compare_log.txt')
+
+
+def watch(app, proc, log_path=LOG, seconds=8, every=500):
+    """If the comparison stops within its first seconds, say so and show why (it used to stop without a word)."""
+    started = [0]
+
+    def look():
+        code = proc.poll()
+        started[0] += every / 1000
+        if code is None:
+            if started[0] < seconds:
+                app.root.after(every, look)
+            return
+        if code == 0:
+            return
+        try:
+            with open(log_path, encoding='utf-8', errors='replace') as fh:
+                tail = fh.read()[-1500:]
+        except OSError:
+            tail = ''
+        ui.inform(app.root, 'The comparison did not start',
+                  'It stopped straight away (exit code %s).\n\n%s\n\nPress "Check it works" in the Compare window to find out what is missing; the full text is in %s.'
+                  % (code, tail.strip() or '(it said nothing)', log_path))
+    app.root.after(every, look)
+
+
+class CheckDialog(ui.Dialog):
+    """Runs `run_compare.py --check` and shows what it says, to read or to copy and send on."""
+
+    def __init__(self, app):
+        super().__init__(app.root, 'Does the comparison work here?', width=px(680), height=px(520))
+        self.app = app
+        ttk.Label(self.body, text='Checking DOSBox, its window, its picture, its keys and its memory ...', style='H3.TLabel').pack(anchor='w')
+        self.text = tk.Text(self.body, wrap='word', height=22, font=('Consolas', 10) if sys.platform.startswith('win') else ('Courier', 10))
+        self.text.pack(fill='both', expand=True, pady=px(8))
+        self.add_buttons([('Close', None, 'TButton'), ('Copy this', 'copy', 'TButton')])
+        self.out = ''
+
+    def start(self):
+        import threading
+        cmd = [sys.executable, os.path.join(ROOT, 'run_compare.py'), '--check']
+
+        def work():
+            try:
+                r = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, timeout=240)
+                text = (r.stdout + ('\n' + r.stderr[-1500:] if r.returncode and r.stderr.strip() else '')).strip()
+            except (OSError, subprocess.SubprocessError) as e:
+                text = f'The check could not run: {e}'
+            self.after(0, lambda: self.show(text))
+        threading.Thread(target=work, daemon=True).start()
+
+    def show(self, text):
+        if not self.winfo_exists():
+            return
+        self.out = text
+        self.text.delete('1.0', 'end')
+        self.text.insert('1.0', text)
+
+    def close(self, value):
+        if value == 'copy':
+            self.clipboard_clear()
+            self.clipboard_append(self.out)
+            return
+        super().close(value)
+
+
 def open_compare(app):
     app.session.autosave()
     d = CompareDialog(app)
@@ -290,7 +363,11 @@ def open_compare(app):
     if bad:
         ui.inform(app.root, 'Compare to DOS', 'It cannot run yet:\n\n' + '\n'.join(bad))
         return
-    log = os.path.join(os.path.expanduser('~'), '.quest_compare_log.txt')
-    with open(log, 'w', encoding='utf-8') as fh:
-        subprocess.Popen(d.launch(), cwd=ROOT, stdout=fh, stderr=subprocess.STDOUT)
+    try:
+        with open(LOG, 'w', encoding='utf-8') as fh:
+            proc = subprocess.Popen(d.launch(), cwd=ROOT, stdout=fh, stderr=subprocess.STDOUT)
+    except OSError as e:
+        ui.inform(app.root, 'The comparison did not start', f'It could not be started: {e}')
+        return
+    watch(app, proc)
     app.say('Starting the comparison: your game and the original open side by side in a moment.', 'ok')
