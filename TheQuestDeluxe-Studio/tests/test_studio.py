@@ -1183,6 +1183,16 @@ _blank = _P.create(os.path.join(tmp_gear, 'Doctor Blank'), _fresh.root, blank=Tr
 assert 'doctor_ok' not in _blank.quest
 print('doctor: a fresh copy of the shipped quest has nothing unexplained; a blank pack starts clean: ok')
 
+# the Studio always asks which quest to open (it never opens the last one by itself); the last one is the one selected
+from studio.pages import welcome as _welcome
+_asked = []
+_real_choose = _welcome.choose_pack
+_welcome.choose_pack = lambda parent, last=None, force=False: (_asked.append(last), 'chosen')[1]
+app.settings['last'] = os.path.join(pack)
+assert app._first_pack() == 'chosen' and _asked == [os.path.basename(pack)], _asked
+_welcome.choose_pack = _real_choose
+print('studio: it asks which quest to open every time, with the last one selected: ok')
+
 # numbers: the slider is only a handy stretch; it never stops anyone, and a stat's slider does not start at minus a billion
 num = ui.Number(root, -10 ** 9, 10 ** 9, 100, soft_max=100, soft_min=0, commit=lambda v: None)
 assert float(num.scale.cget('from')) == 0 and float(num.scale.cget('to')) >= 100, 'a stat\'s slider starts at 0, not minus a billion'

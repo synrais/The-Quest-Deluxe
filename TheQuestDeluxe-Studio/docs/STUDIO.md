@@ -3,8 +3,8 @@
 The Quest Studio is the editor for The Quest Deluxe, built so that anyone can make levels, creatures and items without
 reading a manual.
 
-Start it with **The Quest Studio.bat** (Windows) or `python run_studio.py`. The first time it asks which quest to open;
-after that it opens the one you had open last. The first seven levels of The Quest are locked, so make your own quest
+Start it with **The Quest Studio.bat** (Windows) or `python run_studio.py`. It asks which quest to open every time, from a list (the one you used last is already
+selected), so work never goes into a quest you did not pick. The first seven levels of The Quest are locked, so make your own quest
 (**New quest** on the welcome screen): it starts as a copy of them, in `Custom Maps/`, and everything you change stays in
 its folder.
 

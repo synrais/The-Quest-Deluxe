@@ -1,6 +1,6 @@
 """The Quest Studio: the editor for The Quest Deluxe quests.
 
-    python run_studio.py                 opens the quest you had open last (asks the first time)
+    python run_studio.py                 asks which quest to open (the one used last is selected)
     python run_studio.py --pack mypack   opens Custom Maps/mypack (or any pack folder)
     python run_studio.py --choose        asks which quest
 

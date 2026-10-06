@@ -93,11 +93,11 @@ class Studio:
 
     def _first_pack(self):
         from .pages.welcome import choose_pack
+        # The Studio always asks which quest to open (the one used last is the one selected): it never opens one by itself, so work cannot go into a
+        # quest the person did not mean. A quest named on the command line (--pack) is opened without asking.
         last = self.settings.get('last')
-        if last and os.path.exists(os.path.join(last, 'quest.json')) and '--choose' not in sys.argv:
-            return last
         self.root.update_idletasks()
-        return choose_pack(self.root, last)
+        return choose_pack(self.root, os.path.basename(last) if last else None)
 
     def open(self, path: str):
         from core import custom
@@ -425,7 +425,8 @@ class Studio:
 
     def _switch(self):
         from .pages.welcome import choose_pack
-        path = choose_pack(self.root, self.settings.get('last'), force=True)
+        last = self.settings.get('last')
+        path = choose_pack(self.root, os.path.basename(last) if last else None, force=True)
         if path:
             self.open(path)
 
