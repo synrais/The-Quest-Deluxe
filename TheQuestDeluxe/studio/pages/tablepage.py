@@ -24,6 +24,7 @@ OPAQUE = {'bag', 'spells', 'floors'}
 class TablePage(Page):
     table = ''
     layer = ''                  # what Pictures.thumb draws for a row: 'mon', 'item', 'spell'
+    placeable = True            # the row can be put on a map
     noun = 'entry'              # in words: "a new creature"
     nouns = 'entries'
     skip = ('id', 'name')
@@ -136,6 +137,9 @@ class TablePage(Page):
         bar.pack(anchor='w', pady=(px(8), 0))
         ui.button(bar, 'Duplicate', self.duplicate, 'copy', 'TButton').pack(side='left')
         ui.button(bar, '', self.delete, 'trash', 'Tool.TButton', f'Delete this {self.noun}').pack(side='left', padx=px(6))
+        if self.placeable and self.layer in ('mon', 'item', 'floor', 'wall', 'deco'):
+            ui.button(bar, 'Put on a map', self.put_on_map, 'map', 'TButton', f'Go to the World page with this {self.noun} ready to paint with').pack(
+                side='left')
         self.bar = bar
         self.uses_label = ttk.Label(col, text='', style='Faint.TLabel', wraplength=px(560), justify='left')
         self.uses_label.pack(anchor='w', pady=(px(6), 0))
@@ -143,6 +147,11 @@ class TablePage(Page):
         self.extra_cards(host)
         self.inspector = Inspector(host, self.s, self.schema, skip=self.skip, on_change=self._edited, scroller=self.pane)
         self.inspector.pack(fill='x')
+
+    def put_on_map(self):
+        """The World page, with this one chosen as what the brush paints."""
+        if self.rid is not None:
+            self.app.go('world', brush=(self.layer, self.rid), panel='paint', tool='brush')
 
     # ── the list ────────────────────────────────────────────────────────────
     def rows(self):

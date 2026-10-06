@@ -126,7 +126,7 @@ def check_levels(f: Facts, out: list):
         # a way out
         script = s.project.scripts.get(n, '')
         if not exits and not links and 'next_level' not in script:
-            events = 'def dies(' in script or 'def check(' in script or 'def level_start(' in script
+            events = bool(re.search(r'^def \w+\(', script, flags=re.M))                 # it has handlers of its own: they may end the level
             out.append(Problem('info' if events else 'warn', 'World', f'Level {n} has no way out',
                                'There is no exit, ladder or stairs on the map' + (', though its events may end it' if events else ', and no event sends the hero on')
                                + '. Put an Exit on the map (World page, Places).', ('world', {'level': n, 'panel': 'places'}), key=f'noexit:{n}'))

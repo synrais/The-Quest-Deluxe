@@ -64,8 +64,9 @@ class HomePage(Page):
         card = tk.Frame(body, bg=C['raised'], highlightthickness=1, highlightbackground=C['line'], cursor='hand2')
         card.pack(fill='x', padx=px(28), pady=(px(12), px(4)))
         if c['error'] or c['warn']:
-            colour, icon, text = (C['bad'] if c['error'] else C['warn']), 'warn', \
-                f'{c["error"]} thing{"s" if c["error"] != 1 else ""} to fix, {c["warn"]} probable mistake{"s" if c["warn"] != 1 else ""}'
+            bits = ([f'{c["error"]} thing{"s" if c["error"] != 1 else ""} to fix'] if c['error'] else []) + \
+                   ([f'{c["warn"]} probable mistake{"s" if c["warn"] != 1 else ""}'] if c['warn'] else [])
+            colour, icon, text = (C['bad'] if c['error'] else C['warn']), 'warn', ', '.join(bits)
             sub = 'Open the Quest Doctor to see what and where.'
         else:
             colour, icon, text = C['ok'], 'check', 'The Quest Doctor finds nothing wrong'

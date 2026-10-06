@@ -31,6 +31,7 @@ class HeroesPage(TablePage):
     icon = 'helmet'
     table = 'classes'
     layer = 'mon'
+    placeable = False
     noun = 'class'
     nouns = 'classes'
     card = (94, 104)

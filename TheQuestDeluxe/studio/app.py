@@ -338,7 +338,10 @@ class Studio:
 
     # ── commands ────────────────────────────────────────────────────────────
     def _undo(self, redo):
-        w = self.root.focus_get()
+        try:
+            w = self.root.focus_get()
+        except KeyError:                               # Tk names a combobox's pop-up list oddly
+            w = None
         if isinstance(w, (tk.Text, tk.Entry, ttk.Entry, ttk.Spinbox)) and not (isinstance(w, ttk.Combobox) and str(w.cget('state')) == 'readonly') \
                 and w.winfo_viewable():
             return                                     # a box being typed in has its own undo

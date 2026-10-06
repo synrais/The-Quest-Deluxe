@@ -73,7 +73,10 @@ class StudioPainter(Painter):
         self.bind('<KeyPress-x>', lambda e: self._swap_sides() if self._not_typing() else None)
 
     def _not_typing(self):
-        return not isinstance(self.focus_get(), (ttk.Entry, tk.Entry, ttk.Combobox))
+        try:
+            return not isinstance(self.focus_get(), (ttk.Entry, tk.Entry, ttk.Combobox))
+        except KeyError:                                           # Tk names a combobox's pop-up list oddly
+            return False
 
     def _key_tool(self, tool):
         if self._not_typing() and (tool != 'eraser' or not self.opaque):

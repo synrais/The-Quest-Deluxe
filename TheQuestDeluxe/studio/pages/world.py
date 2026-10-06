@@ -431,7 +431,7 @@ class WorldPage(Page):
             self._fill_list()
 
     # ── life cycle ──────────────────────────────────────────────────────────
-    def on_show(self, level=None, at=None, tool=None, panel=None, wizard=False, new_level=False, quest=False, **where):
+    def on_show(self, level=None, at=None, tool=None, panel=None, wizard=False, new_level=False, quest=False, brush=None, **where):
         if getattr(self, '_dirty_list', True) or level:
             self._dirty_list = False
             self._fill_list()
@@ -441,6 +441,8 @@ class WorldPage(Page):
             self.show_square(*at)
         if panel in self.panels:
             self._panel_chosen(panel)
+        if brush:                                        # (layer, number): paint with this one
+            self.palette.pick(*brush)
         if tool:
             self.choose_tool(tool)
         self.on_view_changed()

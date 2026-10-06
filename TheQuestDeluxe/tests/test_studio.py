@@ -458,6 +458,22 @@ pump(30)
 done('creatures: editing, the fight check, balancing, the wizard, loot' + ': ok')
 
 
+# ── from a creature or an item straight to the map ──
+app.go('creatures', select=2); pump(15)
+C = app.pages['creatures']
+btn_put = [b for b in all_widgets(C) if isinstance(b, ttk.Button) and str(b.cget('text')) == 'Put on a map']
+check('a creature has a Put on a map button', len(btn_put) == 1)
+btn_put[0].invoke(); pump(25)
+W = app.pages['world']
+check('it goes to the World page ready to paint with it', app.current == 'world' and W.palette.layer == 'mon' and W.palette.picks['mon'] == [2] and
+      W.map.tool == 'brush' and W.map.brush.layer == 'mon' and W.map.brush.values == [2], f'{W.palette.layer} {W.palette.picks["mon"]} {W.map.tool}')
+app.go('items', select=201); pump(15)
+[b for b in all_widgets(app.pages['items']) if isinstance(b, ttk.Button) and str(b.cget('text')) == 'Put on a map'][0].invoke(); pump(25)
+check('and an item the same way', W.palette.layer == 'item' and W.map.brush.values == [201], str(W.map.brush.values))
+app.go('heroes', select=1); pump(10)
+check('a hero class cannot be put on a map', not [b for b in all_widgets(app.pages['heroes']) if isinstance(b, ttk.Button) and str(b.cget('text')) == 'Put on a map'])
+
+
 # ── the painter ──
 from studio.painter import StudioPainter  # noqa: E402
 from editor.art import EGA  # noqa: E402
