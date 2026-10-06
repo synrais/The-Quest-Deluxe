@@ -38,8 +38,8 @@ def put_beside(comp, our_x=40, our_y=40, width=640):
     if comp.dos.window is None:
         return
     if sys.platform.startswith('win'):
-        import ctypes
-        ctypes.windll.user32.SetWindowPos(comp.dos.window, 0, our_x + width + 40, our_y, 0, 0, 0x0001 | 0x0004)
+        from . import dos
+        dos._api()[0].SetWindowPos(comp.dos.window, None, our_x + width + 40, our_y, 0, 0, 0x0001 | 0x0004)       # SWP_NOSIZE | SWP_NOZORDER
     else:
         comp.dos._x('windowmove', comp.dos.window, str(our_x + width + 40), str(our_y))
 

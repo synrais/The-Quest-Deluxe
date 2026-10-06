@@ -338,12 +338,42 @@ class Dos:
         return self.read(0, size)
 
 
+_API = []
+
+
+def _api():
+    """(user32, gdi32) with the types of every call declared. A window handle is 64 bits wide on a 64-bit Windows, and ctypes passes a plain number as
+    a 32-bit int unless told otherwise ("int too long to convert"), so nothing here is called without its types."""
+    if not _API:
+        import ctypes
+        from ctypes import wintypes as w
+        u, g = ctypes.WinDLL('user32', use_last_error=True), ctypes.WinDLL('gdi32', use_last_error=True)
+        proto = ctypes.WINFUNCTYPE(w.BOOL, w.HWND, w.LPARAM)
+        for lib, name, args, res in (
+                (u, 'EnumWindows', [proto, w.LPARAM], w.BOOL), (u, 'GetWindowThreadProcessId', [w.HWND, ctypes.POINTER(w.DWORD)], w.DWORD),
+                (u, 'IsWindowVisible', [w.HWND], w.BOOL), (u, 'GetWindowTextW', [w.HWND, w.LPWSTR, ctypes.c_int], ctypes.c_int),
+                (u, 'IsIconic', [w.HWND], w.BOOL), (u, 'ShowWindow', [w.HWND, ctypes.c_int], w.BOOL), (u, 'SetForegroundWindow', [w.HWND], w.BOOL),
+                (u, 'GetClientRect', [w.HWND, ctypes.POINTER(w.RECT)], w.BOOL), (u, 'GetDC', [w.HWND], w.HDC), (u, 'ReleaseDC', [w.HWND, w.HDC], ctypes.c_int),
+                (u, 'PrintWindow', [w.HWND, w.HDC, w.UINT], w.BOOL), (u, 'PostMessageW', [w.HWND, w.UINT, w.WPARAM, w.LPARAM], w.BOOL),
+                (u, 'SetWindowPos', [w.HWND, w.HWND, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, w.UINT], w.BOOL),
+                (u, 'MapVirtualKeyW', [w.UINT, w.UINT], w.UINT), (u, 'VkKeyScanW', [w.WCHAR], ctypes.c_short),
+                (u, 'keybd_event', [w.BYTE, w.BYTE, w.DWORD, ctypes.c_size_t], None),
+                (g, 'CreateCompatibleDC', [w.HDC], w.HDC), (g, 'CreateCompatibleBitmap', [w.HDC, ctypes.c_int, ctypes.c_int], w.HBITMAP),
+                (g, 'SelectObject', [w.HDC, w.HGDIOBJ], w.HGDIOBJ), (g, 'DeleteObject', [w.HGDIOBJ], w.BOOL), (g, 'DeleteDC', [w.HDC], w.BOOL),
+                (g, 'BitBlt', [w.HDC, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, w.HDC, ctypes.c_int, ctypes.c_int, w.DWORD], w.BOOL),
+                (g, 'GetDIBits', [w.HDC, w.HBITMAP, w.UINT, w.UINT, ctypes.c_void_p, ctypes.c_void_p, w.UINT], ctypes.c_int)):
+            fn = getattr(lib, name)
+            fn.argtypes, fn.restype = args, res
+        _API.extend([u, g])
+    return _API[0], _API[1]
+
+
 # ── Windows (written from the API's documentation: the Studio's "Check it works" says what does and does not work on the machine) ──
 def _win_find(pid):
     """DOSBox's window: the visible top-level window of that process whose title starts with DOSBox."""
     import ctypes
     from ctypes import wintypes
-    u = ctypes.windll.user32
+    u, _g = _api()
     found = []
 
     @ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
@@ -360,13 +390,12 @@ def _win_find(pid):
 def _win_title(h):
     import ctypes
     buf = ctypes.create_unicode_buffer(256)
-    ctypes.windll.user32.GetWindowTextW(h, buf, 256)
+    _api()[0].GetWindowTextW(h, buf, 256)
     return buf.value
 
 
 def _win_focus(h):
-    import ctypes
-    u = ctypes.windll.user32
+    u = _api()[0]
     if u.IsIconic(h):
         u.ShowWindow(h, 9)                                        # SW_RESTORE
     u.SetForegroundWindow(h)
@@ -376,7 +405,7 @@ def _win_capture(h):
     """(width, height, raw pixels, a 640 x 480 pygame surface) of the window's client area, or None. GDI copy of the window's own drawing."""
     import ctypes
     from ctypes import wintypes
-    u, g = ctypes.windll.user32, ctypes.windll.gdi32
+    u, g = _api()
     rect = wintypes.RECT()
     if not u.GetClientRect(h, ctypes.byref(rect)):
         return None
@@ -389,16 +418,6 @@ def _win_capture(h):
                     ('biBitCount', wintypes.WORD), ('biCompression', wintypes.DWORD), ('biSizeImage', wintypes.DWORD),
                     ('biXPelsPerMeter', wintypes.LONG), ('biYPelsPerMeter', wintypes.LONG), ('biClrUsed', wintypes.DWORD),
                     ('biClrImportant', wintypes.DWORD)]
-    u.GetDC.restype = wintypes.HDC
-    g.CreateCompatibleDC.restype = wintypes.HDC
-    g.CreateCompatibleBitmap.restype = wintypes.HBITMAP
-    g.SelectObject.restype = wintypes.HGDIOBJ
-    for fn, args in ((g.CreateCompatibleDC, [wintypes.HDC]), (g.CreateCompatibleBitmap, [wintypes.HDC, ctypes.c_int, ctypes.c_int]),
-                     (g.SelectObject, [wintypes.HDC, wintypes.HGDIOBJ]), (g.DeleteObject, [wintypes.HGDIOBJ]), (g.DeleteDC, [wintypes.HDC]),
-                     (u.GetDC, [wintypes.HWND]), (u.ReleaseDC, [wintypes.HWND, wintypes.HDC]),
-                     (g.BitBlt, [wintypes.HDC, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, wintypes.HDC, ctypes.c_int, ctypes.c_int, wintypes.DWORD]),
-                     (u.PrintWindow, [wintypes.HWND, wintypes.HDC, wintypes.UINT])):
-        fn.argtypes = args
     hdc = u.GetDC(h)
     if not hdc:
         return None
@@ -423,7 +442,11 @@ def _win_capture(h):
     if not ok:
         return None
     import pygame
-    shot = pygame.image.frombuffer(buf.raw, (w, hh), 'BGRA').convert()
+    raw = bytearray(buf.raw)
+    raw[3::4] = b'\xff' * (w * hh)                                           # GDI leaves the alpha bytes empty: the picture is opaque
+    shot = pygame.image.frombuffer(bytes(raw), (w, hh), 'BGRA')
+    if pygame.display.get_surface():
+        shot = shot.convert()
     if (w, hh) != (640, 480):
         shot = pygame.transform.scale(shot, (640, 480))
     return w, hh, buf.raw, shot
@@ -435,9 +458,8 @@ VK = {'Insert': 0x2D, 'Return': 0x0D, 'Escape': 0x1B, 'space': 0x20, 'Up': 0x26,
 
 def _win_key(h, name, hold):
     """Post the key to DOSBox's window, so our own window keeps the keyboard (DOS_INPUT=focus: bring DOSBox forward and use keybd_event)."""
-    import ctypes
-    u = ctypes.windll.user32
-    vk = VK.get(name) or (u.VkKeyScanW(ord(name)) & 0xFF if len(name) == 1 else 0)
+    u = _api()[0]
+    vk = VK.get(name) or (u.VkKeyScanW(name) & 0xFF if len(name) == 1 else 0)
     sc = u.MapVirtualKeyW(vk, 0)
     ext = 1 if name in ('Up', 'Down', 'Left', 'Right', 'Home', 'End', 'Prior', 'Next', 'Delete', 'Insert') else 0
     if os.environ.get('DOS_INPUT') == 'focus':

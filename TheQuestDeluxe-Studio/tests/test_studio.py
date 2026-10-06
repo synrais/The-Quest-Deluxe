@@ -40,6 +40,41 @@ root.report_callback_exception = lambda *a: (errors.append(a), traceback.print_e
 app = Studio(root, pack)
 S = app.session
 
+# every dialog the test opens is looked at: the window is as big as its contents, its buttons are inside it, and when a warning (a long text) is
+# added to it the window grows with it instead of cutting the text and the buttons off
+cut_off, audited = [], []
+_run = ui.Dialog.run
+
+
+def _audit_run(self):
+    def audit():
+        if not self.winfo_exists():
+            return
+        audited.append(1)
+        try:
+            root.update()
+            name = f'{type(self).__name__} "{self.title()}"'
+            if self.winfo_height() < self.winfo_reqheight() - 1 or self.winfo_width() < self.winfo_reqwidth() - 1:
+                cut_off.append(f'{name} is smaller than its contents')
+            if self.foot.winfo_ismapped() and self.foot.winfo_y() + self.foot.winfo_height() > self.winfo_height() + 1:
+                cut_off.append(f'{name}: its buttons are outside it')
+            h0 = self.winfo_height()
+            note = ttk.Label(self.body, text='A warning that is long enough to need several lines. ' * 12, wraplength=300)
+            note.pack()
+            root.update()
+            room = self.winfo_screenheight() - 100
+            if self.winfo_reqheight() <= room and (self.winfo_height() < self.winfo_reqheight() - 1
+                                                   or self.foot.winfo_y() + self.foot.winfo_height() > self.winfo_height() + 1):
+                cut_off.append(f'{name} does not grow when a warning appears in it ({h0} high)')
+            note.destroy()
+        except tk.TclError:
+            pass
+    self.after(120, audit)
+    return _run(self)
+
+
+ui.Dialog.run = _audit_run
+
 
 def pump(n=15):
     for _ in range(n):
@@ -517,6 +552,34 @@ def compare_window(d):
 
 dialog_later(compare_window)
 app.compare_dos(); pump(10)
+
+
+def start_asks_for_a_square(d):
+    """Start without a square: it asks for one, takes it, and starts (it used to come back to its own window for ever)."""
+    d.chosen = False
+    def pick(p):
+        p._at(7, 9)
+        p.close('ok')
+    dialog_later(pick)
+    d.close('go')
+
+
+dialog_later(start_asks_for_a_square)
+shown = []
+_open_run = comparedos.CompareDialog.run
+def _noting_run(self):
+    r = _open_run(self)
+    shown.append((r, self.at, self.chosen))
+    return r
+comparedos.CompareDialog.run = _noting_run
+_popen = comparedos.subprocess.Popen
+started = []
+comparedos.subprocess.Popen = lambda *a, **k: (started.append(a[0]), type('P', (), {'poll': lambda s: 0})())[1]           # (nothing is started)
+app.compare_dos(); pump(20)
+comparedos.subprocess.Popen = _popen
+comparedos.CompareDialog.run = _open_run
+check('Start comparison asks for a square, takes it and starts', shown and shown[-1] == ('go', (7, 9), True), str(shown))
+check('and what it starts is the comparison at that square', started and started[-1][started[-1].index('--at') + 1] == '7,9', str(started))
 # a comparison that stops at once says so and shows why (it used to stop without a word); the check window shows the check's words
 import subprocess as _sp
 told = []
@@ -1099,6 +1162,9 @@ assert game_env()['SDL_VIDEODRIVER'] == 'x11', 'a real driver somebody set is ke
 os.environ.clear(); os.environ.update(_keep)
 print('play: the game does not inherit the Studio dummy video driver: ok')
 
+assert not cut_off, cut_off
+assert len(audited) > 15, len(audited)
+print(f'dialogs: {len(audited)} looked at, none cut off, and each grows when a warning appears in it: ok')
 import tkinter as _tk
 root = _tk.Tk()
 root.withdraw()

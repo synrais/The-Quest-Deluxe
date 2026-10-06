@@ -153,9 +153,9 @@ class CompareDialog(ui.Dialog):
         self.where.configure(text=f'square ({x}, {y}), screen ({(x - 1) // 10 + 1}, {(y - 1) // 10 + 1})')
 
     def _pick(self):
-        p = SquarePicker(self, self.s, self.level.get(), *self.at)
-        if p.run() == 'ok':
-            self.at = p.pos
+        got = SquarePicker(self, self.s, self.level.get(), *self.at).run()       # the square (x, y), or None when cancelled
+        if got:
+            self.at = tuple(got)
             self.chosen = True
             self._show_at()
             return True
@@ -165,6 +165,8 @@ class CompareDialog(ui.Dialog):
         """Starting asks which square to start from, if it has not been said."""
         if value == 'go' and not self.chosen and not self._pick():
             return
+        if value == 'go':
+            self.command_line = self.launch()                 # (read from the boxes now: they are gone once the window has closed)
         super().close(value)
 
     def launch(self):
@@ -365,7 +367,7 @@ def open_compare(app):
         return
     try:
         with open(LOG, 'w', encoding='utf-8') as fh:
-            proc = subprocess.Popen(d.launch(), cwd=ROOT, stdout=fh, stderr=subprocess.STDOUT)
+            proc = subprocess.Popen(d.command_line, cwd=ROOT, stdout=fh, stderr=subprocess.STDOUT)
     except OSError as e:
         ui.inform(app.root, 'The comparison did not start', f'It could not be started: {e}')
         return

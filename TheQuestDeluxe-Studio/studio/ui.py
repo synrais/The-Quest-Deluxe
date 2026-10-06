@@ -624,13 +624,19 @@ class Dialog(tk.Toplevel):
         self.result = None
         self.frame = ttk.Frame(self, padding=px(18))
         self.frame.pack(fill='both', expand=True)
+        self.foot = ttk.Frame(self.frame)                       # the buttons are packed first: on a small screen it is the body that is squeezed
+        self.foot.pack(side='bottom', fill='x', pady=(px(14), 0))
         self.body = ttk.Frame(self.frame)
         self.body.pack(fill='both', expand=True)
-        self.foot = ttk.Frame(self.frame)
-        self.foot.pack(fill='x', pady=(px(14), 0))
         self.bind('<Escape>', lambda e: self.close(None))
         self._size = (width, height)
         self.parent = parent
+        # width and height are minimums, kept by empty spacers: the window is never given a fixed size, so it grows with its contents
+        # (a warning or a longer text appearing in it) instead of cutting the text and the buttons off
+        if height:                                              # (packed first: the packer then asks for the larger of this and the rest)
+            ttk.Frame(self.frame, width=1, height=height).pack(side='left', before=self.body)
+        if width:
+            ttk.Frame(self.frame, width=width, height=1).pack(side='top', before=self.body)
 
     def add_buttons(self, buttons, default=None):
         for text, value, style in reversed(buttons):
@@ -646,12 +652,12 @@ class Dialog(tk.Toplevel):
 
     def run(self):
         self.update_idletasks()
-        w = self._size[0] or self.winfo_reqwidth()
-        h = self._size[1] or self.winfo_reqheight()
         top = self.parent.winfo_toplevel()
+        sw, sh = self.winfo_screenwidth(), self.winfo_screenheight()
+        w, h = min(self.winfo_reqwidth(), sw - 40), min(self.winfo_reqheight(), sh - 100)
         x = top.winfo_rootx() + (top.winfo_width() - w) // 2
         y = top.winfo_rooty() + (top.winfo_height() - h) // 3
-        self.geometry(f'{w}x{h}+{max(0, x)}+{max(0, y)}')
+        self.geometry(f'+{max(0, min(x, sw - w - 20))}+{max(0, min(y, sh - h - 60))}')       # only where it goes: its size follows its contents
         self.deiconify()
         self.grab_set()
         self.wait_window()

@@ -37,7 +37,7 @@ class WishesWindow(tk.Toplevel):
         ttk.Button(row, text='Add', command=self.add).pack(side='left')
         box = ttk.Frame(top)
         box.pack(fill='both', expand=True, pady=6)
-        self.text = tk.Text(box, width=84, height=18, wrap='word', undo=True)
+        self.text = tk.Text(box, width=84, height=14, wrap='word', undo=True)
         bar = ttk.Scrollbar(box, orient='vertical', command=self.text.yview)
         self.text.configure(yscrollcommand=bar.set)
         self.text.pack(side='left', fill='both', expand=True)
@@ -48,7 +48,7 @@ class WishesWindow(tk.Toplevel):
         except OSError:
             self.text.insert('1.0', TEMPLATE)
         buttons = ttk.Frame(top)
-        buttons.pack(fill='x')
+        buttons.pack(fill='x', side='bottom', before=box)         # (the buttons keep their place when the window is squeezed)
         ttk.Button(buttons, text='Save', command=self.save).pack(side='left')
         ttk.Button(buttons, text='Save and close', command=self.close).pack(side='left', padx=6)
         self.status = ttk.Label(buttons, text='', foreground='#060')

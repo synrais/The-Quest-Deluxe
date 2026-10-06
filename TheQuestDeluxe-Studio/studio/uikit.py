@@ -26,7 +26,11 @@ def center(win, width: int | None = None, height: int | None = None, parent=None
         y = parent.winfo_rooty() + (parent.winfo_height() - h) // 2
     else:
         x, y = (sw - w) // 2, (sh - h) // 2 - 20
-    win.geometry(f'{w}x{h}+{max(0, x)}+{max(0, y)}')
+    squeezed = win.winfo_reqheight() > sh - 100 or win.winfo_reqwidth() > sw - 40
+    if width or height or squeezed:
+        win.geometry(f'{w}x{h}+{max(0, x)}+{max(0, y)}')       # (no bigger than the screen)
+    else:
+        win.geometry(f'+{max(0, x)}+{max(0, y)}')               # only where it goes: its size follows its contents (a warning appearing in it)
 
 
 def on_wheel(widget, handler):

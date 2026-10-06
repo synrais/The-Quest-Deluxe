@@ -45,14 +45,14 @@ class SendWindow(tk.Toplevel):
         tip(self.entries['A note:'], 'One line about what this is (optional).')
         tip(self.entries['Key:'], 'The long password you were given, pasted once. It is kept on this computer only, '
                                   'outside the game folder.')
-        self.summary = tk.Text(top, width=80, height=14, wrap='word')
+        self.summary = tk.Text(top, width=80, height=12, wrap='word')
         self.summary.pack(fill='both', expand=True, pady=4)
         self.summary.insert('1.0', self.report)
         self.summary.config(state='disabled')
         self.status = ttk.Label(top, text='', wraplength=560)
-        self.status.pack(anchor='w')
         row = ttk.Frame(top)
-        row.pack(fill='x', pady=(6, 0))
+        row.pack(fill='x', pady=(6, 0), side='bottom', before=self.summary)      # (the buttons and the words above them keep their place
+        self.status.pack(anchor='w', side='bottom', before=self.summary)         #  when the window is squeezed or a warning grows it)
         self.go = ttk.Button(row, text='Send', command=self.send)
         self.go.pack(side='left')
         ttk.Button(row, text='Make zip instead', command=self.zip).pack(side='left', padx=6)
