@@ -53,6 +53,7 @@ def message(font, screen, comp, text, colour):
 
 
 def save_recording(comp, font, screen, a):
+    import pygame
     from . import form
     r = comp.recorder
     summary = f'{len(r.steps)} keys pressed, {len(r.differences)} left the two different. Level {comp.level}.'
@@ -61,6 +62,12 @@ def save_recording(comp, font, screen, a):
         return None
     path = comp.save_recording(answers)
     status(font, screen, f'Saved {os.path.basename(path)}', (150, 200, 250))
+    pygame.display.flip()
+    try:
+        from . import sending
+        status(font, screen, sending.offer(path).split('\n')[0], (150, 200, 250))
+    except Exception as e:                                         # noqa: BLE001 - sending is a courtesy; the zip is saved
+        status(font, screen, f'Saved; not sent ({e})', (250, 200, 100))
     return path
 
 
