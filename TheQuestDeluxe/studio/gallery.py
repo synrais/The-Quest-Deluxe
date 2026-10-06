@@ -22,10 +22,10 @@ class Gallery(ttk.Frame):
     """A scrolling grid of cards. Click one to select it; double-click to open it. `items` are Entry objects."""
 
     def __init__(self, master, on_select=None, on_open=None, card=(112, 96), list_mode=False, bg='panel', multi=False,
-                 on_picks=None):
+                 on_picks=None, toggle=False):
         super().__init__(master, style={'panel': 'TFrame', 'bg': 'Bg.TFrame'}[bg])
         self.on_select, self.on_open = on_select, on_open
-        self.multi, self.on_picks = multi, on_picks
+        self.multi, self.on_picks, self.toggle = multi or toggle, on_picks, toggle
         self.picked: list = []                  # with multi: Ctrl+click adds and removes (a brush that mixes several)
         self.card_w, self.card_h = px(card[0]), px(card[1])
         self.list_mode = list_mode
@@ -184,13 +184,13 @@ class Gallery(ttk.Frame):
             self._paint(card, False, inside)
 
     def _click(self, key, ev=None):
-        if self.multi and ev is not None and ev.state & 0x4 and key is not None:
+        if self.multi and ev is not None and (self.toggle or ev.state & 0x4) and key is not None:
             if key in self.picked:
-                if len(self.picked) > 1:
+                if len(self.picked) > 1 or self.toggle:
                     self.picked.remove(key)
             else:
                 self.picked.append(key)
-            self.selected = self.picked[0]
+            self.selected = self.picked[0] if self.picked else None
             self._paint_all()
             if self.on_picks:
                 self.on_picks(list(self.picked))

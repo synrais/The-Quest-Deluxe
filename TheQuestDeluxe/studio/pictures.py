@@ -94,6 +94,21 @@ class Pictures:
                 s.set_at((x - 1, y - 1), col)
         return photo(pygame.transform.scale(s, (side, side)))
 
+    def level_surface(self, sq, x0, y0, w, h, scale):
+        """A part of a level drawn with the real pictures, `scale` pixels a square (a pygame surface)."""
+        s = pygame.Surface((w * scale, h * scale))
+        tile = self.art.tile
+        for x in range(x0, x0 + w):
+            col = sq[x]
+            for y in range(y0, y0 + h):
+                fl, wa, it, mo, go, de = col[y]
+                for layer, v in (('floor', fl), ('deco', de), ('wall', wa), ('gold', go), ('item', it), ('mon', mo)):
+                    if v and not (layer == 'gold' and v <= 0):
+                        img = tile(layer, v, scale)
+                        if img is not None:
+                            s.blit(img, ((x - x0) * scale, (y - y0) * scale))
+        return s
+
     @staticmethod
     def _tile_colour(table, v, default, wall=False):
         t = table.get(v)

@@ -340,6 +340,45 @@ class Segmented(ttk.Frame):
             self.command(key)
 
 
+class ChoiceCards(ttk.Frame):
+    """Big cards to choose one from: options [(key, title, text, icon)]."""
+
+    def __init__(self, master, options, command, value=None, columns=3, width=200):
+        super().__init__(master)
+        self.command, self.cards, self.value, self.options = command, {}, None, {o[0]: o for o in options}
+        for i, (key, title, text, icon) in enumerate(options):
+            card = tk.Frame(self, bg=C['raised'], highlightthickness=2, highlightbackground=C['line'], cursor='hand2', width=px(width))
+            card.grid(row=i // columns, column=i % columns, padx=px(5), pady=px(5), sticky='nsew')
+            head = tk.Frame(card, bg=C['raised'])
+            head.pack(fill='x', padx=px(10), pady=(px(10), 0))
+            im = tk.Label(head, bg=C['raised'], bd=0)
+            im.pack(side='left')
+            tt = tk.Label(head, text=title, bg=C['raised'], fg=C['text'], font=(theme.FONT, 11, 'bold'))
+            tt.pack(side='left', padx=px(8))
+            tx = tk.Label(card, text=text, bg=C['raised'], fg=C['dim'], font=(theme.FONT, 9), wraplength=px(width - 24),
+                          justify='left', anchor='w')
+            tx.pack(fill='x', padx=px(10), pady=(px(4), px(10)))
+            kids = [card, head, im, tt, tx]
+            for w in kids:
+                w.bind('<Button-1>', lambda e, k=key: self.choose(k))
+            self.cards[key] = (card, kids, im, tt, icon)
+        for c in range(columns):
+            self.columnconfigure(c, weight=1, uniform='cc')
+        self.choose(value if value is not None else options[0][0], run=False)
+
+    def choose(self, key, run=True):
+        self.value = key
+        for k, (card, kids, im, tt, icon) in self.cards.items():
+            on = k == key
+            bg = C['select'] if on else C['raised']
+            card.configure(highlightbackground=C['accent'] if on else C['line'])
+            for w in kids:
+                w.configure(bg=bg)
+            im.configure(image=icons.icon(icon, C['accent'] if on else C['dim'], px(22)))
+        if run:
+            self.command(key)
+
+
 class ToolStrip(ttk.Frame):
     """A row of icon buttons of which one is chosen (the map's tools). tools: [(key, icon, tip)]."""
 
