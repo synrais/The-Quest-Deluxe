@@ -62,7 +62,9 @@ HELP = [
     ('The map', [('Left button', 'Use the tool'), ('Right button', 'Pick what is under the pointer'), ('Space + drag / middle button', 'Move the map'),
                  ('Mouse wheel', 'Scroll;  Ctrl+wheel zooms;  Shift+wheel scrolls sideways'),
                  ('B  E  R  L  G  I  S', 'Brush, Eraser, Rectangle, Line, Fill, Pick (eyedropper), Select'),
-                 ('Ctrl+C / Ctrl+X / Ctrl+V', 'Copy, cut and paste what you selected'), ('Delete', 'Clear what you selected')]),
+                 ('Ctrl+C / Ctrl+X / Ctrl+V', 'Copy, cut and paste what you selected'), ('Ctrl+A', 'Select the whole level'),
+                 ('Delete', 'Clear what you selected'), ('Arrow keys', 'Move what you selected one square'),
+                 ('+  /  -', 'Zoom in and out'), ('Esc', 'Let go of what you were doing')]),
 ]
 
 

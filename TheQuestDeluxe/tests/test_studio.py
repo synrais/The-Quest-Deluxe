@@ -47,6 +47,15 @@ def pump(n=15):
         time.sleep(0.005)
 
 
+_t0 = [time.time()]
+
+
+def done(msg):
+    now = time.time()
+    print(f'{msg}  ({now - _t0[0]:.0f}s)', flush=True)
+    _t0[0] = now
+
+
 def check(name, cond, extra=''):
     assert cond, f'{name}  [{extra}]'
 
@@ -196,7 +205,7 @@ check('undo clear brings pasted back', cell(40, 40)[0] == 2)
 # autosave
 S.autosave(); check('saved', not S.project.dirty and S.status == 'saved')
 
-print('the World page: painting, erasing, shapes, fill, pick, layers, selection, copy and paste' + ': ok')
+done('the World page: painting, erasing, shapes, fill, pick, layers, selection, copy and paste' + ': ok')
 
 
 # ── markers, exits, links to any level or entry, levels added, copied and removed, level settings ──
@@ -312,7 +321,7 @@ from engine.pack import Pack
 S.autosave()
 os.system('import -window root /tmp/studio.png')
 
-print('markers, exits, links to any level or entry, levels added, copied and removed, level settings' + ': ok')
+done('markers, exits, links to any level or entry, levels added, copied and removed, level settings' + ': ok')
 
 
 # ── the level wizard ──
@@ -359,7 +368,7 @@ from engine.pack import Pack
 os_ = __import__('os')
 check('map saved', os_.path.exists(os_.path.join(pack, 'levels', str(S.levels), 'map.txt')))
 
-print('the level wizard' + ': ok')
+done('the level wizard' + ': ok')
 
 
 # ── creatures: editing, the fight check, balancing, the wizard, loot ──
@@ -446,7 +455,7 @@ if editors:
     check('rule undone', len(S.row('creatures', made[0])['loot']) == n_rules)
 pump(30)
 
-print('creatures: editing, the fight check, balancing, the wizard, loot' + ': ok')
+done('creatures: editing, the fight check, balancing, the wizard, loot' + ': ok')
 
 
 # ── the Quest Doctor finds and fixes what is broken ──
@@ -493,7 +502,7 @@ d._ignore(pr); pump(5)
 check('ignored problem leaves the badge', all(p.key != pr.key for p in app.problems if p.key not in d.ignored()))
 d._ignore(pr)
 
-print('the Quest Doctor finds and fixes what is broken' + ': ok')
+done('the Quest Doctor finds and fixes what is broken' + ': ok')
 
 
 # ── items, spells, heroes, tiles, shops, stories, talk, events, mods, settings, the palette, the light theme ──
@@ -657,7 +666,7 @@ check('light theme: pages open', True)
 app.toggle_theme(); pump(40)
 check('no errors were reported', not errors, str(errors[:1]))
 
-print('items, spells, heroes, tiles, shops, stories, talk, events, mods, settings, the palette, the light theme' + ': ok')
+done('items, spells, heroes, tiles, shops, stories, talk, events, mods, settings, the palette, the light theme' + ': ok')
 
 
 # ── quests: making one, switching, the locked game, playing ──
@@ -730,7 +739,46 @@ log = open(app.play_log, encoding='utf-8', errors='replace').read()
 if alive:
     app.player.terminate()
 check('the game started on level 2', alive and '--level 2' in log and '--at 10,10' in log, log[-400:])
-print('quests: a new blank one, the wizard into it, switching back, the locked game refused, the game started from the quest: ok')
+done('quests: a new blank one, the wizard into it, switching back, the locked game refused, the game started from the quest: ok')
+
+
+# ── the history keeps maps as the squares that changed, and a removed level comes back even after it was saved away ──
+from studio import levels as levels_mod  # noqa: E402
+app.go('world'); pump(20)
+S = app.session
+W = app.pages['world']
+W.select_level(1)
+n = S.levels
+sq0 = [list(S.project.grid(1).sq[x][y]) for x in range(1, 101) for y in range(1, 101)]
+W.palette.choose_layer('floor'); W.palette._picked([8]); W.palette.gallery.set_picks([8]); W.choose_tool('rect')
+M = W.map
+M.zoom_to(24); M.ox = M.oy = 0; pump(5)
+drag((2, 2), (60, 40))
+big = S.history.undo_stack[-1]
+check('a big map edit is kept as a delta', type(big['before'][('map', 1)]).__name__ == 'MapDelta' and len(big['before'][('map', 1)].cells) > 200,
+      str(type(big['before'][('map', 1)])))
+app._undo(False); pump(5)
+check('undo restores every square', sq0 == [list(S.project.grid(1).sq[x][y]) for x in range(1, 101) for y in range(1, 101)])
+app._undo(True); pump(5)
+check('redo repeats it', S.project.grid(1).sq[30][30][0] == 8)
+app._undo(False); pump(5)
+# add a level with something in it, remove it, save so its folder is deleted, then undo the removal
+lv = levels_mod.add_blank(S)
+S.project.grid(lv).sq[7][7][0] = 5
+with S.edit('mark it', ('map', lv)):
+    S.project.grid(lv).sq[8][8][3] = 2
+levels_mod.remove_last(S)
+S.autosave()
+check('the removed level folder is gone from disk', not os.path.exists(os.path.join(S.project.root, 'levels', str(lv))))
+app._undo(False); pump(10)
+check('undo brings the level back', S.levels == lv and S.project.grid(lv).sq[8][8][3] == 2, str(S.levels))
+S.autosave()
+check('and it is written to disk again', os.path.exists(os.path.join(S.project.root, 'levels', str(lv), 'map.txt')))
+app._undo(True); pump(10)
+app._undo(False); pump(10)
+app._undo(False); pump(10); app._undo(False); pump(10)
+check('the rest undone', S.levels == n, str(S.levels))
+done('history: maps kept as the squares that changed; a removed level comes back after it was saved away: ok')
 
 S.autosave()
 assert not S.project.dirty
@@ -738,4 +786,4 @@ assert 'Brothers Quest' not in open(os.path.join(pack, 'quest.json'), encoding='
 assert not [f for _, _, fs in os.walk(pack) for f in fs if f.endswith('.tmp')], 'no half-written files are left'
 assert not errors, errors[:1]
 root.destroy()
-print('all studio checks passed')
+done('all studio checks passed')

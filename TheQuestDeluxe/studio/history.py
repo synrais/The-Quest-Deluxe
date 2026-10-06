@@ -12,6 +12,26 @@ import time
 TABLES = ('items', 'creatures', 'spells', 'classes', 'skills')
 
 
+class MapDelta:
+    """The squares of a level that one step changed ({(x, y): [floor, wall, item, creature, gold, deco]}): what the history keeps of a
+    map instead of a whole copy of its 10,000 squares."""
+    __slots__ = ('cells',)
+
+    def __init__(self, cells):
+        self.cells = cells
+
+
+def _delta(before, after):
+    old, new = {}, {}
+    for x in range(1, len(before)):
+        bx, ax = before[x], after[x]
+        for y in range(1, len(bx)):
+            if bx[y] != ax[y]:
+                old[(x, y)] = bx[y]
+                new[(x, y)] = ax[y]
+    return MapDelta(old), MapDelta(new)
+
+
 class History:
     LIMIT = 150
 
@@ -67,7 +87,12 @@ class History:
             p.texts.clear()
             p.texts.update(state)
         elif scope[0] == 'map':
-            p.grid(scope[1]).sq[:] = copy.deepcopy(state)
+            if isinstance(state, MapDelta):
+                sq = p.grid(scope[1]).sq
+                for (x, y), cell in state.cells.items():
+                    sq[x][y][:] = cell
+            elif state is not None:
+                p.grid(scope[1]).sq[:] = copy.deepcopy(state)
         elif scope[0] == 'script':
             p.scripts[scope[1]] = state
         elif scope[0] == 'shops':
@@ -99,9 +124,19 @@ class History:
 
     def commit(self, label, before, merge=None):
         after = {s: self.capture(s) for s in before}
+        for s in list(before):                                  # a map is kept as the squares that changed, not as a copy
+            if isinstance(s, tuple) and s[0] == 'map':
+                if s[1] <= self.project.levels:
+                    before[s], after[s] = _delta(before[s], after[s])
+                else:                                           # a level that is gone: its whole map is what undo brings back
+                    after[s] = None
         now = time.monotonic()
         last = self.undo_stack[-1] if self.undo_stack else None
         if merge and last and last.get('merge') == merge and now - last['time'] < 1.5 and set(last['before']) == set(before):
+            for s in after:
+                if isinstance(after[s], MapDelta) and isinstance(last['after'].get(s), MapDelta):
+                    after[s] = MapDelta({**last['after'][s].cells, **after[s].cells})
+                    last['before'][s] = MapDelta({**before[s].cells, **last['before'][s].cells})
             last['after'], last['time'] = after, now             # typing in one box, dragging one slider: one step
         else:
             self.undo_stack.append({'label': label, 'before': before, 'after': after, 'merge': merge, 'time': now})

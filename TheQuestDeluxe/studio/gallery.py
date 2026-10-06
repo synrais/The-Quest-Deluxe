@@ -22,10 +22,12 @@ class Gallery(ttk.Frame):
     """A scrolling grid of cards. Click one to select it; double-click to open it. `items` are Entry objects."""
 
     def __init__(self, master, on_select=None, on_open=None, card=(112, 96), list_mode=False, bg='panel', multi=False,
-                 on_picks=None, toggle=False):
+                 on_picks=None, toggle=False, drag=None):
         super().__init__(master, style={'panel': 'TFrame', 'bg': 'Bg.TFrame'}[bg])
         self.on_select, self.on_open = on_select, on_open
         self.multi, self.on_picks, self.toggle = multi or toggle, on_picks, toggle
+        self.drag = drag                         # drag(key, 'start' | 'move' | 'drop', x_root, y_root): a card carried somewhere else
+        self._press = None
         self.picked: list = []                  # with multi: Ctrl+click adds and removes (a brush that mixes several)
         self.card_w, self.card_h = px(card[0]), px(card[1])
         self.list_mode = list_mode
@@ -42,13 +44,17 @@ class Gallery(ttk.Frame):
         self.empty = None
 
     # ── contents ────────────────────────────────────────────────────────────
-    def set_items(self, items):
+    def set_items(self, items, filter_text=None):
         self.items = list(items)
+        if filter_text is not None:
+            self.filter_text = (filter_text or '').strip().lower()
         self._rebuild()
 
     def filter(self, text):
-        self.filter_text = (text or '').strip().lower()
-        self._rebuild(keep_scroll=False)
+        t = (text or '').strip().lower()
+        if t != self.filter_text:
+            self.filter_text = t
+            self._rebuild(keep_scroll=False)
 
     def select(self, key, scroll=True):
         self.selected = key
@@ -89,12 +95,19 @@ class Gallery(ttk.Frame):
     def _rebuild(self, keep_scroll=True):
         body = self.scroller.body
         y = self.scroller.canvas.yview()[0]
+        shown = self._visible()
+        width = max(self.scroller.canvas.winfo_width(), px(200))
+        cols = 1 if self.list_mode else max(1, (width - px(8)) // (self.card_w + px(8)))
+        sig = (cols, tuple((e.key, e.title, e.sub, id(e.image), e.badge, e.group) for e in shown))
+        if sig == getattr(self, '_sig', None) and self.cards:
+            self._paint_all()                                    # nothing about the cards changed: leave the widgets be
+            return
+        self._sig = sig
         for w in body.winfo_children():
             w.destroy()
         self.cards = {}
-        self.shown = self._visible()
-        width = max(self.scroller.canvas.winfo_width(), px(200))
-        self._cols = 1 if self.list_mode else max(1, (width - px(8)) // (self.card_w + px(8)))
+        self.shown = shown
+        self._cols = cols
         if not self.shown:
             ttk.Label(body, text='Nothing matches.' if self.items else 'Nothing here yet.', style='Dim.TLabel',
                       padding=px(20)).grid(row=0, column=0)
@@ -165,6 +178,9 @@ class Gallery(ttk.Frame):
         for w in [card] + kids:
             w.bind('<Button-1>', lambda ev, k=e.key: self._click(k, ev))
             w.bind('<Double-Button-1>', lambda ev, k=e.key: self._open(k))
+            if self.drag:
+                w.bind('<B1-Motion>', lambda ev, k=e.key: self._carry(k, ev), add='+')
+                w.bind('<ButtonRelease-1>', lambda ev, k=e.key: self._drop(k, ev), add='+')
             w.bind('<Enter>', lambda ev, c=card, k=e.key: self._hover(c, True, k))
             w.bind('<Leave>', lambda ev, c=card, k=e.key: self._hover(c, False, k))
         return card
@@ -183,7 +199,24 @@ class Gallery(ttk.Frame):
         if key not in self.picked:
             self._paint(card, False, inside)
 
+    def _carry(self, key, ev):
+        if self._press is None or self._press[0] != key:
+            self._press = (key, ev.x_root, ev.y_root, False)
+        k, x, y, going = self._press
+        if not going and abs(ev.x_root - x) + abs(ev.y_root - y) > 8:
+            going = True
+            self._press = (k, x, y, True)
+            self.drag(key, 'start', ev.x_root, ev.y_root)
+        if going:
+            self.drag(key, 'move', ev.x_root, ev.y_root)
+
+    def _drop(self, key, ev):
+        press, self._press = self._press, None
+        if press and press[3]:
+            self.drag(key, 'drop', ev.x_root, ev.y_root)
+
     def _click(self, key, ev=None):
+        self._press = (key, ev.x_root, ev.y_root, False) if ev is not None else None
         if self.multi and ev is not None and (self.toggle or ev.state & 0x4) and key is not None:
             if key in self.picked:
                 if len(self.picked) > 1 or self.toggle:

@@ -76,12 +76,15 @@ class CreaturesPage(TablePage):
         return rows[0]['id'] if rows else None
 
     def new(self):
-        rid = CreatureWizard(self).run()
+        wiz = CreatureWizard(self)
+        rid = wiz.run()
         if rid is not None:
             self.cat = 'all'
             self.seg.choose('all', run=False)
             self.fill()
             self.select(rid)
+            if wiz.paint_now.get():
+                self.after(200, lambda: self.paint('creatures', False, 'Picture'))
 
 
 class FightCard(ui.Card):
@@ -239,6 +242,8 @@ class CreatureWizard(ui.Dialog):
         self.tier_box.pack(side='left')
         self.preview = ttk.Label(self.body, text='', style='Dim.TLabel', wraplength=px(700))
         self.preview.pack(anchor='w', pady=(px(10), 0))
+        self.paint_now = tk.BooleanVar(value=True)
+        ttk.Checkbutton(self.body, text='Open the painter afterwards, to draw its picture', variable=self.paint_now).pack(anchor='w', pady=(px(8), 0))
         self.add_buttons([('Cancel', None, 'TButton'), ('Make it', 'make', 'Accent.TButton')], default='make')
         self._preview()
 

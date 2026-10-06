@@ -150,6 +150,27 @@ class ItemsPage(TablePage):
             ui.inform(self, 'Walks on water', 'No tile is marked as water yet. On the Tiles page, open the water wall and tick "Is water": '
                       'only then does this item walk on it.')
 
+    # an item dragged from the list onto a slot of the hero ------------------------------
+    def on_drag(self, key, phase, x, y):
+        if phase == 'start':
+            pic = self.s.project.picture('bag', key)
+            if pic is not None:
+                import pygame
+                from editor.hero_preview import Ghost
+                self._ghost = Ghost(self)
+                flat = pygame.Surface(pic.get_size())
+                flat.blit(pic, (0, 0))
+                self._ghost.show(flat, x, y)
+        elif phase == 'move':
+            if getattr(self, '_ghost', None):
+                self._ghost.move(x, y)
+        elif phase == 'drop':
+            ghost, self._ghost = getattr(self, '_ghost', None), None
+            if ghost:
+                ghost.close()
+            if self.hero_box is not None and self.hero_box.winfo_exists():
+                self.hero_box.drop_from_list(key, x, y)
+
     # new -------------------------------------------------------------------------
     def new(self):
         d = ui.Dialog(self, 'A new item', width=px(700))
@@ -163,6 +184,8 @@ class ItemsPage(TablePage):
         e = ttk.Entry(r, textvariable=name, width=30)
         e.pack(side='left', padx=px(10))
         cards.command = lambda k: name.set('New ' + next(t for kk, t, *_ in NEW_KINDS if kk == k).lower()) if name.get().startswith('New ') else None
+        paint_now = tk.BooleanVar(value=True)
+        ttk.Checkbutton(d.body, text='Open the painter afterwards, to draw its pictures', variable=paint_now).pack(anchor='w', pady=(px(8), 0))
         d.add_buttons([('Cancel', None, 'TButton'), ('Make it', 'make', 'Accent.TButton')], default='make')
         if d.run() != 'make':
             return
@@ -178,6 +201,8 @@ class ItemsPage(TablePage):
                 kinds = self.ammo_kinds()
                 row['fires'] = kinds[:1]
         self.add_row(row, f'New item: {row["name"]}')
+        if paint_now.get():
+            self.after(200, lambda: self.paint('items', False, 'On the map'))
 
     def ammo_kinds(self):
         seen = []

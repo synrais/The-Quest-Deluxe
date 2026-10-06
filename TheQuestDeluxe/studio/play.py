@@ -41,10 +41,10 @@ def launch(app, level=None, at=None, from_start=False):
 
 
 def _check(app):
-    """A few seconds on: if the game has already stopped, say why."""
+    """A few seconds on: if the game has already crashed, say why (a game that was closed, or ended, is nothing to report)."""
     proc = getattr(app, 'player', None)
     code = proc.poll() if proc else None
-    if code is None:
+    if code is None or code <= 0:
         return
     try:
         with open(app.play_log, encoding='utf-8', errors='replace') as fh:

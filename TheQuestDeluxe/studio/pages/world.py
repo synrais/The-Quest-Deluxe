@@ -23,6 +23,15 @@ TOOLS = [('brush', 'brush', 'Brush (B): click or drag to paint'),
          ('pick', 'picker', 'Pick (I, or right-click): take what is under the pointer as the brush'),
          ('select', 'select', 'Select (S): drag a box, then copy, cut, move or clear it')]
 PANELS = [('paint', 'Paint'), ('level', 'Level'), ('places', 'Places')]
+HINTS = {'brush': 'Click or drag to paint · right-click picks what is under the pointer · Space and drag pans · Ctrl+wheel zooms',
+         'eraser': 'Click or drag to rub out the chosen layer · hold Shift to rub out every layer',
+         'rect': 'Drag a rectangle (hollow or filled, set in the Paint panel)', 'line': 'Drag a straight line',
+         'fill': 'Click to fill the area · hold Ctrl to replace every square like it on the level',
+         'pick': 'Click a square to take what is on it as the brush', 'select': 'Drag a box · Ctrl+C copies, Ctrl+X cuts, Ctrl+V pastes, Delete clears · drag it to move',
+         'start': 'Click where the hero should start', 'exit': 'Click a square for an exit', 'link': 'Click a square for stairs, a ladder, a rope, a hole or a pad',
+         'entry': 'Click a square to name it as a way in', 'respawn': 'Click where the hero wakes after dying here',
+         'peaceful': 'Click a screen to make it peaceful (again to undo)', 'dark': 'Click a screen to make it dark (again to undo)',
+         'shop': 'Click a screen to give it a shop'}
 
 
 class WorldPage(Page):
@@ -227,6 +236,7 @@ class WorldPage(Page):
             self.level_panel.view_moved()
 
     def choose_tool(self, tool):
+        self.app.set_hint(HINTS.get(tool, ''))
         self.map.set_tool(tool)
         if tool in MARKER_TOOLS:
             self.tools.choose(None, run=False)
@@ -237,6 +247,7 @@ class WorldPage(Page):
         self.places.paint_tools()
 
     def _tool_chosen(self, tool):
+        self.app.set_hint(HINTS.get(tool, ''))
         self.map.set_tool(tool)
         self.places.paint_tools()
 
@@ -429,6 +440,7 @@ class WorldPage(Page):
         self.on_view_changed()
         self.map.schedule()
         self.map.canvas.focus_set()
+        self.app.set_hint(HINTS.get(self.map.tool, ''))
         if wizard:
             self.after(150, self.wizard)
         if new_level:

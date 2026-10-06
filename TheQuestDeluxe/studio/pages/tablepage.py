@@ -79,6 +79,9 @@ class TablePage(Page):
     def after_new(self, row):
         pass
 
+    def on_drag(self, key, phase, x, y):
+        """A card is being carried (the Items page drops them on the hero)."""
+
     # ── build ───────────────────────────────────────────────────────────────
     def build(self):
         self.schema = Schema(self.s, self.table)
@@ -107,7 +110,7 @@ class TablePage(Page):
             self.seg.pack(anchor='w', padx=px(14))
         self.search_box = ui.SearchBox(left, self._search, 'Search', width=24)
         self.search_box.pack(fill='x', padx=px(14), pady=px(8))
-        self.gallery = Gallery(left, on_select=self.select, card=self.card)
+        self.gallery = Gallery(left, on_select=self.select, card=self.card, drag=self.on_drag)
         self.gallery.pack(fill='both', expand=True)
 
     def _build_detail(self, right):
@@ -155,8 +158,7 @@ class TablePage(Page):
         return out
 
     def fill(self):
-        self.gallery.set_items(self.entries())
-        self.gallery.filter(self.query)
+        self.gallery.set_items(self.entries(), self.query)
         self.gallery.select(self.rid, scroll=False)
 
     def _filter(self, key):

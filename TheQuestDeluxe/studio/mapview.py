@@ -96,6 +96,8 @@ class MapView(ttk.Frame):
         self.line_id = self.canvas.create_line(0, 0, 0, 0, fill=C['accent'], width=3, state='hidden')
         self.sel_id = self.canvas.create_rectangle(0, 0, 0, 0, outline='#ffffff', width=2, dash=(6, 4), state='hidden')
         self.ghost_id = self.canvas.create_image(0, 0, anchor='nw', state='hidden')
+        self.brush_id = self.canvas.create_image(0, 0, anchor='nw', state='hidden')
+        self._brush_cache = {}
         c = self.canvas
         c.bind('<Configure>', lambda e: self._resized())
         c.bind('<ButtonPress-1>', self._press)
@@ -422,10 +424,45 @@ class MapView(ttk.Frame):
     def _left(self, e):
         self.hover = None
         self.canvas.itemconfigure(self.cursor_id, state='hidden')
+        self.canvas.itemconfigure(self.brush_id, state='hidden')
         self.host.on_hover(0, 0, False)
+
+    def _brush_ghost(self):
+        """The picture the brush would put down, faint under the pointer."""
+        c = self.canvas
+        b = self.brush
+        if self.tool != 'brush' or self.hover is None or self.ghost or not b.values or b.layer in self.locked or self._drag:
+            c.itemconfigure(self.brush_id, state='hidden')
+            return
+        z, n = self.zoom, b.size
+        v = b.values[0]
+        key = (b.layer, v, z, n)
+        img = self._brush_cache.get(key)
+        if img is None:
+            tile = self.s.pictures.art.tile(b.layer, v, z) if (v or b.layer == 'gold') else None
+            if tile is None:
+                c.itemconfigure(self.brush_id, state='hidden')
+                return
+            surf = pygame.Surface((z * n, z * n), pygame.SRCALPHA)
+            for i in range(n):
+                for j in range(n):
+                    surf.blit(tile, (i * z, j * z))
+            surf.fill((255, 255, 255, 140), special_flags=pygame.BLEND_RGBA_MULT)
+            buf = io.BytesIO()
+            pygame.image.save(surf, buf, 'x.png')
+            img = tk.PhotoImage(data=base64.b64encode(buf.getvalue()), format='png')
+            if len(self._brush_cache) > 40:
+                self._brush_cache.clear()
+            self._brush_cache[key] = img
+        x, y = self.hover
+        a = n // 2
+        c.itemconfigure(self.brush_id, image=img, state='normal')
+        c.coords(self.brush_id, (x - a - 1) * z - self.ox, (y - a - 1) * z - self.oy)
+        c.tag_lower(self.brush_id, self.cursor_id)
 
     def _refresh_cursor(self):
         c = self.canvas
+        self._brush_ghost()
         if self.hover is None or self.ghost or self.tool in ('select',) and self._drag:
             c.itemconfigure(self.cursor_id, state='hidden')
         else:

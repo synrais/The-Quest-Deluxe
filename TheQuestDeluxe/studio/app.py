@@ -316,6 +316,7 @@ class Studio:
             self.pages[self.current].hide()
             self.pages[self.current].pack_forget()
         self.current = key
+        self.set_hint('')
         page = self.pages[key]
         page.pack(fill='both', expand=True)
         try:                                           # a box on the page just left may still hold the keyboard
@@ -326,7 +327,6 @@ class Studio:
             pass
         page.show(**where)
         self._nav_paint_all()
-        self.set_hint('')
 
     def page(self, key):
         return self.pages[key]
