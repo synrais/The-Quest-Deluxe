@@ -11,6 +11,7 @@ from core import custom
 from core.project import Project
 from engine import packio
 
+from .stepdialog import wizard_size
 from . import icons, merge, ui, upgrade
 from .gallery import Entry, Gallery
 from .theme import C, px
@@ -23,8 +24,7 @@ SEV = {'lost': ('warn', 'bad', 'Something of yours is lost'), 'changed': ('warn'
 
 class MergeWindow(ui.Dialog):
     def __init__(self, app):
-        w = min(px(1040), app.root.winfo_screenwidth() - px(60))
-        h = min(px(720), app.root.winfo_screenheight() - px(100))
+        w, h = wizard_size(app.root)
         super().__init__(app.root, 'Merge quests', width=w, height=h)
         self.app, self.s = app, app.session
         self.dst = self.s.project

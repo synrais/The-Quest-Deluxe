@@ -73,6 +73,13 @@ class Studio:
         w, h = self._size()
         root.geometry(f'{w}x{h}+{(root.winfo_screenwidth() - w) // 2}+{max(0, (root.winfo_screenheight() - h) // 3)}')
         root.minsize(min(1200, w), min(700, h))
+        try:
+            root.state('zoomed')                                         # Windows: opens maximised
+        except tk.TclError:
+            try:
+                root.attributes('-zoomed', True)                         # Linux
+            except tk.TclError:
+                pass
         path = pack or self._first_pack()
         if not path:
             self.closed = True
@@ -89,7 +96,7 @@ class Studio:
     # ── start up ────────────────────────────────────────────────────────────
     def _size(self):
         sw, sh = self.root.winfo_screenwidth(), self.root.winfo_screenheight()
-        return min(sw - 40, 1560), min(sh - 80, 940)
+        return min(sw - 20, 2400), min(sh - 70, 1300)                # as much of the screen as there is: nothing should need scrolling that fits
 
     def _first_pack(self):
         from .pages.welcome import choose_pack

@@ -18,12 +18,25 @@ class HomePage(Page):
         self._job = None
         self._thumbs = {}
         self.s.on('any', self._changed)
+        self._per = 0
+        self.scroller.canvas.bind('<Configure>', lambda e: self._resized(), add='+')
 
     def _changed(self, scope, source):
         if isinstance(scope, tuple) and scope[0] == 'map':
             self._thumbs.pop(scope[1], None)
         if self.visible and self._job is None:
             self._job = self.after(300, self._redraw)
+
+    def per_row(self) -> int:
+        """How many level cards fit across (so the whole world is on one row when the window is wide: nothing to scroll to)."""
+        w = self.scroller.canvas.winfo_width()
+        if w < 300:                                                   # not laid out yet: the window's width less the menu on the left
+            w = max(self.app.root.winfo_width(), min(self.app.root.winfo_screenwidth(), 1500)) - px(240)
+        return max(4, (w - px(60)) // px(150))
+
+    def _resized(self):
+        if self.visible and self._job is None and self.per_row() != self._per:
+            self._job = self.after(200, self._redraw)
 
     def _redraw(self):
         self._job = None
@@ -40,7 +53,7 @@ class HomePage(Page):
         s, p = self.s, self.s.project
         # header: title, author, play
         head = ttk.Frame(body)
-        head.pack(fill='x', padx=px(28), pady=(px(22), px(4)))
+        head.pack(fill='x', padx=px(28), pady=(px(14), px(2)))
         left = ttk.Frame(head)
         left.pack(side='left')
         ttk.Label(left, text=p.quest.get('title') or p.name, style='H1.TLabel').pack(anchor='w')
@@ -56,7 +69,8 @@ class HomePage(Page):
         self._make(body)
         self._counts(body)
         self._recent(body)
-        ttk.Frame(body, height=px(30)).pack()
+        ttk.Frame(body, height=px(10)).pack()
+        self.after(250, self._resized)                               # (once the window has its real size, the cards may fit more to a row)
 
     def _health(self, body):
         problems = [pr for pr in self.app.problems if pr.key not in set(self.app.settings.get('ignored', {}).get(self.s.project.root, []))]
@@ -106,7 +120,7 @@ class HomePage(Page):
                           lambda: self.app.go('world', wizard=True)))
             steps.append(('skull', 'Make a creature of your own: pick a kind, give it a name, and the Fight check says how it fares against your hero', 'New creature',
                           lambda: self.app.go('creatures', new=True)))
-        ttk.Label(body, text='What to do next', style='H2.TLabel').pack(anchor='w', padx=px(28), pady=(px(20), px(6)))
+        ttk.Label(body, text='What to do next', style='H2.TLabel').pack(anchor='w', padx=px(28), pady=(px(14), px(4)))
         for icon, text, label, fn in steps[:3]:
             row = tk.Frame(body, bg=C['raised'], highlightthickness=1, highlightbackground=C['line'])
             row.pack(fill='x', padx=px(28), pady=2)
@@ -116,10 +130,10 @@ class HomePage(Page):
 
     def _world(self, body):
         s, p = self.s, self.s.project
-        ttk.Label(body, text='The world', style='H2.TLabel').pack(anchor='w', padx=px(28), pady=(px(20), px(6)))
+        ttk.Label(body, text='The world', style='H2.TLabel').pack(anchor='w', padx=px(28), pady=(px(14), px(4)))
         wrap = tk.Frame(body, bg=C['panel'])
         wrap.pack(fill='x', padx=px(24))
-        per = 6
+        per = self._per = self.per_row()
         marks_by = {n: levelmeta.landmarks(s, n) for n in range(1, s.levels + 1)}
         pos = {}
         cells = []
@@ -152,7 +166,7 @@ class HomePage(Page):
             w.configure(cursor='hand2')
 
     def _make(self, body):
-        ttk.Label(body, text='Make something', style='H2.TLabel').pack(anchor='w', padx=px(28), pady=(px(20), px(6)))
+        ttk.Label(body, text='Make something', style='H2.TLabel').pack(anchor='w', padx=px(28), pady=(px(14), px(4)))
         row = ttk.Frame(body)
         row.pack(fill='x', padx=px(24))
         acts = (('sparkle', 'Quest wizard', 'A whole quest, level after level, in a few clicks', lambda: self.app.go('world', quest=True)),
@@ -174,7 +188,7 @@ class HomePage(Page):
     def _counts(self, body):
         s, p = self.s, self.s.project
         cards = ttk.Frame(body)
-        cards.pack(fill='x', padx=px(24), pady=(px(18), px(4)))
+        cards.pack(fill='x', padx=px(24), pady=(px(12), px(4)))
         monsters = [r for r in p.tables['creatures'] if r['id'] > 0]
         people = [r for r in p.tables['creatures'] if -100 < r['id'] < 0]
         items = [r for r in p.tables['items'] if r['id']]

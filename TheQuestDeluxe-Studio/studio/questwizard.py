@@ -16,7 +16,7 @@ from studio.art import photo
 
 from . import levels, storytext, theme, ui, worldgen
 from .gallery import Entry, Picker
-from .stepdialog import StepDialog
+from .stepdialog import StepDialog, wizard_size
 from .theme import C, px
 from .wizard import NAMES_A, NAMES_B, STORY_TEMPLATES, THEME_CARDS
 
@@ -63,8 +63,7 @@ class QuestWizard(StepDialog):
     PREVIEW_WIDTH = 470
 
     def __init__(self, app, on_done=None):
-        width = min(px(1180), app.root.winfo_screenwidth() - px(60))
-        height = min(px(780), app.root.winfo_screenheight() - px(100))
+        width, height = wizard_size(app.root)
         super().__init__(app, 'Make a whole quest', width, height)
         self.on_done = on_done
         s = self.s

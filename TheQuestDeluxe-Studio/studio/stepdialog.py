@@ -8,6 +8,12 @@ from . import theme, ui
 from .theme import C, px
 
 
+def wizard_size(root):
+    """A wizard opens as large as the screen allows (a little short of all of it, for the window's title and the taskbar): what fits on the
+    screen is shown without scrolling."""
+    return min(root.winfo_screenwidth() - px(60), px(1700)), min(root.winfo_screenheight() - px(110), px(1000))
+
+
 class StepDialog(ui.Dialog):
     """A wizard window. A subclass sets STEPS [(key, title, icon)], HEADING and MAKE_LABEL, and writes a `_step_<key>` method for each
     step, `preview_pane(right)`, `create()`, `refresh()` and `_set(key, value)`. `self.p` holds the settings the switches and

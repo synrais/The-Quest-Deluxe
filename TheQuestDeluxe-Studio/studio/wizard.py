@@ -10,7 +10,7 @@ from studio.art import photo
 
 from . import levels, theme, ui, worldgen
 from .gallery import Entry, Picker
-from .stepdialog import StepDialog
+from .stepdialog import StepDialog, wizard_size
 from .theme import C, px
 
 STEPS = [('place', 'Place', 'map'), ('land', 'Land', 'tree'), ('life', 'Life', 'skull'), ('loot', 'Loot', 'coin'),
@@ -59,8 +59,7 @@ class LevelWizard(StepDialog):
     MAKE_LABEL = 'Make the level'
 
     def __init__(self, app, on_done=None):
-        width = min(px(1120), app.root.winfo_screenwidth() - px(60))
-        height = min(px(760), app.root.winfo_screenheight() - px(100))
+        width, height = wizard_size(app.root)
         super().__init__(app, 'Make a level', width, height)
         self.on_done = on_done
         self.p = worldgen.Params(seed=random.randint(1, 99999))
