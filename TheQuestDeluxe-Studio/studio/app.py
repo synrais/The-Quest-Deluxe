@@ -124,6 +124,8 @@ class Studio:
         if not getattr(self, '_update_looked', False) and self.settings.get('check_updates', True) and not os.environ.get('QUEST_NO_UPDATE_CHECK'):
             self._update_looked = True                                   # once each time the Studio is started
             self.root.after(3000, self._look_for_updates)
+        if not os.environ.get('QUEST_NO_UPDATE_CHECK'):
+            self.root.after(1200, self._show_notices)
 
     # ── the window ──────────────────────────────────────────────────────────
     def _build_shell(self):
@@ -596,6 +598,15 @@ class Studio:
                 self.root.after(200, poll)
         self.root.after(200, poll)
 
+    def _show_notices(self):
+        """Messages that ship with an update, each shown once on each computer (remembered in the Studio's own settings)."""
+        seen = self.settings.setdefault('notices_seen', [])
+        for key, title, text in NOTICES:
+            if key not in seen:
+                seen.append(key)
+                save_settings(self.settings)
+                ui.inform(self.root, title, text)
+
     def _updated(self, box):
         if 'error' in box:
             ui.inform(self.root, 'Not updated', f'Nothing was changed: {box["error"]}')
@@ -616,6 +627,12 @@ class Studio:
             self.session.close()
         self.closed = True
         self.root.destroy()
+
+
+# (id, title, text): shown once, the first time a Studio that carries it is opened
+NOTICES = [
+    ('test-update-1', 'Test update', 'This was just a test update, if you can read this everything worked fine.'),
+]
 
 
 def main():
