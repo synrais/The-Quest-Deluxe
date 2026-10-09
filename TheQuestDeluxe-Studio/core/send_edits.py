@@ -19,7 +19,7 @@ import time
 import urllib.error
 import urllib.request
 
-REPO = 'synrais/The-Quest-I-II'
+REPO = 'synrais/The-Quest-Deluxe'
 BASE = 'main'
 API = 'https://api.github.com'
 SETTINGS = os.path.join(os.path.expanduser('~'), '.quest_editor.json')

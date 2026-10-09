@@ -21,7 +21,7 @@ remembered on that computer. After a compare recording is saved, the compare win
 ## One-time setup (owner)
 
 1. GitHub > Settings > Developer settings > Fine-grained personal access tokens > Generate new token.
-   - Resource owner: you; **Only select repositories**: `The-Quest-I-II` only.
+   - Resource owner: you; **Only select repositories**: `The-Quest-Deluxe` only.
    - Repository permissions: **Contents: Read and write**. Nothing else.
    - Set an expiry; make a new one when it runs out.
 2. Protect `main`: Settings > Rules > Rulesets > new branch ruleset targeting `main`, requiring a pull request
