@@ -222,7 +222,16 @@ def for_real():
         c.start_ours(window, None)
         r = c.press('c', *keys.to_pygame('c'))
         assert r.pixels > 0 and not r.same
-        c.press('Up', *keys.to_pygame('Up'))
+        # a key goes to both at once and is looked at afterwards: it never waits for the original to go quiet (it used to take about two seconds)
+        t = time.time()
+        c.send('Up', *keys.to_pygame('Up'))
+        sent = time.time() - t
+        assert sent < 0.5 and c.pending is not None, f'a key waited {sent:.2f} seconds before it was sent'
+        t = time.time()
+        while c.poll() is None and time.time() - t < 6:
+            time.sleep(0.03)
+        assert c.pending is None and len(c.recorder.steps) == 2, 'poll() did not finish the key by itself'
+        print(f'compare: a key is sent in {sent:.2f} s and its result is in {time.time() - t:.2f} s later, while the window keeps answering')
         z = c.save_recording({'name': 'Tester', 'seen': 'the sheet', 'right': 'DOS looked right'}, out, 'diff')
         names = zipfile.ZipFile(z).namelist()
         assert 'frames/step-0000-difference.png' in names and 'frames/step-0000-dos.png' in names and 'frames/step-0000-ours.png' in names, names

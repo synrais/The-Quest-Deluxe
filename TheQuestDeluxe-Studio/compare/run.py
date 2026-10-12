@@ -244,6 +244,7 @@ def run(argv=None):
                 dock()
             for ev in pygame.event.get():
                 if ev.type == pygame.QUIT:
+                    comp.complete()
                     if comp.recorder and comp.recorder.unsaved:
                         status(font, screen, 'There are differences in the recording: save it?', (250, 200, 100))
                         pygame.display.flip()
@@ -264,6 +265,7 @@ def run(argv=None):
                 if ev.type != pygame.KEYDOWN:
                     continue
                 if ev.key == pygame.K_F12:
+                    comp.complete()
                     save_recording(comp, font, screen, a)
                     continue
                 if ev.key == pygame.K_F11:                                      # bring the original's window into view, beside this one (Windows)
@@ -277,12 +279,14 @@ def run(argv=None):
                 status(font, screen, f'{name} ...', (230, 230, 230))
                 pygame.display.flip()
                 k, u = keys.to_pygame(name)
-                r = comp.press(name, k, u)
+                comp.send(name, k, u)                                       # at once, on both; how it went is looked at when the original is quiet
+            r = comp.poll()
+            if r is not None:
                 n = len(comp.recorder.differences)
                 if r.same:
-                    status(font, screen, f'{name}: same (dice {r.dos_draws}, pictures equal)   {n} differences so far', (150, 220, 150))
+                    status(font, screen, f'{r.key}: same (dice {r.dos_draws}, pictures equal)   {n} differences so far', (150, 220, 150))
                 else:
-                    status(font, screen, f'{name}: ' + ' '.join(r.notes)[:70] + '  F12 saves', (250, 120, 110))
+                    status(font, screen, f'{r.key}: ' + ' '.join(r.notes)[:70] + '  F12 saves', (250, 120, 110))
             comp.draw()
             if docked[0] is False and not beside[0] and time.time() - last_mirror > 0.15:
                 last_mirror = time.time()

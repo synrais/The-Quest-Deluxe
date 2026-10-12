@@ -194,32 +194,67 @@ class Compare:
             rules._seed[0] = s
 
     # ── waiting for the original ────────────────────────────────────────────
-    def settle(self, quiet=0.45, limit=8.0):
-        """Wait until the original is idle, waiting for a key: its random number state and its picture have both stopped changing."""
+    def settle(self, quiet=0.45, limit=8.0, at_least=0.0):
+        """Wait until the original is idle, waiting for a key: its random number state and its picture have both stopped changing
+        (and at least `at_least` seconds from now have passed: it has had time to start on the key)."""
         t = time.time()
         last, since = None, time.time()
         while time.time() - t < limit:
             cur = (self.dos_seed() if self.seed_ok else None, self.dos.picture_bytes())
             if cur != last:
                 last, since = cur, time.time()
-            elif time.time() - since >= quiet:
+            elif time.time() - since >= quiet and time.time() - t >= at_least:
                 return
-            time.sleep(0.05)
+            time.sleep(0.02)
 
     # ── one key on both ─────────────────────────────────────────────────────
+    pending = None                       # (the report, the original's dice before the key, when it was sent): a key whose result has not been looked at yet
+    HEARD = 0.2                          # seconds the original is given to start on a key before it can count as idle again
+
     def press(self, xname: str, pygame_key: int, unicode: str = '') -> Report:
-        """The same key on both, in step. Returns what happened on each side (and it is recorded)."""
+        """The same key on both, in step, and what happened on each side (it is recorded). Waits for the result; the window uses send() and poll() so that a key never waits."""
+        self.send(xname, pygame_key, unicode)
+        return self.complete()
+
+    def send(self, xname: str, pygame_key: int, unicode: str = ''):
+        """The same key on both, at once. How it went is looked at afterwards (poll or complete). The one before it is finished first: the original must be at rest."""
         import pygame
+        self.complete()
         rep = Report(xname)
-        self.settle()
         before = self.dos_seed()
         self.sync_seed()
         self.keys.append((xname, round(time.time() - self.t0, 2)))
         self.dos.key(xname)
         self.game.handle(pygame.event.Event(pygame.KEYDOWN, key=pygame_key, unicode=unicode, mod=0))
         self.draw()
-        time.sleep(0.25)
-        self.settle()
+        self.pending = (rep, before, time.time())
+        self._watch = (None, time.time(), 0.0)
+
+    def poll(self):
+        """Called often while the window is idle: when the original has finished with the last key, its result (a Report), else None. Never waits."""
+        if self.pending is None:
+            return None
+        now = time.time()
+        last, since, checked = self._watch
+        if now - checked < 0.1:
+            return None
+        cur = (self.dos_seed() if self.seed_ok else None, self.dos.picture_bytes())
+        if cur != last:
+            self._watch = (cur, now, time.time())
+            return None
+        self._watch = (last, since, time.time())
+        if now - since >= 0.45 and now - self.pending[2] >= self.HEARD:
+            return self.complete()
+        return None
+
+    def complete(self):
+        """Wait (if need be) for the original to finish with the last key sent, then say how it went. None when no key is waiting."""
+        if self.pending is None:
+            return None
+        rep, before, sent = self.pending
+        self.settle(at_least=max(0.0, self.HEARD - (time.time() - sent)))
+        self.pending = None
+        xname = rep.key
         after = self.dos_seed()
         if before is not None and after is not None:
             rep.dos_draws = count_draws(before, after)
@@ -290,6 +325,7 @@ class Compare:
 
     def finish(self):
         """The last pictures go into the recording."""
+        self.complete()
         if self.recorder is not None:
             self.recorder.last(self.game.renderer.screen.copy(), self.dos_picture())
 

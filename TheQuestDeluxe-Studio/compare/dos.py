@@ -633,7 +633,7 @@ def _win_capture(h, want_surface=True):
         else:
             u.PrintWindow(h, mdc, 3)                                          # PW_CLIENTONLY | PW_RENDERFULLCONTENT (works while it is behind another window)
         g.GetDIBits(mdc, bmp, 0, hh, buf, ctypes.byref(info), 0)
-        return any(buf.raw[i] for i in range(0, w * hh * 4, 4099))            # not all black
+        return any(buf.raw[::4099])                                           # not all black (one copy of the picture: reading buf.raw once per sample copied it hundreds of times)
     order = ['blt', 'print'] if _CAPTURE['how'] != 'print' else ['print', 'blt']
     ok = False
     for how in order:
@@ -647,8 +647,9 @@ def _win_capture(h, want_surface=True):
     u.ReleaseDC(h, hdc)
     if not ok:
         return None
+    pixels = buf.raw
     if not want_surface:
-        return w, hh, buf.raw, None                                          # (just the bytes: to see whether the picture is changing)
+        return w, hh, pixels, None                                          # (just the bytes: to see whether the picture is changing)
     import pygame
     raw = bytearray(buf.raw)
     raw[3::4] = b'\xff' * (w * hh)                                           # GDI leaves the alpha bytes empty: the picture is opaque
@@ -657,7 +658,7 @@ def _win_capture(h, want_surface=True):
         shot = shot.convert()
     if (w, hh) != (640, 480):
         shot = pygame.transform.scale(shot, (640, 480))
-    return w, hh, buf.raw, shot
+    return w, hh, pixels, shot
 
 
 VK = {'Insert': 0x2D, 'Return': 0x0D, 'Escape': 0x1B, 'space': 0x20, 'Up': 0x26, 'Down': 0x28, 'Left': 0x25, 'Right': 0x27, 'BackSpace': 0x08,
