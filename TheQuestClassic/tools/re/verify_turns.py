@@ -39,6 +39,7 @@ PYGAME = {'Left': pygame.K_LEFT, 'Right': pygame.K_RIGHT, 'Up': pygame.K_UP, 'Do
 for _n in range(1, 9):                                  # 1 to 8: the potions
     KEYS[str(_n)] = [ord(str(_n))]
     PYGAME[str(_n)] = getattr(pygame, f'K_{_n}')
+NOT_RANDOM = ()
 POTIONS = ('rose', 'red', 'purple', 'blue', 'yellow', 'white', 'cyan', 'black')
 ENEMY_F = ('type', 'x', 'y', 'life', 'mlife', 'atk', 'defense', 'power', 'range', 'warm', 'marm', 'att')
 
@@ -51,6 +52,8 @@ class TurnEmu(GameEmu):
         from unicorn import UC_HOOK_CODE
         self.ticks = 0
         self.waits = []
+        from unicorn.x86_const import UC_X86_REG_FPCW
+        self.uc.reg_write(UC_X86_REG_FPCW, 0x037F)               # every x87 exception masked (an unmasked one made 'wait' spin for ever)
         self.died = False
         seg, off = self.addr['_clock']
         at = self.lin(seg, off)
@@ -63,6 +66,21 @@ class TurnEmu(GameEmu):
             self._return(ax=self.ticks & 0xFFFF, dx=self.ticks >> 16)
             return
         self._on_call2(uc, address, size, user)
+
+    def _on_int(self, uc, intno, user):
+        """The x87 fix-ups of emu.py, then the patched bytes are made to take effect: the translation of the old ones is thrown away."""
+        from unicorn.x86_const import UC_X86_REG_CS, UC_X86_REG_IP
+        at = self.lin(uc.reg_read(UC_X86_REG_CS), uc.reg_read(UC_X86_REG_IP) - 2)
+        if intno == 0x3E:                                      # the emulator library's padding: INT 3Eh and the byte after it do nothing
+            uc.mem_write(at, bytes([0x90, 0x90, 0x90]))
+            uc.reg_write(UC_X86_REG_IP, uc.reg_read(UC_X86_REG_IP) - 2)
+            uc.ctl_remove_cache(at, at + 8)
+            return
+        super()._on_int(uc, intno, user)
+        try:
+            uc.ctl_remove_cache(at, at + 8)
+        except Exception:                                      # noqa: BLE001 - an older unicorn: nothing to throw away
+            pass
 
     def _caller(self):
         from unicorn.x86_const import UC_X86_REG_SP, UC_X86_REG_SS
@@ -269,7 +287,7 @@ def main(cases, rng_seed, m2s, only, nkeys):
         state = dict(m1=0, m2=rng.choice(m2s), life=rng.choice([300, 600, 900]), str=rng.choice([40, 80]), dex=rng.choice([30, 60]),
                      acc=rng.choice([30, 60]), rep=0)
         seed = rng.randint(1, 0xFFFFFFFF)
-        keys = [rng.choice(list(KEYS)) for _ in range(nkeys)]
+        keys = [rng.choice([k for k in KEYS if k not in NOT_RANDOM]) for _ in range(nkeys)]
         edits = {}
         if rng.random() < 0.5:
             edits[45] = {'life': rng.choice([1, 30, 39, 40, 80])}
@@ -321,7 +339,7 @@ def main_levels(levels, cases, rng_seed, nkeys):
                                    armor=rng.choice([0, 101, 108, 112]), amulet=rng.choice([0, 0, 501, 503, 505])),
                          potions={name: rng.choice([0, 0, 1, 2]) for name in POTIONS})
             seed = rng.randint(1, 0xFFFFFFFF)
-            keys = [rng.choice(list(KEYS)) for _ in range(nkeys)]
+            keys = [rng.choice([k for k in KEYS if k not in NOT_RANDOM]) for _ in range(nkeys)]
             try:
                 g = Game(win, data)                                   # a new game and a new emulator for each case: nothing is left over from the one before
                 g.overlay = None
