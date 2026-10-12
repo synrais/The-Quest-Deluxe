@@ -415,6 +415,25 @@ class Renderer:
                     return
             clock.tick(30)
 
+    def wait_yesno(self, game, question, fast=False):
+        """save()'s getch loop: the question stays in the strip until Y or N is pressed (True for Y). Without a window (a test) the answer is No."""
+        if fast:
+            return False
+        from .ui import YesNo
+        box = YesNo(question, None)
+        clock = pygame.time.Clock()
+        while game.running:
+            self.draw(game, present=False)
+            box.draw(self, self.screen)
+            self.present()
+            for ev in pygame.event.get():
+                if ev.type == pygame.QUIT:
+                    game.running = False
+                elif ev.type == pygame.KEYDOWN and ev.key in (pygame.K_y, pygame.K_n):
+                    return ev.key == pygame.K_y
+            clock.tick(30)
+        return False
+
     # ── frame ─────────────────────────────────────────────────────────────────
     def draw(self, game, present=True, flat=False):
         """flat: the map from above even in FPS mode."""

@@ -51,7 +51,7 @@ def start(game, level: int, at=None, hero: savefile.SaveData | None = None, cls:
 
 def scenario(game, spec: dict):
     """A test screen made from a loadout's extra keys (both sides run this, on the same dice, so both start from the same screen):
-    only: creature numbers to leave on the screen; talks: talk() for these creatures, as the story would have, in this order
+    only: creature numbers to leave on the screen; spawn: creatures added; talks: talk() for these creatures, as the story would have, in this order
     (a scene is walked through); edit: {creature number: {field: value}} (a boss with one hit left)."""
     from engine import rules
     w = game.world
@@ -61,6 +61,8 @@ def scenario(game, spec: dict):
                 w.sq(e.x, e.y).mon = 0
                 w.enemies.remove(e)
         game.count_hostiles()
+    for number, x, y in spec.get('spawn') or []:                      # creatures put on the screen: [number, x, y] (x, y on the screen, 1 to 10)
+        game.spawn(int(number), w.origin[0] + int(x) - 1, w.origin[1] + int(y) - 1)
     if spec.get('talks'):
         rules._seed[0] = 777
         here = (game.player.X, game.player.Y)
@@ -68,6 +70,14 @@ def scenario(game, spec: dict):
             game.events.talk(npc)
         game.player.X, game.player.Y = here                           # (a scene may push the hero back a square: he starts where he was put)
         game.count_hostiles()
+    if spec.get('next_to') is not None:                              # the hero beside the first creature of this number, on a free square
+        target = next((e for e in w.enemies if e.type == int(spec['next_to'])), None)
+        if target is not None:
+            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                x, y = target.x + dx, target.y + dy
+                if w.in_map(x, y) and w.sq(x, y).mon == 0 and not game.pack.wall(w.sq(x, y).wall).get('solid'):
+                    game.player.X, game.player.Y = x, y
+                    break
     for number, fields in (spec.get('edit') or {}).items():
         for e in w.enemies:
             if e.type == int(number):

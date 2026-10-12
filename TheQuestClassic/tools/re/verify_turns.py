@@ -94,6 +94,9 @@ def setup(emu, g, level, grid0, hero, state, seed, only=None, edits=None):
     """The same situation in both."""
     from engine import rules
     hx, hy = hero
+    g.overlay = None
+    g.target = None
+    g.messages = []
     w, p = g.world, g.player
     w.level = level
     g.status.level = level
@@ -185,7 +188,9 @@ def turn(emu, g, key):
     """The key in both."""
     emu.keys = list(KEYS[key])
     emu.stopped = False
-    emu.call('main2', limit=400_000_000)
+    emu.call('main2', limit=30_000_000)
+    if not emu.stopped:
+        raise RuntimeError('main2 did not come back to wait for a key within the instruction limit')
     g.handle(pygame.event.Event(pygame.KEYDOWN, key=PYGAME[key], unicode='', mod=0))
     # (a message waits for Space in the original; the port's fast mode does not wait)
 

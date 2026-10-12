@@ -196,20 +196,19 @@ def run(argv=None):
         pass
     comp.dos.idle = pygame.event.pump
 
-    def wait_for_space(game, text):
-        """A message is showing (in both): ours waits for the person's Space, as the original does, and then it goes to both."""
-        from engine.ui import TalkBox
-        status(font, screen, 'A message is showing: press Space', (230, 230, 230))
+    def wait_for(game, box, wanted, note):
+        """A message or question is showing (in both): ours waits for the person's key, as the original does (it is then sent to both)."""
+        status(font, screen, note, (230, 230, 230))
         clock, last = pygame.time.Clock(), 0.0
         while True:
             for ev in pygame.event.get():
                 if ev.type == pygame.QUIT:
                     pygame.event.post(ev)                                  # (the main loop leaves)
-                    return
-                if ev.type == pygame.KEYDOWN and ev.key == pygame.K_SPACE:
-                    return
+                    return None
+                if ev.type == pygame.KEYDOWN and ev.key in wanted:
+                    return ev.key
             game.renderer.draw(game, present=False)
-            TalkBox(text).draw(game.renderer, game.renderer.screen)
+            box.draw(game.renderer, game.renderer.screen)
             game.renderer.present()
             if docked[0] is False and not beside[0] and time.time() - last > 0.15:
                 last = time.time()
@@ -218,7 +217,15 @@ def run(argv=None):
                     screen.blit(shot, (640, 0))
                     pygame.display.flip()
             clock.tick(30)
-    comp.on_talk = wait_for_space
+
+    def wait_for_space(game, text):
+        from engine.ui import TalkBox
+        wait_for(game, TalkBox(text), (pygame.K_SPACE,), 'A message is showing: press Space')
+
+    def wait_for_yesno(game, question):
+        from engine.ui import YesNo
+        return wait_for(game, YesNo(question, None), (pygame.K_y, pygame.K_n), 'A question is showing: press Y or N') == pygame.K_y
+    comp.on_talk, comp.on_yesno = wait_for_space, wait_for_yesno
     ours = screen.subsurface((0, 0, 640, 480))
     try:
         if sys.platform.startswith('win'):

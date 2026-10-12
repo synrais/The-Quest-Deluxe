@@ -46,7 +46,7 @@ def main():
             gear = json.load(fh)
     story = tuple(int(v) for v in a.story.split(',')) if a.story else None
     state.start(g, a.level, (a.x, a.y), hero=hero, cls=a.cls, loadout=gear, story=story)
-    if (g.player.X, g.player.Y) != (a.x, a.y):
+    if (g.player.X, g.player.Y) != (a.x, a.y) and not (gear or {}).get('next_to'):
         print(f'BLOCKED {g.player.X} {g.player.Y}')
         return 2
     state.write_dos_save(a.out, state.save_bytes(g))

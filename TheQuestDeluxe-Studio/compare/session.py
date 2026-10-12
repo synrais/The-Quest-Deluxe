@@ -143,6 +143,7 @@ class Compare:
         self.window = window
         self.game = Game(window, settings={'fixes': self.fixes, 'sound': 'off'})
         self.game.renderer.wait_talk = self.talk_wait
+        self.game.renderer.wait_yesno = self.yesno_wait
         if hero is not None and self.same_things:             # the original cannot hold what it has not got: neither does ours
             gone = hero_mod.strip_unknown(hero)
             if gone and not self.removed:
@@ -307,30 +308,48 @@ class Compare:
     def talk_wait(self, game, text, fast=False):
         """talk() in the original draws a message and waits for Space (getch) before anything else happens, so ours does too, and that
         Space goes to the original as well. (A key typed meanwhile is lost in both.) The two pictures, with the message on, are compared."""
+        from engine.ui import TalkBox
         if self.starting:                                                    # a scene walked through to make the starting screen: nobody waits
             return
-        from engine.ui import TalkBox
+        self.shown(game, TalkBox(text), 'message')
+        if self.on_talk is not None:
+            self.on_talk(game, text)
+        self.dos.key('space')
+
+    on_yesno = None                      # the window's wait for the person's Y or N (called with the game and the question; True for Y)
+    auto_yes = False                     # with no window: what is answered
+
+    def yesno_wait(self, game, question, fast=False):
+        """save() in the original asks "Want to save? (Y)es (N)o" and waits (getch) for the answer before anything else happens; so does ours,
+        and the answer goes to the original too."""
+        from engine.ui import YesNo
+        if self.starting:
+            return False
+        self.shown(game, YesNo(question, None), 'question')
+        yes = self.on_yesno(game, question) if self.on_yesno is not None else self.auto_yes
+        self.dos.key('y' if yes else 'n')
+        return yes
+
+    def shown(self, game, box, what):
+        """Draw the message or question box over our screen, wait for the original to show the same, compare the two pictures (kept where they differ)."""
         game.renderer.draw(game, present=False)
-        TalkBox(text).draw(game.renderer, game.renderer.screen)
+        box.draw(game.renderer, game.renderer.screen)
         if self.dos.window is not None:
             self.wait_for_message(game.renderer.screen)
         theirs = self.dos_picture()
         n = self.pixel_difference(theirs=theirs)
-        self.talks.append((text, n))
-        if n and self.recorder is not None and theirs is not None:          # both pictures with the message on, kept where they differ
+        self.talks.append((getattr(box, 'text', None) or getattr(box, 'q', None), n))
+        if n and self.recorder is not None and theirs is not None:          # both pictures with it on, kept where they differ
             from . import record
-            name = f'frames/step-{len(self.recorder.steps):04d}-message-{len(self.talks)}'
+            name = f'frames/step-{len(self.recorder.steps):04d}-{what}-{len(self.talks)}'
             ours = game.renderer.screen
             self.recorder.frames[name + '-ours.png'] = record.png_bytes(ours)
             self.recorder.frames[name + '-dos.png'] = record.png_bytes(theirs)
             self.recorder.frames[name + '-difference.png'] = record.png_bytes(record.diff_surface(ours, theirs))
         if self.current is not None and n:
-            self.current.notes.append(f'{n} pixels differ while the message is shown.')
+            self.current.notes.append(f'{n} pixels differ while the {what} is shown.')
             self.current.pixels += n
         game.renderer.present()
-        if self.on_talk is not None:
-            self.on_talk(game, text)
-        self.dos.key('space')
 
     def facts(self) -> dict:
         """What our game says about itself after a key (for the log: the original has no such window into it)."""

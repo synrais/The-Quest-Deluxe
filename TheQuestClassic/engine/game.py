@@ -440,9 +440,12 @@ class Game:
         self.renderer.wait_talk(self, text, fast=self.fast)
 
     def autosave(self, ask: int):
-        """A story point where the original calls save() itself (ask = 1: 'Want to save?')."""
+        """A story point where the original calls save() itself (ask = 1: 'Want to save?'). Like the original, nothing else
+        happens until it is answered: a scene's message comes after the question, not before it."""
         if self.world.grid and self.status.saveslot:
-            self.save_game(ask=bool(ask))
+            if ask and not self.renderer.wait_yesno(self, 'Want to save? (Y)es (N)o', fast=self.fast):
+                return
+            self.write_save(ask=bool(ask))
 
     # ── items ─────────────────────────────────────────────────────────────────
     def pick_up(self) -> bool:
@@ -741,17 +744,19 @@ class Game:
             return
         self.save_game(ask=True)
 
+    def write_save(self, ask: bool = False):
+        """save(), once it has been told to go ahead."""
+        if ask:
+            self.tones((500, 50), (600, 50))
+            self.play('strip_text', 'Saving. . .')
+        self.slots.write(self.status.saveslot, self.to_save())
+
     def save_game(self, ask: bool = False):
         """save(type): type 1 asks 'Want to save? (Y)es (N)o'; type 0 (after creation) saves silently."""
-        def write():
-            if ask:
-                self.tones((500, 50), (600, 50))
-                self.play('strip_text', 'Saving. . .')
-            self.slots.write(self.status.saveslot, self.to_save())
         if ask:
-            self.overlay = ui.YesNo('Want to save? (Y)es (N)o', write)
+            self.overlay = ui.YesNo('Want to save? (Y)es (N)o', lambda: self.write_save(True))
         else:
-            write()
+            self.write_save(False)
 
     def load_game(self, on_no=None):
         """load(): in a game it asks 'Want to load? (Y)es (N)o' (from the title's list it doesn't),
