@@ -337,7 +337,7 @@ class Compare:
         if self.dos.window is not None:
             self.wait_for_message(game.renderer.screen)
         theirs = self.dos_picture()
-        n = self.pixel_difference(theirs=theirs)
+        n = self.pixel_difference(theirs=theirs) if theirs is not None else 0
         self.talks.append((getattr(box, 'text', None) or getattr(box, 'q', None), n))
         if n and self.recorder is not None and theirs is not None:          # both pictures with it on, kept where they differ
             from . import record
@@ -376,6 +376,8 @@ class Compare:
                 self._said_size = True
                 self.log(f'The original\'s window is {size[0]} x {size[1]}, not 640 x 480: Windows is stretching it, so many pixels will differ.')
             return shot
+        if not self.dos.scratch:                                           # the original never started: there is no picture
+            return None
         path = os.path.join(self.dos.scratch, 'shot.png')
         if not self.dos.screenshot(path):
             return None
