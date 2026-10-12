@@ -369,20 +369,21 @@ class Game:
         if e and (st.killer or e.att > -1 or e.type > 0):
             self.combat.melee(e)
             return True
-        if q.wall in (-1, -5, -6) or (q.wall == -2 and p.inv.ykey) or (q.wall == -3 and p.inv.rkey) \
-                or (q.wall == -4 and p.inv.bkey):
-            q.wall, q.deco = 0, 1
-            self.tones((400, 100))
-            return True
-        if q.wall in (-2, -3, -4):                   # locked: the original just doesn't move
-            return True
-        if q.mon < 0 and q.mon > -100:
-            if p.hero.invisible == -1:
-                if q.mon == -5:
-                    self.open_shop()
-                elif q.mon <= -6:
-                    self.talk(q.mon, nx, ny)
-            return True
+        if w.in_room(nx, ny):                        # (a square on the next screen is not looked at: its door does not stop the hero, nor its NPC)
+            if q.wall in (-1, -5, -6) or (q.wall == -2 and p.inv.ykey) or (q.wall == -3 and p.inv.rkey) \
+                    or (q.wall == -4 and p.inv.bkey):
+                q.wall, q.deco = 0, 1
+                self.tones((400, 100))
+                return True
+            if q.wall in (-2, -3, -4):               # locked: the original just doesn't move
+                return True
+            if q.mon < 0 and q.mon > -100:
+                if p.hero.invisible == -1:
+                    if q.mon == -5:
+                        self.open_shop()
+                    elif q.mon <= -6:
+                        self.talk(q.mon, nx, ny)
+                return True
         if e is not None:                     # an ally or neutral in the way
             return False
         if not w.in_room(nx, ny):

@@ -555,24 +555,25 @@ class Game:
             self.combat.melee(e)
             return True
         door = wall.get('door')
-        if door in ('plain', 'fake') or (door == 'locked' and has_key(p, wall['key'])):
-            q.wall, q.deco = 0, self.pack.deco('open_door')
-            self.tones((400, 100))
-            if door == 'locked':
-                self.report(f'You unlock the door with the {self.key_name(wall["key"])}.', 14)
-            elif door == 'fake':
-                self.report('The wall gives way: a secret passage!', 14)
-            return True
-        if door == 'locked':                         # locked: the original just doesn't move
-            self.report(f'The door is locked. You need the {self.key_name(wall["key"])}.', 12)
-            return True
-        if q.mon < 0 and q.mon > -100:
-            if p.hero.invisible == -1:
-                if q.mon == -5:
-                    self.open_shop()
-                elif q.mon <= -6:
-                    self.talk(q.mon, nx, ny)
-            return True
+        if w.in_room(nx, ny):                        # (a square on the next screen is not looked at: its door does not stop the hero, nor its NPC)
+            if door in ('plain', 'fake') or (door == 'locked' and has_key(p, wall['key'])):
+                q.wall, q.deco = 0, self.pack.deco('open_door')
+                self.tones((400, 100))
+                if door == 'locked':
+                    self.report(f'You unlock the door with the {self.key_name(wall["key"])}.', 14)
+                elif door == 'fake':
+                    self.report('The wall gives way: a secret passage!', 14)
+                return True
+            if door == 'locked':                     # locked: the original just doesn't move
+                self.report(f'The door is locked. You need the {self.key_name(wall["key"])}.', 12)
+                return True
+            if q.mon < 0 and q.mon > -100:
+                if p.hero.invisible == -1:
+                    if q.mon == -5:
+                        self.open_shop()
+                    elif q.mon <= -6:
+                        self.talk(q.mon, nx, ny)
+                return True
         if e is not None:                     # an ally or neutral in the way
             return False
         if not w.in_room(nx, ny):

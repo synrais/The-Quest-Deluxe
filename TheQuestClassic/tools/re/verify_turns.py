@@ -245,7 +245,7 @@ def look(emu, g, level):
         'story': (g.status.mission1, g.status.mission2, len(w.enemies)),
         'enemies': [(e.type, e.x - ox + 1, e.y - oy + 1, e.life, e.atk, e.power, e.range, e.warm, e.marm, e.att) for e in w.enemies],
         'seed': __import__('engine.rules', fromlist=['_seed'])._seed[0],
-        'texts': [s for t in g.talk_log if t for s in (t[0], t[1])],
+        'texts': [s for t in g.talk_log if t for s in (t[0], t[1]) if s],
     }
     squares = []
     for i in range(1, 11):
