@@ -237,8 +237,10 @@ class Combat:
             return 'noarrows' if ammo == 0 else 'badammo'
         return None
 
-    def shoot(self, e: Enemy):
-        """Fire at e: to-hit (8-dist)*10 + atk + 5 - def, damage = power (ignores armour)."""
+    def shoot(self, e: Enemy, ring: int | None = None, remember: bool = False):
+        """Fire at e: to-hit (8-dist)*10 + atk + 5 - def, damage = power (ignores armour). ring: with Space the distance in the
+        formula is that of the nearest creature the search found, even when the shot goes to the remembered target (as main2()
+        does); remember: Tab's chosen target is kept for the next Space (Space itself does not choose one)."""
         p, h = self.p, self.p.hero
         rules.status_update(p, self.g.status, self.g.items)
         if e.att == -2:
@@ -246,8 +248,9 @@ class Combat:
         self.wake_on_attack(e)
         if e.att not in (-4, 8):
             e.att = 9
-        self.g.target = e
-        d = distance(e.x - p.X, e.y - p.Y)
+        if remember:
+            self.g.target = e
+        d = distance(e.x - p.X, e.y - p.Y) if ring is None else ring
         if (8 - d) * 10 + h.atk + 5 - e.defense >= random(100) + 1:
             wep = p.item(SLOT_WEAPON)
             hit = {230: 'sthit', 231: 'arhit', 232: 'arhit', 233: 'bolthit'}.get(wep)

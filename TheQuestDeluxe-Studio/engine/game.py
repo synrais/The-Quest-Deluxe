@@ -23,7 +23,7 @@ from .world import World, screen_of, room_origin
 from .savefile import SaveData, Slots
 from . import savefile
 from . import rules
-from .rules import SP_RANGE, SP_INT
+from .rules import SP_RANGE, SP_INT, distance
 from .combat import Combat
 from .magic import Magic
 from .ai import monsmove
@@ -926,15 +926,15 @@ class Game:
 
             def picked(x, y):
                 self.messages = []
-                self.combat.shoot(self.world.enemy_at(x, y))
+                self.combat.shoot(self.world.enemy_at(x, y), remember=True)
                 self.end_turn()
             self.overlay = ui.Cursor(self, sx, sy, 'Choose a target', picked, can_pick=ok,
                                      on_cancel=self.end_turn)   # target() cancelled: the turn is used
             return False
-        e = self.target if self.target in cands else (cands[0] if cands else None)
-        if not e:
+        if not cands:
             return True                               # nothing in range: the turn passes anyway
-        self.combat.shoot(e)
+        e = self.target if self.target in self.world.enemies else cands[0]       # a target chosen with Tab is shot at again
+        self.combat.shoot(e, ring=distance(cands[0].x - p.X, cands[0].y - p.Y))
         return True
 
     # ── turn end ──────────────────────────────────────────────────────────────

@@ -119,6 +119,11 @@ class TurnEmu(GameEmu):
                     return
                 self._return(ax=self.keys.pop(0))
                 return
+            if who.startswith(('@story', '@credits', '@newmap', '@title', '@mastermind', '@loadscreen', '@creation')):      # the game is over (or a level changes): story pages
+                self.ended = True
+                self.stopped = True
+                uc.emu_stop()
+                return
             if who.startswith(('@death', '@load', '@dying', '@quit')):          # the hero died: nothing more is compared
                 self.died = True
                 self.stopped = True
@@ -257,6 +262,7 @@ def turn(emu, g, key):
     emu.keys = list(KEYS[key])
     emu.stopped = False
     emu.died = False
+    emu.ended = False
     emu.set_word('_moved', 2)                          # main2() then starts with moved = 0: it does not run the end-of-turn upkeep (poison, timers) before the key, as a continuing game would not
     emu.call('main2', limit=30_000_000)
     if not emu.stopped:
@@ -266,6 +272,8 @@ def turn(emu, g, key):
 
 
 def compare(emu, g, level):
+    if emu.ended:                                      # the original went on to the story pages (the quest is won, or a level changes): the port must be showing its own
+        return [] if (g.overlay is not None or g.world.level != level) else ['the original went to the story pages, the port did not']
     if emu.died:                                       # the hero fell: both must have, and that is all that is compared
         return [] if g.player.hero.life < 1 else ['the original killed the hero, the port did not']
     theirs, mine, squares = look(emu, g, level)
@@ -283,6 +291,8 @@ def run_case(emu, g, level, grid0, hero, state, seed, keys, only=None, edits=Non
         before = seed_of(emu)
         turn(emu, g, key)
         d = compare(emu, g, level)
+        if not d and (emu.ended or emu.died):
+            break                                         # the hero fell or the quest ended: nothing more to press
         if d:
             out.append(f'key {n + 1} ({key}) from seed {before}: ' + '; '.join(d[:5]))
             break
