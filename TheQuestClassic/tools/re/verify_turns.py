@@ -207,6 +207,9 @@ def setup(emu, g, level, grid0, hero, state, seed, only=None, edits=None):
         p.bag[cell] = gear.get(slot, 0)
     for name in POTIONS:
         setattr(p.inv, name, state.get('potions', {}).get(name, 0))
+    for name, v in zip(('bkey', 'rkey', 'ykey'), state.get('keys', (0, 0, 0))):
+        setattr(p.inv, name, v)
+    p.inv.coins = state.get('coins', 0)
     rules.status_update(p, g.status, g.items)
     g.talk_log = []
     ox, oy = w.origin
@@ -252,6 +255,7 @@ def look(emu, g, level):
     n = st['mons']
     theirs = {
         'hero': (hero['life'], hero['mana'], hero['exper'], hero['rep'], hero['poisoned'], emu.get_word('_X'), emu.get_word('_Y')),
+        'inv': tuple(emu.get_struct('_inv', INV)[f] for f in INV),
         'story': (st['mission1'], st['mission2'], st['mons']),
         'enemies': [tuple(e[f] for f in ('type', 'x', 'y', 'life', 'atk', 'power', 'range', 'warm', 'marm', 'att')) for e in emu.enemies(n)],
         'seed': seed_of(emu),
@@ -259,6 +263,7 @@ def look(emu, g, level):
     }
     mine = {
         'hero': (p.hero.life, p.hero.mana, p.hero.exper, p.hero.rep, p.hero.poisoned, p.X, p.Y),
+        'inv': tuple(getattr(p.inv, f) for f in INV),
         'story': (g.status.mission1, g.status.mission2, len(w.enemies)),
         'enemies': [(e.type, e.x - ox + 1, e.y - oy + 1, e.life, e.atk, e.power, e.range, e.warm, e.marm, e.att) for e in w.enemies],
         'seed': __import__('engine.rules', fromlist=['_seed'])._seed[0],
@@ -301,7 +306,7 @@ def compare(emu, g, level):
         return [] if g.player.hero.life < 1 else ['the original killed the hero, the port did not']
     theirs, mine, squares = look(emu, g, level)
     diffs = []
-    for k in ('hero', 'story', 'enemies', 'seed', 'texts'):
+    for k in ('hero', 'inv', 'story', 'enemies', 'seed', 'texts'):
         if theirs[k] != mine[k]:
             diffs.append(f'{k}: original {theirs[k]} port {mine[k]}')
     return diffs + squares[:4]
@@ -390,6 +395,7 @@ def main_levels(levels, cases, rng_seed, nkeys):
                          gear=dict(weapon=rng.choice(weapons), offhand=rng.choice(offhands), helmet=rng.choice([0, 402, 405]),
                                    armor=rng.choice([0, 101, 108, 112]), amulet=rng.choice([0, 0, 501, 503, 505])),
                          potions={name: rng.choice([0, 0, 1, 2]) for name in POTIONS})
+            state.update(keys=tuple(rng.choice([0, 1]) for _ in range(3)), coins=rng.choice([0, 30, 500]))
             known = rng.sample(range(1, 21), rng.randint(2, 8))
             state.update(spells=known, fkeys={k: rng.choice(known) for k in range(1, 9)}, intl=rng.choice([20, 40, 80]), mana=rng.choice([30, 100]))
             seed = rng.randint(1, 0xFFFFFFFF)

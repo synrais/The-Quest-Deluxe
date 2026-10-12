@@ -130,6 +130,11 @@ def check_levels(f: Facts, out: list):
             out.append(Problem('info' if events else 'warn', 'World', f'Level {n} has no way out',
                                'There is no exit, ladder or stairs on the map' + (', though its events may end it' if events else ', and no event sends the hero on')
                                + '. Put an Exit on the map (World page, Places).', ('world', {'level': n, 'panel': 'places'}), key=f'noexit:{n}'))
+        if n == f.levels and 'next_level' in script:
+            out.append(Problem('info', 'World', f'Level {n} is the last, and its events send the hero on to the next',
+                               'When its story is done (the original\'s Death Bringer on level 7) the game goes on to the next level, and there is none: '
+                               'it ends here, with the ending pages and the credits. To go on, add a level (World page, the + at the top: Add a level); '
+                               'the hero will arrive on its start square.', ('world', {'level': n, 'panel': 'level'}), key=f'lastends:{n}'))
         # reachability
         if 1 <= sx <= SIZE and 1 <= sy <= SIZE and (not sw or passable(f, sw)):
             seen = reach(f, g, start)
