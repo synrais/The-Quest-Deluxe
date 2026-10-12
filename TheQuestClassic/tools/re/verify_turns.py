@@ -223,7 +223,7 @@ def turn(emu, g, key):
     emu.died = False
     emu.call('main2', limit=30_000_000)
     if not emu.stopped:
-        raise RuntimeError('main2 did not come back to wait for a key within the instruction limit')
+        raise RuntimeError('main2 did not come back to wait for a key within the instruction limit (it was asking for keys in: %s)' % sorted(set(emu.waits[-20:])))
     g.handle(pygame.event.Event(pygame.KEYDOWN, key=PYGAME[key], unicode='', mod=0))
     # (a message waits for Space in the original; the port's fast mode does not wait)
 
