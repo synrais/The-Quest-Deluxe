@@ -45,6 +45,8 @@ class TurnEmu(GameEmu):
         super().__init__()
         from unicorn import UC_HOOK_CODE
         self.ticks = 0
+        self.waits = []
+        self.died = False
         seg, off = self.addr['_clock']
         at = self.lin(seg, off)
         self._hooked[at] = 'clock'                         # the timer the key loop uses to slow a held key down: time passes between keys
@@ -57,14 +59,32 @@ class TurnEmu(GameEmu):
             return
         self._on_call2(uc, address, size, user)
 
+    def _caller(self):
+        from unicorn.x86_const import UC_X86_REG_SP, UC_X86_REG_SS
+        import qdis
+        from emu import LOADSEG
+        sp, ss = self.uc.reg_read(UC_X86_REG_SP), self.uc.reg_read(UC_X86_REG_SS)
+        ip, cs = self.word(ss, sp, signed=False), self.word(ss, sp + 2, signed=False)
+        return str(qdis.func_at(cs - LOADSEG, ip))
+
     def _on_call2(self, uc, address, size, user):
         if self._hooked[address] == 'getch':
             self.calls.append(('getch', []))
-            if not self.keys:
+            who = self._caller()
+            if who.startswith('@main2'):                       # the key loop: the turn is over when it asks again
+                if not self.keys:
+                    self.stopped = True
+                    uc.emu_stop()
+                    return
+                self._return(ax=self.keys.pop(0))
+                return
+            if who.startswith(('@death', '@load', '@dying', '@quit')):          # the hero died: nothing more is compared
+                self.died = True
                 self.stopped = True
                 uc.emu_stop()
                 return
-            self._return(ax=self.keys.pop(0))
+            self.waits.append(who)                              # a message or a question in the middle of the turn
+            self._return(ax=110 if who.startswith('@save') else 32)        # Space for a message, N for "Want to save?"
             return
         super()._on_call(uc, address, size, user)
 
@@ -164,7 +184,7 @@ def look(emu, g, level):
         'story': (st['mission1'], st['mission2'], st['mons']),
         'enemies': [tuple(e[f] for f in ('type', 'x', 'y', 'life', 'atk', 'power', 'range', 'warm', 'marm', 'att')) for e in emu.enemies(n)],
         'seed': seed_of(emu),
-        'texts': list(emu.texts),
+        'texts': [t for t in emu.texts if t[:1] in ('\xff', '\n') or t.startswith(' "')],           # what talk() printed (not the strip's questions and death lines)
     }
     mine = {
         'hero': (p.hero.life, p.hero.mana, p.hero.exper, p.hero.rep, p.hero.poisoned, p.X, p.Y),
@@ -188,6 +208,7 @@ def turn(emu, g, key):
     """The key in both."""
     emu.keys = list(KEYS[key])
     emu.stopped = False
+    emu.died = False
     emu.call('main2', limit=30_000_000)
     if not emu.stopped:
         raise RuntimeError('main2 did not come back to wait for a key within the instruction limit')
@@ -196,6 +217,8 @@ def turn(emu, g, key):
 
 
 def compare(emu, g, level):
+    if emu.died:                                       # the hero fell: both must have, and that is all that is compared
+        return [] if g.player.hero.life < 1 else ['the original killed the hero, the port did not']
     theirs, mine, squares = look(emu, g, level)
     diffs = []
     for k in ('hero', 'story', 'enemies', 'seed', 'texts'):
@@ -225,8 +248,6 @@ def main(cases, rng_seed, m2s, only, nkeys):
     data = GameData.load()
     g = Game(win, data)
     g.overlay = None
-    emu = TurnEmu()
-    load_tables(emu, data)
     rng = pyrandom.Random(rng_seed)
     grid0 = data.load_level(7)
     free = [(x, y) for x in range(71, 81) for y in range(1, 11) if grid0[x][y].wall == 0 and grid0[x][y].mon == 0]
@@ -241,6 +262,8 @@ def main(cases, rng_seed, m2s, only, nkeys):
         if rng.random() < 0.5:
             edits[45] = {'life': rng.choice([1, 30, 39, 40, 80])}
         try:
+            emu = TurnEmu()                                       # a new emulator for each case: nothing is left over from the one before
+            load_tables(emu, data)
             diffs = run_case(emu, g, 7, grid0, hero, state, seed, keys, only, edits)
         except Exception as err:          # noqa: BLE001
             import traceback
@@ -248,7 +271,7 @@ def main(cases, rng_seed, m2s, only, nkeys):
         total += 1
         if diffs:
             bad += 1
-            print(f'hero {hero} state {state} edits {edits} keys {keys}')
+            print(f'hero {hero} state {state} edits {edits} keys {keys} seed {seed}')
             for d in diffs:
                 print('    ', d)
     print(f'{total - bad} of {total} turns identical')
