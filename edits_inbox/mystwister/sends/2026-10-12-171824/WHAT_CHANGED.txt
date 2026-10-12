@@ -1,0 +1,129 @@
+Quest edits, made 2026-10-12 17:17
+
+NOTE FROM WHOEVER MADE THIS:
+level 1 starting location restored to its original design. (removed items and accessories from early testing)
+
+packs/TheQuest (the shipped pack): 0 new, 0 changed, 0 removed files
+
+Custom Maps/Jonos Pack (a copy of the shipped pack): 33 new, 3 changed, 0 removed files
+    new: sprites/bag/109.png
+    new: sprites/bag/115.png
+    new: sprites/bag/223.png
+    new: sprites/bag/224.png
+    new: sprites/bag/225.png
+    new: sprites/bag/226.png
+    new: sprites/bag/227.png
+    new: sprites/bag/228.png
+    new: sprites/bag/307.png
+    new: sprites/bag/409.png
+    new: sprites/bag/512.png
+    new: sprites/creatures/48.png
+    new: sprites/creatures/49.png
+    new: sprites/creatures/50.png
+    new: sprites/creatures/51.png
+    new: sprites/creatures/52.png
+    new: sprites/creatures/53.png
+    new: sprites/creatures/54.png
+    new: sprites/creatures/55.png
+    new: sprites/creatures/56.png
+    new: sprites/creatures/57.png
+    new: sprites/creatures/58.png
+    new: sprites/creatures/59.png
+    new: sprites/items/109.png
+    new: sprites/items/115.png
+    new: sprites/items/223.png
+    new: sprites/items/224.png
+    new: sprites/items/226.png
+    new: sprites/items/227.png
+    new: sprites/items/228.png
+    new: sprites/items/307.png
+    new: sprites/items/409.png
+    new: sprites/items/512.png
+    changed: creatures.json
+    changed: items.json
+    changed: quest.json
+
+What changed in the tables:
+items.json:
+    NEW items 109 'Recovered item 109': {"id": 109, "name": "Recovered item 109", "type": "treasure"}
+    NEW items 115 'Recovered item 115': {"id": 115, "name": "Recovered item 115", "type": "treasure"}
+    NEW items 223 'Recovered item 223': {"id": 223, "name": "Recovered item 223", "type": "treasure"}
+    NEW items 224 'Recovered item 224': {"id": 224, "name": "Recovered item 224", "type": "treasure"}
+    NEW items 225 'Recovered item 225': {"id": 225, "name": "Recovered item 225", "type": "treasure"}
+    NEW items 226 'Club (copy)': {"id": 226, "name": "Club (copy)", "price": 4, "req_str": 10, "req_int": 0, "atk": 10, "def": 0, "warm": 0, "marm": 0, "str": 0, "int": 0, "power": 3, "kind": 0, "dex": 0, "acc": 0, "type": "weapon", "bag_name": "Wooden Club"}
+    NEW items 227 'Knife (copy)': {"id": 227, "name": "Knife (copy)", "price": 20, "req_str": 10, "req_int": 0, "atk": 15, "def": 0, "warm": 0, "marm": 0, "str": 0, "int": 0, "power": 4, "kind": 0, "dex": 0, "acc": 0, "type": "weapon", "bag_name": "Knife"}
+    NEW items 228 'Knife (copy) (copy)': {"id": 228, "name": "Knife (copy) (copy)", "price": 20, "req_str": 10, "req_int": 0, "atk": 15, "def": 0, "warm": 0, "marm": 0, "str": 0, "int": 0, "power": 4, "kind": 0, "dex": 0, "acc": 0, "type": "weapon", "bag_name": "Knife"}
+    NEW items 307 'Recovered item 307': {"id": 307, "name": "Recovered item 307", "type": "treasure"}
+    NEW items 409 'Golden Helmet (copy)': {"id": 409, "name": "Golden Helmet (copy)", "price": 400, "req_str": 50, "req_int": 40, "atk": 0, "def": 0, "warm": 5, "marm": 2, "str": 0, "int": 0, "power": 0, "kind": 0, "dex": 0, "acc": 0, "type": "helmet", "bag_name": "Gol...
+    NEW items 512 'Recovered item 512': {"id": 512, "name": "Recovered item 512", "type": "treasure"}
+creatures.json:
+    NEW creatures 48 'Recovered creature 48': {"id": 48, "name": "Recovered creature 48", "life": 10, "power": 3, "atk": 60, "def": 10, "warm": 0, "marm": 0, "range": 1, "att": 9, "exp": 10, "loot": []}
+    NEW creatures 49 'Recovered creature 49': {"id": 49, "name": "Recovered creature 49", "life": 10, "power": 3, "atk": 60, "def": 10, "warm": 0, "marm": 0, "range": 1, "att": 9, "exp": 10, "loot": []}
+    NEW creatures 50 'Recovered creature 50': {"id": 50, "name": "Recovered creature 50", "life": 10, "power": 3, "atk": 60, "def": 10, "warm": 0, "marm": 0, "range": 1, "att": 9, "exp": 10, "loot": []}
+    NEW creatures 51 'Recovered creature 51': {"id": 51, "name": "Recovered creature 51", "life": 10, "power": 3, "atk": 60, "def": 10, "warm": 0, "marm": 0, "range": 1, "att": 9, "exp": 10, "loot": []}
+    NEW creatures 52 'Recovered creature 52': {"id": 52, "name": "Recovered creature 52", "life": 10, "power": 3, "atk": 60, "def": 10, "warm": 0, "marm": 0, "range": 1, "att": 9, "exp": 10, "loot": []}
+    NEW creatures 53 'Recovered creature 53': {"id": 53, "name": "Recovered creature 53", "life": 10, "power": 3, "atk": 60, "def": 10, "warm": 0, "marm": 0, "range": 1, "att": 9, "exp": 10, "loot": []}
+    NEW creatures 54 'Recovered creature 54': {"id": 54, "name": "Recovered creature 54", "life": 10, "power": 3, "atk": 60, "def": 10, "warm": 0, "marm": 0, "range": 1, "att": 9, "exp": 10, "loot": []}
+    NEW creatures 55 'Recovered creature 55': {"id": 55, "name": "Recovered creature 55", "life": 10, "power": 3, "atk": 60, "def": 10, "warm": 0, "marm": 0, "range": 1, "att": 9, "exp": 10, "loot": []}
+    NEW creatures 56 'Recovered creature 56': {"id": 56, "name": "Recovered creature 56", "life": 10, "power": 3, "atk": 60, "def": 10, "warm": 0, "marm": 0, "range": 1, "att": 9, "exp": 10, "loot": []}
+    NEW creatures 57 'Recovered creature 57': {"id": 57, "name": "Recovered creature 57", "life": 10, "power": 3, "atk": 60, "def": 10, "warm": 0, "marm": 0, "range": 1, "att": 9, "exp": 10, "loot": []}
+    NEW creatures 58 'Recovered creature 58': {"id": 58, "name": "Recovered creature 58", "life": 10, "power": 3, "atk": 60, "def": 10, "warm": 0, "marm": 0, "range": 1, "att": 9, "exp": 10, "loot": []}
+    NEW creatures 59 'Recovered creature 59': {"id": 59, "name": "Recovered creature 59", "life": 10, "power": 3, "atk": 60, "def": 10, "warm": 0, "marm": 0, "range": 1, "att": 9, "exp": 10, "loot": []}
+quest.json:
+    CHANGED title: "The Quest" -> "Jonos Pack"
+    CHANGED fixes: null -> true
+    CHANGED base: null -> "TheQuest"
+
+The new and changed pictures:
+    sprites/bag/109.png: 40 x 40
+    sprites/bag/115.png: 40 x 40
+    sprites/bag/223.png: 40 x 40
+    sprites/bag/224.png: 40 x 40
+    sprites/bag/225.png: 40 x 40
+    sprites/bag/226.png: 40 x 40
+    sprites/bag/227.png: 40 x 40
+    sprites/bag/228.png: 40 x 40
+    sprites/bag/307.png: 40 x 40
+    sprites/bag/409.png: 40 x 40
+    sprites/bag/512.png: 40 x 40
+    sprites/creatures/48.png: 40 x 40
+    sprites/creatures/49.png: 40 x 40
+    sprites/creatures/50.png: 40 x 40
+    sprites/creatures/51.png: 40 x 40
+    sprites/creatures/52.png: 40 x 40
+    sprites/creatures/53.png: 40 x 40
+    sprites/creatures/54.png: 40 x 40
+    sprites/creatures/55.png: 40 x 40
+    sprites/creatures/56.png: 40 x 40
+    sprites/creatures/57.png: 40 x 40
+    sprites/creatures/58.png: 40 x 40
+    sprites/creatures/59.png: 40 x 40
+    sprites/items/109.png: 40 x 40
+    sprites/items/115.png: 40 x 40
+    sprites/items/223.png: 40 x 40
+    sprites/items/224.png: 40 x 40
+    sprites/items/226.png: 40 x 40
+    sprites/items/227.png: 40 x 40
+    sprites/items/228.png: 40 x 40
+    sprites/items/307.png: 40 x 40
+    sprites/items/409.png: 40 x 40
+    sprites/items/512.png: 40 x 40
+
+Custom Maps/Mystwisters Pack (a copy of the shipped pack): 0 new, 2 changed, 0 removed files
+    changed: classes.json
+    changed: quest.json
+
+What changed in the tables:
+classes.json:
+    CHANGED classes 1 'Knight': look: {"colour": 5, "shield_and_sword": true} -> {"colour": 5}; no_skill: null -> "mar"; str: 20 -> 100
+    CHANGED classes 2 'Mage': no_skill: null -> "mar"
+    CHANGED classes 4 'Monk': no_skill: null -> "mar"
+quest.json:
+    CHANGED title: "The Quest" -> "Mystwisters Pack"
+    CHANGED fixes: null -> true
+    CHANGED base: null -> "TheQuest"
+
+Custom Maps/compare loadouts.json: the gear presets for comparisons with the DOS game
+
+
+39 files in all.

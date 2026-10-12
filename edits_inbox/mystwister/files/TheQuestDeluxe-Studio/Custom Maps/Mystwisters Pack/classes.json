@@ -1,0 +1,8 @@
+{"_comment": "Hero classes: starting life, mana and stats; growth = [life, mana] gained per level; skill = the skill it gets free (skills.json); no_fault = the fault it may not take; look = how guy2() draws it (body colour, the Knight's shield and sword); bag = starting items by bag cell \"column,row\" (12,4 weapon, 16,4 off hand, 14,2 helmet, 14,4 armour, 14,6 amulet, 12-15,8-11 backpack); spells = known at the start, in spell-book order.",
+ "classes": [
+ {"id": 1, "name": "Knight", "life": 50, "mana": 0, "str": 100, "int": 10, "dex": 10, "acc": 10, "growth": [7, 3], "skill": "amb", "no_fault": "cow", "look": {"colour": 5}, "bag": {"12,4": 201, "16,4": 301}, "spells": [], "no_skill": "mar"},
+ {"id": 2, "name": "Mage", "life": 20, "mana": 30, "str": 10, "int": 20, "dex": 10, "acc": 10, "growth": [1, 5], "skill": "mem", "no_fault": "ras", "look": {"colour": 4}, "bag": {"12,4": 201}, "spells": [1, 2, 3], "no_skill": "mar"},
+ {"id": 3, "name": "Rogue", "life": 35, "mana": 15, "str": 10, "int": 10, "dex": 15, "acc": 15, "growth": [4, 4], "skill": "mar", "no_fault": "hon", "look": {"colour": 8}, "bag": {"12,4": 201, "12,8": 230, "13,8": 620}, "spells": []},
+ {"id": 4, "name": "Monk", "life": 30, "mana": 20, "str": 15, "int": 15, "dex": 10, "acc": 10, "growth": [3, 3], "skill": "sch", "look": {"colour": 15}, "bag": {"12,4": 201, "14,6": 502}, "spells": [1], "no_skill": "mar"}
+ ]
+}
