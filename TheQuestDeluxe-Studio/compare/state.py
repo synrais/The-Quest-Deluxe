@@ -27,8 +27,9 @@ def place(game, level: int, at=None):
     game.messages = []
 
 
-def start(game, level: int, at=None, hero: savefile.SaveData | None = None, cls: int = 1, loadout: dict | None = None):
-    """A hero (from a save, or a new one of class `cls`) on a level and square, wearing and carrying the loadout if there is one."""
+def start(game, level: int, at=None, hero: savefile.SaveData | None = None, cls: int = 1, loadout: dict | None = None, story=None):
+    """A hero (from a save, or a new one of class `cls`) on a level and square, wearing and carrying the loadout if there is one.
+    story: (mission1, mission2), how far the level's story has got (the last level's Death Bringer only comes when mission2 is 2)."""
     if hero is not None:
         game.from_save(hero, SLOT)
         game.overlay = None
@@ -42,7 +43,36 @@ def start(game, level: int, at=None, hero: savefile.SaveData | None = None, cls:
         game.overlay = None
     game.status.saveslot = SLOT
     place(game, level, at)
+    if story is not None:
+        game.status.mission1, game.status.mission2 = int(story[0]), int(story[1])
+    scenario(game, loadout or {})
     game.status.saveslot = SLOT
+
+
+def scenario(game, spec: dict):
+    """A test screen made from a loadout's extra keys (both sides run this, on the same dice, so both start from the same screen):
+    only: creature numbers to leave on the screen; talks: talk() for these creatures, as the story would have, in this order
+    (a scene is walked through); edit: {creature number: {field: value}} (a boss with one hit left)."""
+    from engine import rules
+    w = game.world
+    if spec.get('only') is not None:
+        for e in list(w.enemies):
+            if e.type not in spec['only']:
+                w.sq(e.x, e.y).mon = 0
+                w.enemies.remove(e)
+        game.count_hostiles()
+    if spec.get('talks'):
+        rules._seed[0] = 777
+        here = (game.player.X, game.player.Y)
+        for npc in spec['talks']:
+            game.events.talk(npc)
+        game.player.X, game.player.Y = here                           # (a scene may push the hero back a square: he starts where he was put)
+        game.count_hostiles()
+    for number, fields in (spec.get('edit') or {}).items():
+        for e in w.enemies:
+            if e.type == int(number):
+                for field, v in fields.items():
+                    setattr(e, field, int(v))
 
 
 def save_bytes(game) -> bytes:

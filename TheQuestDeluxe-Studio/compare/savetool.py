@@ -22,6 +22,7 @@ def main():
     ap.add_argument('--hero')
     ap.add_argument('--class', dest='cls', type=int, default=1)
     ap.add_argument('--loadout')
+    ap.add_argument('--story', help='M1,M2: how far the level\'s story has got')
     a = ap.parse_args()
     import pygame
     pygame.init()
@@ -43,7 +44,8 @@ def main():
         import json
         with open(a.loadout, encoding='utf-8') as fh:
             gear = json.load(fh)
-    state.start(g, a.level, (a.x, a.y), hero=hero, cls=a.cls, loadout=gear)
+    story = tuple(int(v) for v in a.story.split(',')) if a.story else None
+    state.start(g, a.level, (a.x, a.y), hero=hero, cls=a.cls, loadout=gear, story=story)
     if (g.player.X, g.player.Y) != (a.x, a.y):
         print(f'BLOCKED {g.player.X} {g.player.Y}')
         return 2

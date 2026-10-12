@@ -374,7 +374,7 @@ class Combat:
                 g.play_at('adarkhour', p.X, p.Y)
                 self.hurt(e.power, None, 1, e)
                 g.play_at('adarkhour', e.x, e.y)
-            self.hurt(e.power * 6, e, 1, e)
+            self.hurt(e.power * 6, e, 1)                    # hurt(.., w, 1, -1): the hero is credited with it, as with any death nobody else caused
             return
         dmg = e.power
         if e.att != -4:

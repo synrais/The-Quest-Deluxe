@@ -107,6 +107,9 @@ def apply(data, loadout: dict | None):
         data.bag[cell] = 0
     for cell, n in zip(state.BACKPACK, loadout.get('bag') or []):
         data.bag[cell] = int(n)
+    for field, n in (loadout.get('hero') or {}).items():              # the hero's own numbers (a strong hero for a late fight): level, mlife, life, bstr ...
+        if field in data.hero:
+            data.hero[field] = int(n)
 
 
 def describe(loadout: dict | None) -> str:

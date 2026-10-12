@@ -28,6 +28,7 @@ def parse(argv=None):
     ap.add_argument('--same-things', dest='same', choices=('on', 'off'), default='on')
     ap.add_argument('--hero-label', default='')
     ap.add_argument('--loadout', help='a JSON file: the gear both heroes start in (compare/loadout.py)')
+    ap.add_argument('--story', help='M1,M2: how far the level\'s story has got on both sides (the last level\'s Death Bringer needs 0,2)')
     ap.add_argument('--check', action='store_true', help='try each thing the comparison needs on this computer and say what works')
     ap.add_argument('--replay', help='a recording (a zip from compare zips) to run again and check')
     return ap.parse_args(argv)
@@ -163,7 +164,7 @@ def run(argv=None):
         with open(a.loadout, encoding='utf-8') as fh:
             gear = json.load(fh)
     comp = Compare(a.level, at, pack_root=a.pack, hero_file=a.hero_file, cls=a.cls, fixes=a.fixes, same_things=a.same == 'on',
-                   hero_label=a.hero_label, loadout=gear)
+                   hero_label=a.hero_label, loadout=gear, story=tuple(int(v) for v in a.story.split(',')) if a.story else None)
     beside = [False]                                                   # its picture could not be copied in: DOSBox is shown beside ours instead
     docked = [None]                                                    # None: not tried yet; then whether it could be locked in
 
@@ -194,6 +195,30 @@ def run(argv=None):
     except (ValueError, OSError):
         pass
     comp.dos.idle = pygame.event.pump
+
+    def wait_for_space(game, text):
+        """A message is showing (in both): ours waits for the person's Space, as the original does, and then it goes to both."""
+        from engine.ui import TalkBox
+        status(font, screen, 'A message is showing: press Space', (230, 230, 230))
+        clock, last = pygame.time.Clock(), 0.0
+        while True:
+            for ev in pygame.event.get():
+                if ev.type == pygame.QUIT:
+                    pygame.event.post(ev)                                  # (the main loop leaves)
+                    return
+                if ev.type == pygame.KEYDOWN and ev.key == pygame.K_SPACE:
+                    return
+            game.renderer.draw(game, present=False)
+            TalkBox(text).draw(game.renderer, game.renderer.screen)
+            game.renderer.present()
+            if docked[0] is False and not beside[0] and time.time() - last > 0.15:
+                last = time.time()
+                shot = comp.dos.picture_surface()
+                if shot is not None:
+                    screen.blit(shot, (640, 0))
+                    pygame.display.flip()
+            clock.tick(30)
+    comp.on_talk = wait_for_space
     ours = screen.subsurface((0, 0, 640, 480))
     try:
         if sys.platform.startswith('win'):

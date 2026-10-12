@@ -43,11 +43,13 @@ class Report:
         return self.dos_draws == self.our_draws and self.pixels == 0
 
 
-def make_dos_save(out_dir: str, level: int, at, hero_file: str | None = None, cls: int = 1, loadout: dict | None = None):
+def make_dos_save(out_dir: str, level: int, at, hero_file: str | None = None, cls: int = 1, loadout: dict | None = None, story=None):
     """Run the save tool on the original pack. (None, what was left out) when it worked, else (what went wrong, '')."""
     cmd = [sys.executable, '-m', 'compare.savetool', out_dir, str(level), str(at[0]), str(at[1]), '--class', str(cls)]
     if hero_file:
         cmd += ['--hero', hero_file]
+    if story is not None:
+        cmd += ['--story', '%d,%d' % tuple(story)]
     gear_file = None
     if loadout:
         import json
@@ -83,8 +85,9 @@ def count_draws(a: int, b: int, limit=4000):
 
 class Compare:
     def __init__(self, level: int, at, pack_root: str | None = None, hero_file: str | None = None, cls: int = 1,
-                 fixes: str = 'off', dos_env=None, log=print, same_things: bool = True, seed: int | None = None, hero_label: str = '', loadout: dict | None = None):
-        self.loadout = loadout
+                 fixes: str = 'off', dos_env=None, log=print, same_things: bool = True, seed: int | None = None, hero_label: str = '', loadout: dict | None = None,
+                 story=None):
+        self.loadout, self.story = loadout, story
         self.level, self.at, self.hero_file, self.cls, self.fixes = level, tuple(at), hero_file, cls, fixes
         self.pack_root = pack_root
         self.dos = dos.Dos(env=dos_env)
@@ -98,6 +101,8 @@ class Compare:
         self.reports: list = []
         self.t0 = time.time()
         self.seed_ok = False
+        self.talks: list = []              # every message the original and ours showed: (the words, pixels that differed)
+        self.current = None                # the key being sent now
 
     # ── starting both ───────────────────────────────────────────────────────
     progress = staticmethod(lambda text: None)               # told what is happening while it starts (the window shows it)
@@ -105,7 +110,7 @@ class Compare:
     def start_dos(self):
         self.progress('Making the save the original loads ...')
         game_dir = self.dos.prepare()
-        problem, self.removed = make_dos_save(os.path.join(game_dir, 'data'), self.level, self.at, self.hero_file, self.cls, self.loadout)
+        problem, self.removed = make_dos_save(os.path.join(game_dir, 'data'), self.level, self.at, self.hero_file, self.cls, self.loadout, self.story)
         if problem:
             raise RuntimeError(problem)
         with open(os.path.join(game_dir, 'data', 'save01.dat'), 'rb') as fh:
@@ -137,11 +142,16 @@ class Compare:
         from . import hero as hero_mod
         self.window = window
         self.game = Game(window, settings={'fixes': self.fixes, 'sound': 'off'})
+        self.game.renderer.wait_talk = self.talk_wait
         if hero is not None and self.same_things:             # the original cannot hold what it has not got: neither does ours
             gone = hero_mod.strip_unknown(hero)
             if gone and not self.removed:
                 self.removed = hero_mod.describe(gone)
-        state.start(self.game, self.level, self.at, hero=hero, cls=self.cls, loadout=self.loadout)
+        self.starting = True
+        try:
+            state.start(self.game, self.level, self.at, hero=hero, cls=self.cls, loadout=self.loadout, story=self.story)
+        finally:
+            self.starting = False
 
     def finish_ours(self):
         """Once the original is ready: our dice are set from its, and the recording begins with both pictures."""
@@ -154,7 +164,7 @@ class Compare:
         meta = {'level': self.level, 'at': list(self.at), 'fixes': self.fixes, 'hero': self.hero_label or ('a new hero of class %d' % self.cls),
                 'class': self.cls, 'pack': os.environ.get('QUEST_PACK') or 'The Quest', 'removed': self.removed,
                 'seed': self.dos_seed(), 'dos_dice_matched': bool(self.seed_ok), 'dosbox': os.path.basename(self.dos.exe or ''),
-                'same_things': self.same_things, 'engine': engine_fingerprint(), 'loadout': self.loadout}
+                'same_things': self.same_things, 'engine': engine_fingerprint(), 'loadout': self.loadout, 'story': self.story}
         self.recorder = record.Recorder(meta, getattr(self, 'start_save', None), hero_bytes)
         self.draw()
         self.recorder.first(self.game.renderer.screen.copy(), self.dos_picture())
@@ -220,12 +230,13 @@ class Compare:
         """The same key on both, at once. How it went is looked at afterwards (poll or complete). The one before it is finished first: the original must be at rest."""
         import pygame
         self.complete()
-        rep = Report(xname)
+        rep = self.current = Report(xname)
         before = self.dos_seed()
         self.sync_seed()
         self.keys.append((xname, round(time.time() - self.t0, 2)))
         self.dos.key(xname)
-        self.game.handle(pygame.event.Event(pygame.KEYDOWN, key=pygame_key, unicode=unicode, mod=0))
+        self.game.handle(pygame.event.Event(pygame.KEYDOWN, key=pygame_key, unicode=unicode, mod=0))        # (a message in it waits for Space: see talk_wait)
+        self.current = None
         self.draw()
         self.pending = (rep, before, time.time())
         self._watch = (None, time.time(), 0.0)
@@ -264,13 +275,62 @@ class Compare:
                 self.sync_seed()
         ours = self.game.renderer.screen.copy()
         theirs = self.dos_picture()
-        rep.pixels = self.pixel_difference(theirs=theirs)
-        if rep.pixels:
-            rep.notes.append(f'{rep.pixels} pixels differ between the two pictures.')
+        end = self.pixel_difference(theirs=theirs)
+        rep.pixels += end
+        if end:
+            rep.notes.append(f'{end} pixels differ between the two pictures.')
         self.reports.append(rep)
         if self.recorder is not None:
             self.recorder.step(xname, rep, ours, theirs, self.facts())
         return rep
+
+    def wait_for_message(self, ours, limit=8.0):
+        """The original shows the message only after its spell effects (a second or two): wait until its message strip is like ours
+        (or the limit passes: then the two are said to differ), and for the picture to be still."""
+        import pygame
+        from . import record
+        strip = (0, 410, 640, 70)
+        want = record.quantised(ours.subsurface(strip))
+        t = time.time()
+        while time.time() - t < limit:
+            pic = self.dos_picture()
+            if pic is not None:
+                got = record.quantised(pic.subsurface(strip))
+                if sum(1 for i in range(0, len(want), 3) if want[i:i + 3] != got[i:i + 3]) < 400:
+                    break
+            self.dos._sleep(0.1)
+        self.dos.wait_still(0.3, 4)
+
+    starting = False
+    on_talk = None                       # the window's wait for the person's Space (called with the game and the words); None: Space is pressed for them
+
+    def talk_wait(self, game, text, fast=False):
+        """talk() in the original draws a message and waits for Space (getch) before anything else happens, so ours does too, and that
+        Space goes to the original as well. (A key typed meanwhile is lost in both.) The two pictures, with the message on, are compared."""
+        if self.starting:                                                    # a scene walked through to make the starting screen: nobody waits
+            return
+        from engine.ui import TalkBox
+        game.renderer.draw(game, present=False)
+        TalkBox(text).draw(game.renderer, game.renderer.screen)
+        if self.dos.window is not None:
+            self.wait_for_message(game.renderer.screen)
+        theirs = self.dos_picture()
+        n = self.pixel_difference(theirs=theirs)
+        self.talks.append((text, n))
+        if n and self.recorder is not None and theirs is not None:          # both pictures with the message on, kept where they differ
+            from . import record
+            name = f'frames/step-{len(self.recorder.steps):04d}-message-{len(self.talks)}'
+            ours = game.renderer.screen
+            self.recorder.frames[name + '-ours.png'] = record.png_bytes(ours)
+            self.recorder.frames[name + '-dos.png'] = record.png_bytes(theirs)
+            self.recorder.frames[name + '-difference.png'] = record.png_bytes(record.diff_surface(ours, theirs))
+        if self.current is not None and n:
+            self.current.notes.append(f'{n} pixels differ while the message is shown.')
+            self.current.pixels += n
+        game.renderer.present()
+        if self.on_talk is not None:
+            self.on_talk(game, text)
+        self.dos.key('space')
 
     def facts(self) -> dict:
         """What our game says about itself after a key (for the log: the original has no such window into it)."""
