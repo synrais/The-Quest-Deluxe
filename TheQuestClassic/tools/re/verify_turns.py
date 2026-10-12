@@ -36,6 +36,9 @@ SEED_AT = 0x2834                # DS offset of the C library's rand() state (a l
 KEYS = {'Left': [0, 75], 'Right': [0, 77], 'Up': [0, 72], 'Down': [0, 80], 'space': [32], 'Return': [13]}
 PYGAME = {'Left': pygame.K_LEFT, 'Right': pygame.K_RIGHT, 'Up': pygame.K_UP, 'Down': pygame.K_DOWN, 'space': pygame.K_SPACE,
           'Return': pygame.K_RETURN}
+for _n in range(8):                                     # F1 to F8: the spells bound to them
+    KEYS[f'F{_n + 1}'] = [0, 59 + _n]
+    PYGAME[f'F{_n + 1}'] = pygame.K_F1 + _n
 for _n in range(1, 9):                                  # 1 to 8: the potions
     KEYS[str(_n)] = [ord(str(_n))]
     PYGAME[str(_n)] = getattr(pygame, f'K_{_n}')
@@ -129,6 +132,10 @@ class TurnEmu(GameEmu):
                 self.stopped = True
                 uc.emu_stop()
                 return
+            if who.startswith(('@cast', '@target')):            # choosing where a spell goes: Enter (take the square the cursor is on), and if that was not allowed, Esc
+                self.cast_calls += 1
+                self._return(ax=13 if self.cast_calls % 2 == 1 else 27)
+                return
             self.waits.append(who)                              # a message or a question in the middle of the turn
             self._return(ax=110 if who.startswith('@save') else 32)        # Space for a message, N for "Want to save?"
             return
@@ -184,11 +191,17 @@ def setup(emu, g, level, grid0, hero, state, seed, only=None, edits=None):
     g.count_hostiles()                                       # (main2() counts them again before every key)
     g.status.mission1, g.status.mission2 = state['m1'], state['m2']
     h = p.hero
-    h.life, h.mlife, h.mana, h.mmana = state['life'], state['life'], 50, 50
-    h.bstr, h.bintl, h.bdex, h.bacc = state['str'], 20, state['dex'], state['acc']
+    h.life, h.mlife, h.mana, h.mmana = state['life'], state['life'], state.get('mana', 50), state.get('mana', 50)
+    h.bstr, h.bintl, h.bdex, h.bacc = state['str'], state.get('intl', 20), state['dex'], state['acc']
     h.level, h.exper, h.rep, h.poisoned, h.invisible = 10, 30000, state.get('rep', 0), 0, -1
     for f in ('amb', 'bar', 'sch', 'mem', 'mar', 'cow', 'hon', 'ras'):       # no skills and no faults, as the emulator's hero has
         setattr(p.skill, f, 0)
+    p.spells = [0] * 21
+    for sp in state.get('spells', []):
+        p.spells[sp] = 1
+    p.fkey = [0] * 10
+    for k, sp in state.get('fkeys', {}).items():
+        p.fkey[int(k)] = sp
     gear = state.get('gear', {})
     for slot, cell in (('weapon', (12, 4)), ('offhand', (16, 4)), ('helmet', (14, 2)), ('armor', (14, 4)), ('amulet', (14, 6))):
         p.bag[cell] = gear.get(slot, 0)
@@ -220,6 +233,10 @@ def setup(emu, g, level, grid0, hero, state, seed, only=None, edits=None):
     for c in range(12, 17):
         for r in range(0, 13):
             emu.set_int('_bag', c, r, p.bag.get((c, r), 0))
+    for i in range(21):
+        emu.uc.mem_write(emu.gaddr('_spells') + 2 * i, struct.pack('<h', p.spells[i]))
+    for i in range(10):
+        emu.uc.mem_write(emu.gaddr('_fkey') + 2 * i, struct.pack('<h', p.fkey[i]))
     emu.set_struct('_inv', INV, {name: getattr(p.inv, name) for name in INV if hasattr(p.inv, name)})
     set_seed(emu, seed)
     rules.srand(seed)
@@ -264,11 +281,16 @@ def turn(emu, g, key):
     emu.stopped = False
     emu.died = False
     emu.ended = False
+    emu.cast_calls = 0
     emu.set_word('_moved', 2)                          # main2() then starts with moved = 0: it does not run the end-of-turn upkeep (poison, timers) before the key, as a continuing game would not
     emu.call('main2', limit=30_000_000)
     if not emu.stopped:
         raise RuntimeError('main2 did not come back to wait for a key within the instruction limit (it was asking for keys in: %s)' % sorted(set(emu.waits[-20:])))
     g.handle(pygame.event.Event(pygame.KEYDOWN, key=PYGAME[key], unicode='', mod=0))
+    from engine import ui
+    for k in (pygame.K_RETURN, pygame.K_ESCAPE):         # a spell's target cursor: Enter takes the square it is on, then Esc if that was not allowed
+        if isinstance(g.overlay, ui.Cursor):
+            g.handle(pygame.event.Event(pygame.KEYDOWN, key=k, unicode='', mod=0))
     # (a message waits for Space in the original; the port's fast mode does not wait)
 
 
@@ -368,6 +390,8 @@ def main_levels(levels, cases, rng_seed, nkeys):
                          gear=dict(weapon=rng.choice(weapons), offhand=rng.choice(offhands), helmet=rng.choice([0, 402, 405]),
                                    armor=rng.choice([0, 101, 108, 112]), amulet=rng.choice([0, 0, 501, 503, 505])),
                          potions={name: rng.choice([0, 0, 1, 2]) for name in POTIONS})
+            known = rng.sample(range(1, 21), rng.randint(2, 8))
+            state.update(spells=known, fkeys={k: rng.choice(known) for k in range(1, 9)}, intl=rng.choice([20, 40, 80]), mana=rng.choice([30, 100]))
             seed = rng.randint(1, 0xFFFFFFFF)
             keys = [rng.choice([k for k in KEYS if k not in NOT_RANDOM]) for _ in range(nkeys)]
             try:
