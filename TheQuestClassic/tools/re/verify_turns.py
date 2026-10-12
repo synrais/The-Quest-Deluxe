@@ -59,8 +59,26 @@ class TurnEmu(GameEmu):
         at = self.lin(seg, off)
         self._hooked[at] = 'clock'                         # the timer the key loop uses to slow a held key down: time passes between keys
         self.uc.hook_add(UC_HOOK_CODE, self._on_call, begin=at, end=at)
+        seg, off = self.addr['_pow']                       # this emulator's x87 gets pow() with a fractional power wrong (sqrt(13) comes out 0):
+        at = self.lin(seg, off)                            # a real x87 gives the right answer, so it is done here and put on the x87 stack by a two-instruction stub
+        self._hooked[at] = 'pow'
+        self.uc.hook_add(UC_HOOK_CODE, self._on_call, begin=at, end=at)
+        self.uc.mem_write(0xF1000, bytes([0x2E, 0xDD, 0x06, 0x10, 0x00, 0xCB]))          # fld qword ptr cs:[0010h] ; retf
 
     def _on_call(self, uc, address, size, user):
+        if self._hooked.get(address) == 'pow':
+            import math
+            from unicorn.x86_const import UC_X86_REG_SP, UC_X86_REG_SS, UC_X86_REG_CS, UC_X86_REG_IP
+            sp, ss = uc.reg_read(UC_X86_REG_SP), uc.reg_read(UC_X86_REG_SS)
+            x, y = struct.unpack('<dd', bytes(uc.mem_read(self.lin(ss, sp + 4), 16)))
+            try:
+                r = math.pow(x, y)
+            except (ValueError, OverflowError):
+                r = 0.0
+            uc.mem_write(0xF1010, struct.pack('<d', r))
+            uc.reg_write(UC_X86_REG_CS, 0xF100)
+            uc.reg_write(UC_X86_REG_IP, 0)                 # the stub loads it and returns to the caller
+            return
         if self._hooked.get(address) == 'clock':
             self.ticks += 5000
             self._return(ax=self.ticks & 0xFFFF, dx=self.ticks >> 16)
