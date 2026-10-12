@@ -15,6 +15,13 @@ from .state import (Player, Status, Enemy, SLOT_WEAPON, SLOT_OFFHAND, SLOT_HELME
 LOW_HEALTH = 0.3   # DS:01D6 — cowardice threshold and "leave blood" threshold
 
 
+def low_health(life: int, mlife: int) -> bool:
+    """life / mlife <= 0.3 as the original's x87 decides it: it divides to 64 bits and compares with the double 0.3, which is a hair
+    under 3/10, so exactly 30% (12 of 40) is NOT low health."""
+    from fractions import Fraction
+    return mlife != 0 and Fraction(life, mlife) <= Fraction(LOW_HEALTH)
+
+
 _seed = [0]
 
 
@@ -80,7 +87,7 @@ def status_update(p: Player, st: Status, items: ItemTable) -> None:
         h.atk = it(wep, IT_ATK) + 2 * h.acc + it(amu, IT_ATK) + 15
         if sk.mar == 1:
             h.atk += 30
-    if sk.cow == 1 and h.mlife and h.life / h.mlife <= LOW_HEALTH:
+    if sk.cow == 1 and low_health(h.life, h.mlife):
         h.atk = int(h.atk / 2)
 
     h.defense = it(off, IT_DEF) + h.dex + it(amu, IT_DEF) + 10

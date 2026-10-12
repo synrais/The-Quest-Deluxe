@@ -113,8 +113,13 @@ def monsmove(g: 'Game') -> None:
         for cx, cy in w.cells(e):
             w.sq(cx, cy).mon = e.type
 
-    for e in list(w.enemies):
-        if e not in w.enemies or e.life <= 0:
+    i = -1
+    while True:
+        i += 1                                        # the original walks the list by number, and a death compacts it under the walk
+        if i >= len(w.enemies):
+            break
+        e = w.enemies[i]
+        if e.life <= 0:
             continue
         mover[0] = e
         if e.att < -10:
@@ -149,7 +154,8 @@ def monsmove(g: 'Game') -> None:
                 else:
                     g.play_at('bhit', o.x, o.y, g.fps_creature_side(mw) if g.renderer.in_3d(g) else mw)
                     g.report(f'The {g.monster_name(e.type)} misses the {g.monster_name(o.type)}.', 7, (o.x, o.y), 'miss')
-                e.moved = True
+                if i < len(w.enemies):
+                    w.enemies[i].moved = True             # move[i] = 1, by number: after a death below it, it is the creature that slid into its place that is marked, and passed over
                 fought = not ranok
                 break
             if fought:

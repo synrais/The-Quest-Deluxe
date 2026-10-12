@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from . import rules
-from .rules import random, distance, LOW_HEALTH
+from .rules import random, distance, LOW_HEALTH, low_health
 from .ai import flees, flee_squares
 from .state import (Enemy, SLOT_WEAPON, SLOT_OFFHAND, IT_KIND, KIND_RANGED)
 
@@ -606,8 +606,13 @@ class Combat:
     def enemy_attacks(self):
         p, h, st, items = self.p, self.p.hero, self.g.status, self.g.items
         self.g.play('pause', 100 if st.ems > 0 else 50)      # main2() pauses before the enemies act
-        for e in list(self.w.enemies):
-            if e not in self.w.enemies or e.life <= 0:
+        i = -1
+        while True:
+            i += 1                                   # the original walks the list by number and asks its length every time: a creature raised during the walk is reached in the same walk
+            if i >= len(self.w.enemies):
+                break
+            e = self.w.enemies[i]
+            if e.life <= 0:
                 continue
             if not (e.att >= 0 or e.att <= -10 or e.att == -4):
                 continue
@@ -629,7 +634,8 @@ class Combat:
             elif e.atk != 0 and not self.g.pack.trait(e.type, 'deceiver'):
                 self.enemy_ranged(e, name)
             else:
-                self.enemy_cast(e, name)
+                if self.enemy_cast(e, name):
+                    i -= 1                           # the kamikaze demon is gone from the list: w--
 
     def side_seen(self, e: Enemy) -> int:
         """side(), or in FPS mode the side as the hero sees it (Game.fps_side): only the stroke's
@@ -743,7 +749,7 @@ class Combat:
                 self.hurt(e.power, None, 1, e)
                 g.play_at('adarkhour', e.x, e.y)
             self.hurt(e.power * blasts, e, 1)                # (hurt(.., w, 1, -1): the hero is credited with it, as with any death nobody else caused)
-            return
+            return True
         dmg = e.power
         if e.att != -4:
             dmg = self.hurt(e.power, None, 1, e)
@@ -781,7 +787,7 @@ class Combat:
     def bleed_hero(self):
         h = self.p.hero
         q = self.w.sq(self.p.X, self.p.Y)
-        if q.deco == 0 and h.mlife and h.life / h.mlife <= LOW_HEALTH:
+        if q.deco == 0 and low_health(h.life, h.mlife):
             q.deco = self.g.pack.deco('blood')
 
     def fire_shield(self):

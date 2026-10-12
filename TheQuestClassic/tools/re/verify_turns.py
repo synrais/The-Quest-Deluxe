@@ -181,6 +181,7 @@ def setup(emu, g, level, grid0, hero, state, seed, only=None, edits=None):
             setattr(e, f, v)
     ens = w.enemies
     g.status.mons = len(ens)
+    g.count_hostiles()                                       # (main2() counts them again before every key)
     g.status.mission1, g.status.mission2 = state['m1'], state['m2']
     h = p.hero
     h.life, h.mlife, h.mana, h.mmana = state['life'], state['life'], 50, 50
