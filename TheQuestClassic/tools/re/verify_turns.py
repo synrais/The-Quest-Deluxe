@@ -257,6 +257,7 @@ def turn(emu, g, key):
     emu.keys = list(KEYS[key])
     emu.stopped = False
     emu.died = False
+    emu.set_word('_moved', 2)                          # main2() then starts with moved = 0: it does not run the end-of-turn upkeep (poison, timers) before the key, as a continuing game would not
     emu.call('main2', limit=30_000_000)
     if not emu.stopped:
         raise RuntimeError('main2 did not come back to wait for a key within the instruction limit (it was asking for keys in: %s)' % sorted(set(emu.waits[-20:])))
