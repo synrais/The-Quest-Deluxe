@@ -140,7 +140,8 @@ def setup(emu, g, level, grid0, hero, state, seed, only=None, edits=None):
     h.life, h.mlife, h.mana, h.mmana = state['life'], state['life'], 50, 50
     h.bstr, h.bintl, h.bdex, h.bacc = state['str'], 20, state['dex'], state['acc']
     h.level, h.exper, h.rep, h.poisoned, h.invisible = 10, 30000, state.get('rep', 0), 0, -1
-    p.skill.hon = 0
+    for f in ('amb', 'bar', 'sch', 'mem', 'mar', 'cow', 'hon', 'ras'):       # no skills and no faults, as the emulator's hero has
+        setattr(p.skill, f, 0)
     rules.status_update(p, g.status, g.items)
     g.talk_log = []
     ox, oy = w.origin
