@@ -33,8 +33,13 @@ from emu_game import GameEmu, HERO, INV, SKILL, STATUS  # noqa: E402
 from verify_events import HERO_F, ST_F  # noqa: E402
 
 SEED_AT = 0x2834                # DS offset of the C library's rand() state (a long)
-KEYS = {'Left': [0, 75], 'Right': [0, 77], 'Up': [0, 72], 'Down': [0, 80], 'space': [32]}
-PYGAME = {'Left': pygame.K_LEFT, 'Right': pygame.K_RIGHT, 'Up': pygame.K_UP, 'Down': pygame.K_DOWN, 'space': pygame.K_SPACE}
+KEYS = {'Left': [0, 75], 'Right': [0, 77], 'Up': [0, 72], 'Down': [0, 80], 'space': [32], 'Return': [13]}
+PYGAME = {'Left': pygame.K_LEFT, 'Right': pygame.K_RIGHT, 'Up': pygame.K_UP, 'Down': pygame.K_DOWN, 'space': pygame.K_SPACE,
+          'Return': pygame.K_RETURN}
+for _n in range(1, 9):                                  # 1 to 8: the potions
+    KEYS[str(_n)] = [ord(str(_n))]
+    PYGAME[str(_n)] = getattr(pygame, f'K_{_n}')
+POTIONS = ('rose', 'red', 'purple', 'blue', 'yellow', 'white', 'cyan', 'black')
 ENEMY_F = ('type', 'x', 'y', 'life', 'mlife', 'atk', 'defense', 'power', 'range', 'warm', 'marm', 'att')
 
 
@@ -142,6 +147,11 @@ def setup(emu, g, level, grid0, hero, state, seed, only=None, edits=None):
     h.level, h.exper, h.rep, h.poisoned, h.invisible = 10, 30000, state.get('rep', 0), 0, -1
     for f in ('amb', 'bar', 'sch', 'mem', 'mar', 'cow', 'hon', 'ras'):       # no skills and no faults, as the emulator's hero has
         setattr(p.skill, f, 0)
+    gear = state.get('gear', {})
+    for slot, cell in (('weapon', (12, 4)), ('offhand', (16, 4)), ('helmet', (14, 2)), ('armor', (14, 4)), ('amulet', (14, 6))):
+        p.bag[cell] = gear.get(slot, 0)
+    for name in POTIONS:
+        setattr(p.inv, name, state.get('potions', {}).get(name, 0))
     rules.status_update(p, g.status, g.items)
     g.talk_log = []
     ox, oy = w.origin
@@ -167,7 +177,8 @@ def setup(emu, g, level, grid0, hero, state, seed, only=None, edits=None):
                           power=e.power, range=e.range, warm=e.warm, marm=e.marm, att=e.att) for e in ens])
     for c in range(12, 17):
         for r in range(0, 13):
-            emu.set_int('_bag', c, r, 0)
+            emu.set_int('_bag', c, r, p.bag.get((c, r), 0))
+    emu.set_struct('_inv', INV, {name: getattr(p.inv, name) for name in INV if hasattr(p.inv, name)})
     set_seed(emu, seed)
     rules.srand(seed)
     emu.texts = []
@@ -279,9 +290,58 @@ def main(cases, rng_seed, m2s, only, nkeys):
     return bad
 
 
+def main_levels(levels, cases, rng_seed, nkeys):
+    """Random screens of the given levels with creatures on them, a random hero (gear, potions, numbers) on a free square, random keys."""
+    pygame.init()
+    win = pygame.display.set_mode((640, 480))
+    from engine.game import Game
+    from engine.formats import GameData
+    data = GameData.load()
+    g = Game(win, data)
+    g.overlay = None
+    rng = pyrandom.Random(rng_seed)
+    weapons = [0, 201, 205, 213, 214, 216, 230, 231, 232, 233]
+    offhands = [0, 0, 301, 303, 625, 640, 650, 665, 675]
+    total = bad = 0
+    for level in levels:
+        grid0 = data.load_level(level)
+        screens = sorted({((x - 1) // 10, (y - 1) // 10) for x in range(1, 101) for y in range(1, 101) if grid0[x][y].mon != 0})
+        for c in range(cases):
+            sx, sy = rng.choice(screens)
+            free = [(x, y) for x in range(sx * 10 + 1, sx * 10 + 11) for y in range(sy * 10 + 1, sy * 10 + 11)
+                    if grid0[x][y].wall == 0 and grid0[x][y].mon == 0]
+            if not free:
+                continue
+            hero = rng.choice(free)
+            state = dict(m1=rng.randint(0, 4), m2=rng.randint(0, 7), life=rng.choice([40, 120, 300, 600]), str=rng.choice([20, 40, 80]),
+                         dex=rng.choice([10, 30, 60]), acc=rng.choice([10, 30, 60]), rep=rng.randint(-5, 7),
+                         gear=dict(weapon=rng.choice(weapons), offhand=rng.choice(offhands), helmet=rng.choice([0, 402, 405]),
+                                   armor=rng.choice([0, 101, 108, 112]), amulet=rng.choice([0, 0, 501, 503, 505])),
+                         potions={name: rng.choice([0, 0, 1, 2]) for name in POTIONS})
+            seed = rng.randint(1, 0xFFFFFFFF)
+            keys = [rng.choice(list(KEYS)) for _ in range(nkeys)]
+            try:
+                emu = TurnEmu()
+                load_tables(emu, data)
+                diffs = run_case(emu, g, level, grid0, hero, state, seed, keys)
+            except Exception as err:          # noqa: BLE001
+                import traceback
+                diffs = [f'error: {type(err).__name__}: {err}', traceback.format_exc()[-600:]]
+            total += 1
+            if diffs:
+                bad += 1
+                print(f'level {level} hero {hero} state {state} keys {keys} seed {seed}')
+                for d in diffs:
+                    print('    ', d)
+    print(f'{total - bad} of {total} turns identical')
+    return bad
+
+
 if __name__ == '__main__':
     args = sys.argv[1:]
     opt = lambda name, default: type(default)(args[args.index(name) + 1]) if name in args else default       # noqa: E731
     only = [int(v) for v in args[args.index('--only') + 1].split(',')] if '--only' in args else None
     m2s = [int(v) for v in args[args.index('--m2') + 1].split(',')] if '--m2' in args else [2, 3, 4, 5, 6]
+    if '--levels' in args:
+        sys.exit(1 if main_levels([int(v) for v in args[args.index('--levels') + 1].split(',')], opt('--cases', 20), opt('--seed', 1), opt('--keys', 3)) else 0)
     sys.exit(1 if main(opt('--cases', 20), opt('--seed', 1), m2s, only, opt('--keys', 3)) else 0)
