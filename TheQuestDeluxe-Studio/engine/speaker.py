@@ -11,6 +11,8 @@ import os
 
 import pygame
 
+from . import speed
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))      # the TheQuestDeluxe folder
 
 RATE = 22050
@@ -63,7 +65,7 @@ class Speaker:
         return snd
 
     def sound(self, freq: int):
-        if not self.enabled or freq == self.freq:
+        if not self.enabled or freq == self.freq or speed.silent():      # (sped up 4x or more, the tones would only click)
             return
         freq &= 0xFFFF
         self.freq = freq

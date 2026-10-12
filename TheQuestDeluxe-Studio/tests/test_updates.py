@@ -132,6 +132,38 @@ def main():
             raise AssertionError
         except updates.UpdateError:
             pass
+
+    # what is new: the notes of an update are read before it is installed, and only the ones this copy does not have
+    import json
+    from core import whatsnew
+    old_notes = [{'id': 'a', 'title': 'Old', 'changes': ['one']}]
+    new_notes = [{'id': 'c', 'title': 'Newest', 'changes': ['x', 'y']}, {'id': 'b', 'date': '2026-10-12', 'title': 'Newer', 'changes': ['z']}] + old_notes
+    old_bytes, new_bytes = json.dumps(old_notes).encode(), json.dumps(new_notes).encode()
+    there = tempfile.mkdtemp()
+    write(there, whatsnew.REL, old_bytes)
+    served = {updates.blob_sha(new_bytes): new_bytes}
+
+    def news_get(path, token=''):
+        sha = path.rsplit('/', 1)[1]
+        return (200, {'encoding': 'base64', 'content': base64.b64encode(served[sha]).decode()}) if sha in served else (404, {})
+    found_notes = [(whatsnew.REL, updates.blob_sha(new_bytes), 'changed'), ('run_studio.py', 'x' * 40, 'changed')]
+    got = whatsnew.fresh(there, found_notes, '', news_get)
+    assert [e['id'] for e in got] == ['c', 'b'], got
+    assert whatsnew.fresh(there, [('run_studio.py', 'x' * 40, 'changed')], '', news_get) == [], 'an update that leaves the notes alone brings none'
+    assert whatsnew.fresh(there, found_notes, '', lambda path, token='': (403, {})) == [], 'notes that cannot be read are no reason to stop the update'
+    assert whatsnew.fresh(there, found_notes, '', lambda path, token='': (200, {'encoding': 'base64', 'content': base64.b64encode(b'wrong').decode()})) == []
+    fresh_dir = tempfile.mkdtemp()
+    assert [e['id'] for e in whatsnew.fresh(fresh_dir, found_notes, '', news_get)] == ['c', 'b', 'a'], 'a copy without notes gets them all'
+    assert [e['id'] for e in whatsnew.unseen(new_notes, ['a'])] == ['c', 'b'] and whatsnew.unseen(new_notes, ['a', 'b', 'c']) == []
+    assert len(whatsnew.unseen([{'id': str(i), 'title': 't', 'changes': ['c']} for i in range(20)], [])) == whatsnew.SHOWN
+    assert whatsnew.parse(b'not json') == [] and whatsnew.parse(b'{"a": 1}') == [] and whatsnew.parse(None) == []
+    assert whatsnew.parse(json.dumps([{'id': 'ok', 'title': 'T', 'changes': ['c']}, {'id': 1, 'title': 'T', 'changes': ['c']},
+                                      {'id': 'e', 'title': 'T', 'changes': []}, {'id': 'f', 'title': 'T', 'changes': [3]}, 'x'])) == \
+        [{'id': 'ok', 'date': '', 'title': 'T', 'changes': ['c']}], 'only the well made notes are kept'
+    shipped = whatsnew.load(ROOT)
+    assert shipped and len({e['id'] for e in shipped}) == len(shipped), 'the shipped notes exist and no id is used twice'
+    assert 'Play faster' in whatsnew.text(shipped) and whatsnew.text([]) == ''
+    print('updates: the notes of an update are read before it is installed, the ones this copy has are left out, unreadable notes never stop an update: ok')
     print('updates: only real differences are found, your quests and settings are never touched, Custom Maps is backed up and checked first, replaced files are kept: ok')
 
 

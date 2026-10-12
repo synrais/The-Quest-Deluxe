@@ -1145,6 +1145,21 @@ app._undo(False); pump(10); app._undo(False); pump(10)
 check('the rest undone', S.levels == n, str(S.levels))
 done('history: maps kept as the squares that changed; a removed level comes back after it was saved away: ok')
 
+import json as _json                                 # noqa: E402
+# the help bubbles: F1, the button beside the menu and the menu turn them off and on, and it is remembered
+from studio import bubbles as _bubbles               # noqa: E402
+assert _bubbles.enabled() and app.settings.get('help_bubbles', True)
+app.toggle_bubbles()
+assert not _bubbles.enabled() and app.settings['help_bubbles'] is False and 'off' in app._bubble_btn._tooltip.text
+assert _json.load(open(os.path.join(tmp, '.quest_studio.json')))['help_bubbles'] is False, 'the choice is kept on disk'
+app.root.event_generate('<F1>'); pump(10)
+assert _bubbles.enabled() and app.settings['help_bubbles'] is True and 'on' in app._bubble_btn._tooltip.text
+app._bubble_btn.invoke(); pump(10)
+assert not _bubbles.enabled()
+app._bubble_btn.invoke(); pump(10)
+assert _bubbles.enabled()
+done('help bubbles turn off and on (F1, the button) and the choice is remembered: ok')
+
 S.autosave()
 assert not S.project.dirty
 assert 'Brothers Quest' not in open(os.path.join(pack, 'quest.json'), encoding='utf-8').read(), 'undone settings stay undone on disk'
@@ -1171,7 +1186,8 @@ import tkinter as _tk
 root = _tk.Tk()
 root.withdraw()
 # a fresh copy of the shipped quest: the Doctor has nothing left to say (its four notices are meant: the bosses, the kamikaze, the secret area,
-# the exit made by beating Fate Bringer), and a blank pack does not inherit that
+# the exit made by beating Fate Bringer) but one, kept on purpose: the last level (7) sends the hero on to a level that is not there, and says
+# how to add it (tests/test_continue.py); and a blank pack does not inherit any of that
 import core.custom as _cu
 from core.project import Project as _P
 from studio import doctor as _doc
@@ -1179,7 +1195,7 @@ _fresh = _P(_cu.create('Doctor Fresh', folder=tmp_gear))
 class _S:
     project = _fresh
 _keys = {p.key for p in _doc.check(_S) if p.severity in ('info', 'warn', 'error')}
-assert _keys <= set(_fresh.quest['doctor_ok']), _keys - set(_fresh.quest['doctor_ok'])
+assert _keys <= set(_fresh.quest['doctor_ok']) | {'lastends:7'}, _keys - set(_fresh.quest['doctor_ok'])
 _blank = _P.create(os.path.join(tmp_gear, 'Doctor Blank'), _fresh.root, blank=True)
 assert 'doctor_ok' not in _blank.quest
 print('doctor: a fresh copy of the shipped quest has nothing unexplained; a blank pack starts clean: ok')
@@ -1214,6 +1230,48 @@ assert len(_asked) == 1 and 'run_studio.py' in _asked[0][1] and 'Custom Maps' in
 assert open(_mine, 'rb').read() and _up.blob_sha(open(_mine, 'rb').read()) == _sha, '"Not now" changes nothing'
 ui.confirm = _confirm
 print('studio: it looks for updates in the background, says nothing unless there is one, and asks first: ok')
+
+# what is new: an update that brings notes shows them in its question; the notes of this Studio show once after an update, and again from the menu
+import base64 as _b64                                # noqa: E402
+import json as _json                                 # noqa: E402
+from core import whatsnew as _wn                     # noqa: E402
+from studio import news as _news                     # noqa: E402
+_notes = [{'id': 'zz-new', 'title': 'Something new', 'changes': ['It does a thing.', 'And another.']}] + _wn.load(ROOT)
+_notes_bytes = _json.dumps(_notes).encode()
+_shown = []
+_dialog = _news.dialog
+_news.dialog = lambda parent, title, entries, intro='', outro='', yes='OK', no=None: (_shown.append((title, [e['id'] for e in entries], intro, outro)), False)[1]
+ui.confirm = lambda *a, **k: (_asked.append(a), False)[1]
+_asked.clear()
+
+
+def _with_notes(path, token=''):
+    if '/git/blobs/' in path:
+        return 200, {'encoding': 'base64', 'content': _b64.b64encode(_notes_bytes).decode()}
+    return 200, {'tree': [{'path': 'core/whatsnew.json', 'type': 'blob', 'sha': _up.blob_sha(_notes_bytes)}], 'truncated': False}
+app._look_for_updates(_with_notes); pump(10); time.sleep(0.6); pump(10)
+assert not _asked and len(_shown) == 1 and _shown[0][0] == 'A new Studio is ready' and _shown[0][1] == ['zz-new'], (_asked, _shown)
+assert 'Custom Maps' in _shown[0][3] and 'update' in _shown[0][2].lower(), 'the question still says what is safe, and the update comes with its notes'
+_shown.clear()
+app.settings['whatsnew_seen'] = []
+app._show_whatsnew()
+assert len(_shown) == 1 and _shown[0][0] == "What's new" and _shown[0][1] and len(_shown[0][1]) <= _wn.SHOWN, _shown
+assert set(app.settings['whatsnew_seen']) >= {e['id'] for e in _wn.load(ROOT)}, 'what was shown is remembered'
+_shown.clear()
+app._show_whatsnew()
+assert not _shown, 'the notes are shown once on each computer'
+app.whats_new()
+assert len(_shown) == 1 and _shown[0][1] == [e['id'] for e in _wn.load(ROOT)[:_wn.SHOWN]], 'the menu shows them again'
+_news.dialog = _dialog
+ui.confirm = _confirm
+# the real box, with the real notes (nothing is clicked: it is looked at and closed)
+_box = []
+_orig_run = ui.Dialog.run
+ui.Dialog.run = lambda self: (_box.append(self), self.update(), self.close(True), True)[3]
+assert _news.dialog(root, "What's new", _wn.load(ROOT), intro='This Studio has changed:', outro='Update now?', yes='Update now', no='Not now') is True
+ui.Dialog.run = _orig_run
+print('studio: updates tell what is new before they are installed, once after, and the menu shows it again: ok')
+
 
 # numbers: the slider is only a handy stretch; it never stops anyone, and a stat's slider does not start at minus a billion
 num = ui.Number(root, -10 ** 9, 10 ** 9, 100, soft_max=100, soft_min=0, commit=lambda v: None)

@@ -37,58 +37,7 @@ def vsep(parent, **kw):
     return ttk.Separator(parent, orient='vertical', **kw)
 
 
-class Tooltip:
-    """The little box that explains a widget while the pointer rests on it."""
-    DELAY = 450
-
-    def __init__(self, widget, text):
-        self.widget, self.text, self.box, self.job = widget, text, None, None
-        widget.bind('<Enter>', self._enter, add='+')
-        widget.bind('<Leave>', self._leave, add='+')
-        widget.bind('<ButtonPress>', self._leave, add='+')
-
-    def _enter(self, e=None):
-        self._leave()
-        self.job = self.widget.after(self.DELAY, self._show)
-
-    def _leave(self, e=None):
-        if self.job:
-            self.widget.after_cancel(self.job)
-            self.job = None
-        if self.box is not None:
-            self.box.destroy()
-            self.box = None
-
-    def _show(self):
-        self.job = None
-        if not self.text:
-            return
-        try:
-            x = self.widget.winfo_pointerx() + 14
-            y = self.widget.winfo_pointery() + 18
-        except tk.TclError:
-            return
-        self.box = tk.Toplevel(self.widget)
-        self.box.wm_overrideredirect(True)
-        self.box.configure(bg=C['line'])
-        tk.Label(self.box, text=self.text, bg=C['raised'], fg=C['text'], justify='left', wraplength=px(340),
-                 padx=px(10), pady=px(6), font=(theme.FONT, 9)).pack(padx=1, pady=1)
-        self.box.update_idletasks()
-        sw, sh = self.widget.winfo_screenwidth(), self.widget.winfo_screenheight()
-        w, h = self.box.winfo_reqwidth(), self.box.winfo_reqheight()
-        self.box.wm_geometry(f'+{min(x, sw - w - 8)}+{min(y, sh - h - 8)}')
-
-
-def tip(widget, text):
-    """Explain a widget when the pointer rests on it. A second call changes the words."""
-    if not text:
-        return widget
-    old = getattr(widget, '_tooltip', None)
-    if old is not None:
-        old.text = text
-    else:
-        widget._tooltip = Tooltip(widget, text)
-    return widget
+from .bubbles import Tooltip, tip      # noqa: E402,F401  (the help bubbles: one implementation, one switch; see bubbles.py)
 
 
 # ── scrolling ────────────────────────────────────────────────────────────────
@@ -599,8 +548,16 @@ class Toasts:
             a.bind('<Button-1>', lambda e: (self.hide(), action[1]()))
         f.place(relx=1.0, rely=1.0, anchor='se', x=-px(18), y=-px(40))
         f.lift()
+        if not action:                                           # a message with nothing to press goes a moment after the pointer comes to it: it never blocks the work under it
+            for w in (f, inner, *inner.winfo_children()):
+                w.bind('<Enter>', lambda e: self._pointer_came(f))
         self.box = f
         self.job = self.root.after(ms, self.hide)
+
+    def _pointer_came(self, box):
+        if self.job:
+            self.root.after_cancel(self.job)
+        self.job = self.root.after(900, lambda: self.hide() if self.box is box else None)
 
     def hide(self):
         if self.job:

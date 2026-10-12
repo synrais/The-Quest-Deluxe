@@ -1,0 +1,65 @@
+[
+ {
+  "id": "2026-10-12-speed",
+  "date": "2026-10-12",
+  "title": "Play faster: 2x, 4x, 8x",
+  "changes": [
+   "In the game, press + to play faster (2x, 4x, 8x) and - to slow down again. The speed shows in the top right corner of the map.",
+   "Only the waiting is quicker: the animations, the pauses and the weapon in view. The dice and the turns are the same, so it is the same game, only quicker.",
+   "To start a game already fast, put speed = 4 (or 2, or 8) in settings.ini. At 4x and 8x the PC-speaker tones are left out, they would only click."
+  ]
+ },
+ {
+  "id": "2026-10-12-bubbles",
+  "date": "2026-10-12",
+  "title": "Help bubbles stay out of the way, and can be turned off",
+  "changes": [
+   "The little explaining boxes now wait until the pointer has stopped, and go away at the first move, click or key (and by themselves after a few seconds).",
+   "Over a big surface that is being worked on (the painter, the map) they stand outside it instead of on top of it, so they no longer cover what is being edited.",
+   "New: F1, the (i) button beside the menu, or the menu (gear) turns all the help bubbles off and on. It is remembered.",
+   "The messages at the bottom right step aside a moment after the pointer comes to them."
+  ]
+ },
+ {
+  "id": "2026-10-12-updates",
+  "date": "2026-10-12",
+  "title": "Updates tell you what is new",
+  "changes": [
+   "The question 'A new Studio is ready' now lists what the update brings, and after an update this box shows once on each computer.",
+   "The menu (gear) has What's new... to read them again."
+  ]
+ },
+ {
+  "id": "2026-10-12-dos",
+  "date": "2026-10-12",
+  "title": "Closer to the DOS original, turn by turn",
+  "changes": [
+   "The original's own program was run beside the game over hundreds of random turns on every level (moves, fights, spells, keys, potions) and these differences were found and fixed:",
+   "A kamikaze demon's blast now counts as the hero's kill (experience and loot), as in the original.",
+   "'Want to save?' is asked before the scene speaks (the Death Bringer scenes).",
+   "Space shoots the nearest creature every time; only Tab remembers the creature it chose. The distance used for the chance to hit is the original's.",
+   "Exactly 30% health no longer counts as low health (cowardice, bleeding).",
+   "Creatures act in the original's order: a creature raised during a fight acts at once, and a death moves the walk along the list as the original does.",
+   "A locked door or a person standing on the edge square of the next screen no longer stops the step onto it."
+  ]
+ },
+ {
+  "id": "2026-10-12-compare",
+  "date": "2026-10-12",
+  "title": "Compare to DOS is quicker and follows the story",
+  "changes": [
+   "Keys go to both games at once. The two second wait between keys is gone, and the pictures are checked afterwards.",
+   "Messages and questions wait for Space or Y/N in both games, like the original, and a comparison can start at a story scene.",
+   "A comparison where the original does not start no longer reports an error while a message or question is on the screen."
+  ]
+ },
+ {
+  "id": "2026-10-12-level8",
+  "date": "2026-10-12",
+  "title": "Carrying on past the credits (a level 8)",
+  "changes": [
+   "The Quest Doctor says when the last level sends the hero on to a level that is not there (the Death Bringer's end), and how to add it: the + on the World page makes a level 8.",
+   "Once a level 8 exists, beating the Death Bringer goes on to it instead of the credits."
+  ]
+ }
+]

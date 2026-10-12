@@ -132,6 +132,17 @@ G D W S I choose the tools.
 | B E R L G I S | Map tools: brush, eraser, rectangle, line, fill, pick, select |
 | Ctrl+C, Ctrl+X, Ctrl+V, Ctrl+A | Copy, cut, paste, select all (on the map) |
 | + and - | Zoom the map |
+| F1 | Help bubbles on or off (also the (i) button beside the menu, and the menu) |
+
+## Help bubbles
+The little boxes that explain a button, a field or a picture while the pointer rests on it. They wait until the pointer has stopped, go away at the first move,
+a click, a key or the wheel (and by themselves after a few seconds), and over a big surface that is being edited (the painter, the map) they stand outside it
+and not beside the pointer, so they do not cover the work. **F1**, the (i) button beside the menu and the menu (gear) turn them all off and on; the choice is
+remembered (`"help_bubbles"` in `.quest_studio.json`).
+
+## What's new
+Each update comes with a note of what changed. After an update has been installed, the next time the Studio is opened it shows what is new, once on each computer
+(`core/whatsnew.json` holds the notes, newest first: an update that adds a note adds an entry to it). The update question itself lists what the update brings. **What's new...** in the menu shows them again.
 
 ## Updates
 Each time the Studio starts it looks, quietly and in the background, for a newer Studio in the game's repository (it compares each file's checksum with the

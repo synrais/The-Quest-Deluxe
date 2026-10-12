@@ -58,7 +58,7 @@ def recover_pictures(app):
 HELP = [
     ('Everywhere', [('Ctrl+K', 'Search: jump to any level, creature, item, spell ... or run a command'), ('Ctrl+Z / Ctrl+Y', 'Undo / redo (everything, not only the map)'),
                     ('Ctrl+S', 'Save now and make the zip of your additions (it also saves by itself as you go)'),
-                    ('F5', 'Play the game')]),
+                    ('F5', 'Play the game'), ('F1', 'Help bubbles on or off (the little boxes that explain what the pointer rests on)')]),
     ('The map', [('Left button', 'Use the tool'), ('Right button', 'Pick what is under the pointer'), ('Space + drag / middle button', 'Move the map'),
                  ('Mouse wheel', 'Scroll;  Ctrl+wheel zooms;  Shift+wheel scrolls sideways'),
                  ('B  E  R  L  G  I  S', 'Brush, Eraser, Rectangle, Line, Fill, Pick (eyedropper), Select'),

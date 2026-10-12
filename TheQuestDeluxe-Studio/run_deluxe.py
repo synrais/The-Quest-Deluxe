@@ -32,7 +32,7 @@ def main():
     os.environ.setdefault('SDL_VIDEO_CENTERED', '1')     # the window opens in the middle of the screen
     import pygame
     from engine.game import Game
-    from engine import settings as player_settings
+    from engine import settings as player_settings, speed
 
     pygame.init()
     scale = args.scale
@@ -60,6 +60,7 @@ def main():
         elif reopen:
             game.overlay = ui.LoadScreen(game)             # P on the load list: the saves of the pack switched to
         game.run()
+        settings['speed'] = str(speed.get())               # the pace carries over to the quest switched to
         if not game.next_pack:                             # P on the title or the load list: play the next pack
             break
         reopen = bool(getattr(game, 'reopen_load', False))

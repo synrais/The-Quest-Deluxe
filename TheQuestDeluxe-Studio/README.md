@@ -33,6 +33,7 @@ pygame-ce.
 | **Quest packs** | | Everything the original hardcodes (items, creatures and their traits, classes, spells, tiles, stories, dialogue, shops, level scripts) is data in the pack. |
 | **Bug fixes** | | The original's bugs (the Shield / Ring of Ice swap, the shop memory, questionnaire ties, the item in a tree and more) are fixed: `settings.ini` has them on for every pack, or leaves it to each pack, whose author picks them one by one. `packs/TheQuest` itself keeps them all, so the tests can hold it to the original. |
 | **Past the original's limits** | 9, 0 | More than 20 spells (a spell book with pages), potions 9 and 10, more key colours, and new classes in class changes and the questionnaire. |
+| **Speed** | + and - | Play 1x (the original's pace), 2x, 4x or 8x as fast: the animations, the pauses between pictures, the weapon in view and the glide of FPS mode take a half, a quarter or an eighth of the time. The rules and the dice do not change, so the same keys give the same game at every speed. The speed shows in the top right corner of the map (`speed` in settings.ini says where a game starts). At 4x and 8x the PC-speaker tones are left out. |
 | **Mods** | | Every addition above can be switched off for a pack in the editor's Mods tab, so a pack can play as close to the original as it likes: [docs/MODS.md](docs/MODS.md). |
 | **The Quest Studio** | | The editor, rebuilt: a map editor with every tool and a level wizard that makes whole levels and a quest wizard that makes a whole quest, level after level, creatures with a fight check against any hero, items, spells, heroes, tiles, shops, stories, dialogue and events, the Quest Doctor, Ctrl+K to find anything, undo for everything, saved as you go: [docs/STUDIO.md](docs/STUDIO.md). A 16-colour painter for every picture; Play (F5) test-plays from the clicked square. |
 
@@ -47,7 +48,7 @@ The original's keys all work as in [the classic edition](../TheQuestClassic/READ
 | `run_deluxe.py`, `run_studio.py`, `run_compare.py` | Start the game, the Studio and the comparison with DOS. |
 | `engine/` | The Quest Deluxe's code (a fork of the classic port's engine, reading everything from a pack). |
 | `studio/` | The Quest Studio (tkinter): its pages are in `studio/pages/`. |
-| `core/` | What the Studio works on, with no windows: the pack loader (`project.py`), Custom Maps, the descriptions of every field (`fields/`), events and stories, and "Send my edits" (`pack_edits.py`, `side_save.py`, `send_edits.py`). |
+| `core/` | What the Studio works on, with no windows: the pack loader (`project.py`), Custom Maps, the descriptions of every field (`fields/`), events and stories, "Send my edits" (`pack_edits.py`, `side_save.py`, `send_edits.py`), and the updater with the notes of what is new in each update (`updates.py`, `whatsnew.json`). |
 | `packs/TheQuest/` | The original quest as a pack: the first 7 levels, **locked**. The game plays it, and the editor never opens it. |
 | `Custom Maps/` | The packs made in the editor, a folder each (made the first time the editor runs). Every one starts as a copy of `packs/TheQuest`'s levels and tables, and takes its pictures from it (`"base": "TheQuest"` in `quest.json`), so a pack's own folder holds only what was changed or added: levels, stats, pictures. The locked game itself is never edited. To use something from another pack, use **Merge** in the Studio. On the game's title and load screens, **P** switches between The Quest and these packs; each pack has its own saves. |
 | `docs/QUEST_PACKS.md` | Every file of a pack, and every field. |
@@ -69,6 +70,7 @@ The player's settings, in this folder:
 | `fixes` | `on` (shipped): the original's bugs are fixed in every pack, and the title screen says "Bug fixes: on". `off`: every bug kept, exactly as the original plays. `pack`: as each quest pack says (the editor's Quest tab). |
 | `sound` | `on` or `off`: the PC-speaker tones. Without it, a `sound.txt` holding `0` turns them off, as in the original. |
 | `items_on_top` | `on` (shipped): gold and items are drawn over a creature or the hero standing on them. `off`: under them, as the original draws them. Blood, remains and footprints stay underneath either way. In FPS mode they are always in front. |
+| `speed` | `1` (shipped): the original's pace. `2`, `4` or `8`: that many times as quick (see **Speed** above). In the game, + and - change it. |
 | `floating_numbers` | `off` (shipped): in FPS mode the combat log's lines only. `on`: the damage, "miss" and the like also rise off whoever took them. |
 
 | `render_quality` | `normal` (shipped): one switch for how finely FPS mode is drawn. `high`: `fps_quality = high`. `ultra`: `fps_quality = max`, three times the detail averaged down, so distant things pixelate much less (slower). It does not blur the picture. |

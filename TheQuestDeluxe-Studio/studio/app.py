@@ -7,7 +7,8 @@ import time
 import tkinter as tk
 from tkinter import ttk
 
-from . import icons, theme, ui
+from . import bubbles, icons, theme, ui
+from . import news as news_box
 from .model import Session, load_settings, save_settings
 from .theme import C, px
 
@@ -58,6 +59,7 @@ class Studio:
         self.settings = load_settings()
         theme.make_dpi_aware()
         theme.apply(root, self.settings.get('theme', 'dark'))
+        bubbles.set_enabled(self.settings.get('help_bubbles', True))
         ui.install_wheel(root)
         root.title('The Quest Studio')
         self.session: Session | None = None
@@ -85,6 +87,7 @@ class Studio:
         root.bind_all('<Control-y>', lambda e: self._undo(True))
         root.bind_all('<Control-Shift-Z>', lambda e: self._undo(True))
         root.bind_all('<F5>', lambda e: self.play())
+        root.bind_all('<F1>', lambda e: self.toggle_bubbles())
 
     # ── start up ────────────────────────────────────────────────────────────
     def _size(self):
@@ -125,7 +128,7 @@ class Studio:
             self._update_looked = True                                   # once each time the Studio is started
             self.root.after(3000, self._look_for_updates)
         if not os.environ.get('QUEST_NO_UPDATE_CHECK'):
-            self.root.after(1200, self._show_notices)
+            self.root.after(1200, self._show_whatsnew)
 
     # ── the window ──────────────────────────────────────────────────────────
     def _build_shell(self):
@@ -199,6 +202,9 @@ class Studio:
         menu = ui.button(r, '', self._main_menu, 'gear', 'Tool.TButton', 'Menu: packs, saving, theme')
         menu.pack(side='right', padx=px(6))
         self._menu_btn = menu
+        self._bubble_btn = ui.button(r, '', self.toggle_bubbles, 'info', 'Tool.TButton')
+        self._bubble_btn.pack(side='right')
+        self._bubbles_shown()
         self._fill_heroes()
 
     def _fill_heroes(self):
@@ -423,6 +429,9 @@ class Studio:
                       command=self.toggle_theme)
         m.add_command(label='Shortcuts and help', command=self.help)
         m.add_command(label='Show the page tips again', command=self.tips_again)
+        m.add_command(label='Turn the help bubbles ' + ('off' if bubbles.enabled() else 'on'), accelerator='F1',
+                      command=self.toggle_bubbles)
+        m.add_command(label="What's new…", command=self.whats_new)
         m.add_separator()
         m.add_command(label='Quit', command=self.quit)
         b = self._menu_btn
@@ -446,6 +455,26 @@ class Studio:
         self.say('The tips will show again the next time you open each page.', 'ok')
         if self.current:
             self.go(self.current)
+
+    def toggle_bubbles(self):
+        """The help bubbles (the boxes that explain what the pointer rests on) on or off, for good (F1, the button beside the menu)."""
+        on = not bubbles.enabled()
+        bubbles.set_enabled(on)
+        self.settings['help_bubbles'] = on
+        save_settings(self.settings)
+        self._bubbles_shown()
+        self.say('Help bubbles are on. F1 turns them off.' if on else 'Help bubbles are off. F1 or the (i) button beside the menu turns them on.', 'ok')
+
+    def _bubbles_shown(self):
+        on = bubbles.enabled()
+        b = getattr(self, '_bubble_btn', None)
+        if b is not None:
+            try:
+                b.configure(image=icons.icon('info', C['accent'] if on else C['faint'], px(16)))
+            except tk.TclError:                                   # (the window it was in is gone)
+                return
+            ui.tip(b, 'Help bubbles are on: click (or press F1) to turn them off.' if on else
+                   'Help bubbles are off: click (or press F1) to turn them on.', always=True)
 
     def toggle_theme(self):
         self.settings['theme'] = 'light' if theme.name() == 'dark' else 'dark'
@@ -542,7 +571,7 @@ class Studio:
     def _look_for_updates(self, get=None):
         """Looks, in the background, for a newer Studio. It says nothing at all unless there is one (no internet, nothing new: silence)."""
         import threading
-        from core import send_edits, updates
+        from core import send_edits, updates, whatsnew
         from engine.pack import ROOT
         token = send_edits.load_settings().get('key', '')
 
@@ -553,27 +582,34 @@ class Studio:
                 box['found'] = updates.check(ROOT, token, get or updates.http)
             except Exception:                                            # noqa: BLE001 - offline, rate limited, anything: not worth a word
                 box['found'] = []
+            try:                                                         # what the update brings, to say it before asking (the notes are never worth failing for)
+                box['news'] = whatsnew.fresh(ROOT, box['found'], token, get or updates.http) if box['found'] else []
+            except Exception:                                            # noqa: BLE001
+                box['news'] = []
         threading.Thread(target=work, daemon=True).start()
 
         def poll(n=0):                                                   # (the window's own thread picks the answer up: Tk is not called from the other)
             if 'found' in box:
                 if box['found']:
-                    self._offer_update(box['found'], get)
+                    self._offer_update(box['found'], get, box.get('news') or [])
             elif n < 200:
                 self.root.after(150, lambda: poll(n + 1))
         self.root.after(150, poll)
 
-    def _offer_update(self, found, get=None):
+    def _offer_update(self, found, get=None, news=()):
         from core import send_edits, updates
         from engine.pack import ROOT
         if self.closed or self.session is None:
             return
         new = sum(1 for _, _, why in found if why == 'new')
         names = ', '.join(rel for rel, _, _ in found[:6]) + (' ...' if len(found) > 6 else '')
-        if not ui.confirm(self.root, 'A new Studio is ready',
-                          f'There is an update: {len(found)} file{"s" if len(found) != 1 else ""} ({new} new).\n\n{names}\n\n'
-                          'Everything in Custom Maps is copied to a zip in the backups folder first, and your quests and settings are not touched.\n\nUpdate now?',
-                          yes='Update now', no='Not now'):
+        safe = 'Everything in Custom Maps is copied to a zip in the backups folder first, and your quests and settings are not touched.\n\nUpdate now?'
+        count = f'There is an update: {len(found)} file{"s" if len(found) != 1 else ""} ({new} new).'
+        if news:                                                         # it says what the update brings
+            ok = news_box.dialog(self.root, 'A new Studio is ready', news, intro=count + '\n\nWhat is new in it:', outro=safe, yes='Update now', no='Not now')
+        else:
+            ok = ui.confirm(self.root, 'A new Studio is ready', f'{count}\n\n{names}\n\n{safe}', yes='Update now', no='Not now')
+        if not ok:
             return
         import threading
         token = send_edits.load_settings().get('key', '')
@@ -598,14 +634,30 @@ class Studio:
                 self.root.after(200, poll)
         self.root.after(200, poll)
 
-    def _show_notices(self):
-        """Messages that ship with an update, each shown once on each computer (remembered in the Studio's own settings)."""
-        seen = self.settings.setdefault('notices_seen', [])
-        for key, title, text in NOTICES:
-            if key not in seen:
-                seen.append(key)
-                save_settings(self.settings)
-                ui.inform(self.root, title, text)
+    def _show_whatsnew(self):
+        """The notes that came with this Studio (core/whatsnew.json): the ones not seen yet are shown once on each computer (remembered in the Studio's own settings)."""
+        from core import whatsnew
+        from engine.pack import ROOT
+        if self.closed:
+            return
+        seen = self.settings.setdefault('whatsnew_seen', [])
+        entries = whatsnew.load(ROOT)
+        fresh = whatsnew.unseen(entries, seen)
+        if not fresh:
+            return
+        seen.extend(e['id'] for e in entries if e['id'] not in seen)           # (the older ones past the box's limit are marked too)
+        save_settings(self.settings)
+        news_box.dialog(self.root, "What's new", fresh, intro='This Studio has changed since you last opened it:', yes='OK')
+
+    def whats_new(self):
+        """Menu: the notes again."""
+        from core import whatsnew
+        from engine.pack import ROOT
+        entries = whatsnew.load(ROOT)[:whatsnew.SHOWN]
+        if entries:
+            news_box.dialog(self.root, "What's new", entries, yes='OK')
+        else:
+            ui.inform(self.root, "What's new", 'Nothing is listed yet.')
 
     def _updated(self, box):
         if 'error' in box:
@@ -617,6 +669,8 @@ class Studio:
             text += f'\nYour quests are backed up in {r["backup"]}'
         if r['kept']:
             text += f'\nThe files that were replaced are kept in {r["kept"]}'
+        if 'core/whatsnew.json' in r['done']:
+            text += "\nThe new Studio shows what is new the first time it opens (the menu's What's new... shows it again)."
         if r['failed']:
             text += '\n\nNot updated (in use or refused): ' + ', '.join(f'{p}' for p, _ in r['failed'][:5])
         if ui.confirm(self.root, 'Updated', text + '\n\nClose the Studio now, and open it again to use the new one?', yes='Close the Studio', no='Later'):
@@ -627,12 +681,6 @@ class Studio:
             self.session.close()
         self.closed = True
         self.root.destroy()
-
-
-# (id, title, text): shown once, the first time a Studio that carries it is opened
-NOTICES = [
-    ('test-update-1', 'Test update', 'This was just a test update, if you can read this everything worked fine.'),
-]
 
 
 def main():

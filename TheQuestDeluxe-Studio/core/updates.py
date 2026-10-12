@@ -118,6 +118,17 @@ def backup_custom_maps(root: str, stamp: str | None = None) -> str | None:
     return path
 
 
+def fetch(sha: str, token: str = '', get=http) -> bytes:
+    """The content of the repository's file with this checksum, checked against it. Raises UpdateError."""
+    status, data = get(f'/repos/{REPO}/git/blobs/{sha}', token)
+    if status != 200 or data.get('encoding') != 'base64':
+        raise UpdateError(f'GitHub said {status}')
+    content = base64.b64decode(data['content'])
+    if blob_sha(content) != sha:
+        raise UpdateError('what came did not match its checksum')
+    return content
+
+
 def apply(root: str, updates: list, token: str = '', get=http, progress=None, stamp: str | None = None) -> dict:
     """Back up Custom Maps, then bring the files in. {'backup': zip or None, 'done': [...], 'failed': [(path, why)], 'kept': folder of the replaced files}."""
     say = progress or (lambda text: None)
@@ -129,12 +140,7 @@ def apply(root: str, updates: list, token: str = '', get=http, progress=None, st
     for i, (rel, sha, why) in enumerate(updates, 1):
         say(f'Updating {i} of {len(updates)}: {rel}')
         try:
-            status, data = get(f'/repos/{REPO}/git/blobs/{sha}', token)
-            if status != 200 or data.get('encoding') != 'base64':
-                raise UpdateError(f'GitHub said {status}')
-            content = base64.b64decode(data['content'])
-            if blob_sha(content) != sha:
-                raise UpdateError('what came did not match its checksum')
+            content = fetch(sha, token, get)
             path = os.path.join(root, *rel.split('/'))
             if os.path.exists(path):
                 keep = os.path.join(kept, *rel.split('/'))

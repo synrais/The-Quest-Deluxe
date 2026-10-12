@@ -9,7 +9,7 @@ import pygame
 from .world import ROOM
 from .bgi import BGI
 from .hud import Hud
-from . import anim, view3d
+from . import anim, speed, view3d
 from .hands import Hands
 from .face import Face
 from . import missiles
@@ -209,7 +209,7 @@ class Renderer:
         h, st = game.player.hero, game.status
         state = {'life': h.life, 'mlife': h.mlife, 'poisoned': h.poisoned, 'shield': st.Shield + st.fShield,
                  'invisible': h.invisible, 'powered': st.powboost}
-        c = worn.clasp_now(row, worn.colour_of(row, self.sprites.bag.get(item)), state, pygame.time.get_ticks())
+        c = worn.clasp_now(row, worn.colour_of(row, self.sprites.bag.get(item)), state, speed.ticks())
         scr.set_at((hx + worn.CLASP[0], hy + worn.CLASP[1]), worn.EGA[c])
 
     def _hero_pixels(self, scr, game, hx, hy):
@@ -302,23 +302,24 @@ class Renderer:
         self.bgi.s = self.screen
         clock = pygame.time.get_ticks
         target = shown = clock()
+        quick = speed.get() > 1                  # sped up: frames are shown at most every 16 ms, however short the delays
         for ms in gen:
-            target += max(0, ms)
+            target += speed.real_ms(max(0, ms))
             now = clock()
-            if now < target or now - shown >= 16:
+            if (now < target and not quick) or now - shown >= 16:
                 self.present(self.compose_3d(game) if three_d else None)
                 shown = clock()
             pygame.event.pump()                  # keys pressed meanwhile stay queued, like the BIOS buffer
             wait = target - clock()
-            if wait > 0:
-                pygame.time.wait(wait)
+            if wait >= 1:
+                pygame.time.wait(int(wait))
         self.present(self.compose_3d(game) if three_d else None)
 
     def hand(self, game, scr):
         """The weapon in view (engine.hands), over the view and under the combat log."""
         if not hasattr(self, 'hands'):
             self.hands = Hands(self.pack, self.sprites)
-        self.hands.draw(game, scr.subsurface((0, 0, MAP_PX, MAP_PX)), pygame.time.get_ticks())
+        self.hands.draw(game, scr.subsurface((0, 0, MAP_PX, MAP_PX)), speed.ticks())
 
     def fly(self, game, anim_name, frm, to, hit: bool, towards_hero: bool, fast=False):
         """FPS mode: an arrow, bolt or stone flies through the view (engine.missiles), blocking like an
@@ -329,9 +330,9 @@ class Renderer:
         at, ms = missiles.path(frm, to, hit, towards_hero)
         tail = 0.35 / max(1.0, ms / missiles.MS_PER_SQUARE)     # about a third of a square behind
         cam = self.camera(game)
-        start = pygame.time.get_ticks()
+        start = speed.ticks()
         while True:
-            t = (pygame.time.get_ticks() - start) / ms
+            t = (speed.ticks() - start) / ms
             if t >= 1:
                 break
             self.draw(game, present=False)
@@ -395,7 +396,7 @@ class Renderer:
         self.screen.blit(surface, (0, 0))
         self.present()
         pygame.event.pump()
-        pygame.time.wait(max(0, ms))
+        pygame.time.wait(int(speed.real_ms(max(0, ms))))
 
     def wait_talk(self, game, text, fast=False):
         """talk()'s getch loop: the message stays in the strip until Space is pressed."""
@@ -467,6 +468,8 @@ class Renderer:
                 self.face = Face(self.pack, self.sprites)
             self.face.draw(game, scr)                    # the hero's bust, right of the coins
         self.draw_message(scr, game)
+        if speed.get() > 1:
+            self.draw_speed(scr)
         if game.overlay:
             game.overlay.draw(self, scr)
         if present:
@@ -478,7 +481,7 @@ class Renderer:
         fx = getattr(game, 'view_fx', None)
         if fx is None:
             return None
-        t = (pygame.time.get_ticks() - fx[0]) / FX_MS
+        t = (speed.ticks() - fx[0]) / FX_MS
         if t >= 1 or game.fast or game.cursor is not None or not game.world.grid:
             game.view_fx = None
             return None
@@ -591,7 +594,7 @@ class Renderer:
         """Where the eye is: it glides a step or a quarter turn over STEP_MS, then stays."""
         p = game.player
         goal = (p.X + 0.5, p.Y + 0.5, view3d.facing_angle(game.facing))
-        now = pygame.time.get_ticks()
+        now = speed.ticks()
         cam = getattr(self, '_cam', None)
         if cam is None or snap or game.fast:
             cam = self._cam = {'from': goal, 'goal': goal, 't0': now}
@@ -708,7 +711,7 @@ class Renderer:
             # the rising numbers are FPS mode's, and only with settings.ini floating_numbers = on
             game.floaters = [f for f in game.floaters if f.get('key') == game.log_key]
             return
-        now = pygame.time.get_ticks()
+        now = speed.ticks()
         p = game.player
         g.settextstyle(0, 0, 2)
         keep, last = [], {}
@@ -738,6 +741,17 @@ class Renderer:
             g.setcolor(f['colour'])                     # plain, in the ROM font's pixels like the log
             g.outtextxy(sx - tw // 2, sy, f['text'])
         game.floaters = keep
+
+    def draw_speed(self, scr):
+        """Sped up (+ and -): the speed in the map's top right corner, so it is known why everything is quick."""
+        g = self.bgi
+        g.s = scr
+        g.settextstyle(0, 0, 1)
+        text = f'{speed.get()}x'
+        w = g.textwidth(text)
+        scr.fill((0, 0, 0), (MAP_PX - w - 6, 1, w + 5, 11))
+        g.setcolor(14)
+        g.outtextxy(MAP_PX - w - 4, 3, text)
 
     def draw_message(self, scr, game):
         """The bottom strip shows this turn's messages, or the potion belt when there are none."""

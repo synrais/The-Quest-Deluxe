@@ -35,6 +35,7 @@ from . import settings as settings_mod
 from .hands import attack_kind
 from . import anim
 from . import hatch
+from . import speed
 from . import invshop
 from . import ui
 from . import view3d
@@ -46,6 +47,8 @@ DIRS = {pygame.K_LEFT: (-1, 0), pygame.K_RIGHT: (1, 0), pygame.K_UP: (0, -1), py
         pygame.K_KP4: (-1, 0), pygame.K_KP6: (1, 0), pygame.K_KP8: (0, -1), pygame.K_KP2: (0, 1)}
 FACES = {(0, -1): 0, (1, 0): 1, (0, 1): 2, (-1, 0): 3}
 TURNS = {pygame.K_LEFT: -1, pygame.K_KP4: -1, pygame.K_RIGHT: 1, pygame.K_KP6: 1}      # FPS mode
+FASTER = (pygame.K_PLUS, pygame.K_EQUALS, pygame.K_KP_PLUS)        # Deluxe: the game's speed, 1x to 8x (engine.speed)
+SLOWER = (pygame.K_MINUS, pygame.K_KP_MINUS)
 STRAFE = {pygame.K_COMMA: -1, pygame.K_q: -1, pygame.K_PERIOD: 1, pygame.K_e: 1}     # FPS mode: step sideways
 
 
@@ -162,6 +165,7 @@ class Game:
         self.next_pack = None              # set to a pack folder to leave this game and start the other (switch_pack)
         # scripted runs (tests, the dummy video driver) play animations instantly and silently
         self.fast = os.environ.get('SDL_VIDEODRIVER') == 'dummy'
+        speed.use(self.settings.get('speed', 1))                  # settings.ini: the pace to start at; + and - change it while playing
         sound = self.settings.get('sound')
         self.speaker = Speaker(enabled=not self.fast and (sound == 'on' if sound else sound_setting(self.data.src)))
         self.anim_host = ScreenHost(self)
@@ -208,7 +212,7 @@ class Game:
     def hand_react(self, kind: str):
         """FPS mode: a blow came at the hero ('hit') or missed him ('miss'): the shield in view reacts (engine.hands)."""
         if self.view3d and not self.fast:
-            self.hand_fx = (kind, pygame.time.get_ticks())
+            self.hand_fx = (kind, speed.ticks())
 
     def start_swing(self, second: bool = False):
         """FPS mode: the weapon in view (engine.hands) attacks from now. Only the picture moves. The second blow of
@@ -216,7 +220,7 @@ class Game:
         self.swing_hand = 'left' if second else 'right'
         if self.view3d and not self.fast:
             item = self.pack.item(self.player.bag.get((12, 4), 0)) if self.player.bag.get((12, 4)) else {}
-            self.swing = (attack_kind(item), pygame.time.get_ticks())
+            self.swing = (attack_kind(item), speed.ticks())
 
     def fly(self, anim_name, frm, to, hit: bool, towards_hero: bool = False):
         """FPS mode: the missile's flight (Renderer.fly), before its landing animation. A creature
@@ -462,6 +466,10 @@ class Game:
             self.overlay.key(self, ev)
             return
         k = ev.key
+        if k in FASTER or k in SLOWER:                   # Deluxe: play quicker (+) or slower (-): 1x, 2x, 4x, 8x. Only the waiting changes.
+            n = speed.faster() if k in FASTER else speed.slower()
+            self.messages = [Msg(f'Speed {n}x' + (' (the original\'s pace)' if n == 1 else ': + faster, - slower'), 14)]
+            return
         if self.view3d and k in TURNS:
             self.facing = (self.facing + TURNS[k]) % 4    # FPS mode: turning is free, and not an action
             return
@@ -503,7 +511,7 @@ class Game:
         elif k == pygame.K_f and self.pack.mod('fps_mode'):
             self.view3d = not self.view3d            # FPS mode (Deluxe)
             if not self.fast and (getattr(self, 'settings', None) or {}).get('fps_transition') != 'off':
-                self.view_fx = (pygame.time.get_ticks(), self.view3d)     # the zoom down and in (Renderer.transition)
+                self.view_fx = (speed.ticks(), self.view3d)     # the zoom down and in (Renderer.transition)
         elif k == pygame.K_m and self.view3d:
             self.minimap = not self.minimap          # the Map box: this screen from above, or the level map
         elif k == pygame.K_d and self.pack.mod('combat_log'):
@@ -1668,7 +1676,7 @@ class Game:
         REPEAT_MS after the last repeat, so walking into a wall or a fight doesn't run away."""
         if not self.view3d or self.overlay or not self.renderer.in_3d(self) or self.renderer.gliding(self):
             return None
-        if now - getattr(self, '_last_repeat', -10 ** 9) < self.REPEAT_MS:
+        if now - getattr(self, '_last_repeat', -10 ** 9) < self.REPEAT_MS / speed.get():
             return None
         for k, t0 in held.items():
             if (k in DIRS or k in STRAFE or k in TURNS) and now - t0 >= self.HOLD_MS:
