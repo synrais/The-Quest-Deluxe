@@ -274,7 +274,9 @@ def main(cases, rng_seed, m2s, only, nkeys):
         if rng.random() < 0.5:
             edits[45] = {'life': rng.choice([1, 30, 39, 40, 80])}
         try:
-            emu = TurnEmu()                                       # a new emulator for each case: nothing is left over from the one before
+            g = Game(win, data)                                   # a new game and a new emulator for each case: nothing is left over from the one before
+            g.overlay = None
+            emu = TurnEmu()
             load_tables(emu, data)
             diffs = run_case(emu, g, 7, grid0, hero, state, seed, keys, only, edits)
         except Exception as err:          # noqa: BLE001
@@ -321,6 +323,8 @@ def main_levels(levels, cases, rng_seed, nkeys):
             seed = rng.randint(1, 0xFFFFFFFF)
             keys = [rng.choice(list(KEYS)) for _ in range(nkeys)]
             try:
+                g = Game(win, data)                                   # a new game and a new emulator for each case: nothing is left over from the one before
+                g.overlay = None
                 emu = TurnEmu()
                 load_tables(emu, data)
                 diffs = run_case(emu, g, level, grid0, hero, state, seed, keys)
