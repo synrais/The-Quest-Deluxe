@@ -1,5 +1,16 @@
 [
  {
+  "id": "2026-10-18-exit-screen",
+  "date": "2026-10-18",
+  "title": "Leaving a screen: the creatures' turn is seen, and every key waits as in the original",
+  "changes": [
+   "When you step off a screen, the creatures on it now take their turn in view (moving, chasing, attacking) before the new screen comes, as in the original. This was in the rules before but never drawn.",
+   "The original waits a moment (50 ms, or 100 ms with enemies on the screen) after every key it handles, even one that does nothing: a step into a wall, Enter with nothing to take, a potion you do not have. The game now does too. Creatures breaking a door and fighting each other also wait as the original's do.",
+   "If you step onto a door at the edge of the next screen and have its key, it opens, as in the original; an NPC there talks or sells.",
+   "Found by comparing every wait of hundreds of turns with the original's own program, including turns that start at the edge of a screen."
+  ]
+ },
+ {
   "id": "2026-10-18-fixes",
   "date": "2026-10-18",
   "title": "Window size, sounds at speed, the hero's eyes, Marksmanship",

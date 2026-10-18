@@ -427,8 +427,8 @@ class Game:
             self.leaving_to = (nx, ny)
             self.end_turn()
             self.leaving_to = None
-            if self.overlay or p.hero.life < 1:
-                return True                              # he died (or a level-up screen is up): he did not get away
+            if self.overlay or p.hero.life <= -5:
+                return True                              # he died (or a level-up screen is up): he did not get away; one who is only bleeding (life 0 to -4) still leaves
             self.renderer.hold(self, ROOM_REPAINT_MS, fast=self.fast)      # the creatures' turn is on the screen he is leaving, then the new screen is painted
             self.pause_ems = st.ems                      # (the second pass still counts the creatures of the screen left)
             w.leave_room(st.ems, self.events.shadow)

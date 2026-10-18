@@ -118,6 +118,19 @@ assert pauses(ev) == [50]
 g._restore()
 print('pauses: leaving a screen shows the creatures\' turn on it, holds, then the new screen; the second wait counts the screen left: ok')
 
+# a hero who is bleeding (life 0 to -4) still leaves; one past that dies where he stands
+g, ev = new_game((11, 7))
+g.player.hero.life = 0
+g.handle(key(pygame.K_LEFT))
+assert g.player.X == 10 and g.player.hero.life < 0 and g.overlay is None, (g.player.X, g.player.hero.life)
+g._restore()
+g, ev = new_game((11, 7))
+g.player.hero.life = -5
+g.handle(key(pygame.K_LEFT))
+assert g.player.X == 11, g.player.X
+g._restore()
+print('pauses: a bleeding hero still leaves a screen: ok')
+
 # arriving on a door: the second pass deals with the square he arrives on as with any step, only he stays on it
 for wall, key_held, opens in ((-1, 0, True), (-2, 1, True), (-2, 0, False), (-3, 0, False)):
     g, ev = new_game((11, 7))
