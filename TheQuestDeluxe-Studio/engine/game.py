@@ -28,7 +28,7 @@ from .combat import Combat
 from .magic import Magic
 from .ai import monsmove
 from .events import Events
-from .render import Renderer, TILE
+from .render import Renderer, TILE, ROOM_REPAINT_MS
 from .speaker import Speaker, sound_setting
 from .settings import fix_override
 from . import settings as settings_mod
@@ -45,6 +45,8 @@ CUSTOM_DIR = os.path.join(ROOT, 'Custom Maps')
 
 DIRS = {pygame.K_LEFT: (-1, 0), pygame.K_RIGHT: (1, 0), pygame.K_UP: (0, -1), pygame.K_DOWN: (0, 1),
         pygame.K_KP4: (-1, 0), pygame.K_KP6: (1, 0), pygame.K_KP8: (0, -1), pygame.K_KP2: (0, 1)}
+# the keys after which main2() waits though nothing happens (a turn waits anyway): the moves, Enter, potions 1-8, Space, Tab and K
+WAITS = set(DIRS) | {pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE, pygame.K_TAB, pygame.K_k} | set(range(pygame.K_1, pygame.K_8 + 1))
 FACES = {(0, -1): 0, (1, 0): 1, (0, 1): 2, (-1, 0): 3}
 TURNS = {pygame.K_LEFT: -1, pygame.K_KP4: -1, pygame.K_RIGHT: 1, pygame.K_KP6: 1}      # FPS mode
 FASTER = (pygame.K_PLUS, pygame.K_EQUALS, pygame.K_KP_PLUS)        # Deluxe: the game's speed, 1x to 8x (engine.speed)
@@ -144,6 +146,7 @@ class Msg(str):
 
 
 class Game:
+    pause_ems = None                   # set while a screen is being left: the creature count the next wait goes by
     def __init__(self, window, data: GameData | None = None, start_level: int = 1, settings: dict | None = None):
         self.data = data or GameData.load()
         self.pack = self.data.src.pack
@@ -494,6 +497,8 @@ class Game:
             s = self.player.fkey[k - pygame.K_F1 + 1]
             if s:
                 self.begin_cast(s)
+            else:
+                self.key_pause()
         elif k == pygame.K_s:
             self.overlay = ui.SpellBook(self)
         elif k == pygame.K_i:
@@ -520,12 +525,44 @@ class Game:
             self.log_lines, self.floaters = [], []
         if acted:
             self.end_turn()
+        elif k in WAITS and not self.overlay:
+            self.key_pause()                             # a key that does nothing (a wall, nothing to take, no such potion) still waits, as the original's
+        self.pause_ems = None
         self.events.run('after_action', 'space' if k == pygame.K_SPACE else 'key')
         if self.pending_next_level and not self.overlay:
             self.pending_next_level = False
             self.next_level()
 
+    # ── the original's waits ──────────────────────────────────────────────────
+    def key_pause(self):
+        """main2() waits after every key it handles, a turn or not, before the creatures act: 100 ms with hostile creatures on the screen, 50 without.
+        On the second pass of leaving a screen it still counts the creatures of the screen left (pause_ems)."""
+        ems = self.status.ems if self.pause_ems is None else self.pause_ems
+        self.pause_ems = None
+        self.play('pause', 100 if ems > 0 else 50)
+
     # ── movement ──────────────────────────────────────────────────────────────
+    def arrive_on(self, q, x: int, y: int):
+        """The second pass of leaving a screen puts the hero on the new screen's edge square and then deals with what is on it as with any step, only he stays
+        where he is: a door he can open opens (with its click), an NPC there talks or sells, a locked door stays shut under him."""
+        p = self.player
+        wall = self.pack.wall(q.wall)
+        door = wall.get('door')
+        if door in ('plain', 'fake') or (door == 'locked' and has_key(p, wall['key'])):
+            q.wall, q.deco = 0, self.pack.deco('open_door')
+            self.tones((400, 100))
+            if door == 'locked':
+                self.report(f'You unlock the door with the {self.key_name(wall["key"])}.', 14)
+            elif door == 'fake':
+                self.report('The wall gives way: a secret passage!', 14)
+        elif door == 'locked':
+            self.report(f'The door is locked. You need the {self.key_name(wall["key"])}.', 12)
+        elif q.mon < 0 and q.mon > -100 and p.hero.invisible == -1:
+            if q.mon == -5:
+                self.open_shop()
+            elif q.mon <= -6:
+                self.talk(q.mon, x, y)
+
     def step_3d(self, k) -> bool:
         """FPS mode: Up walks forward, Down back, , and . (or Q and E) step sideways (Left and Right
         turn, in handle()). Walking is the classic move, so bumping still fights, talks and opens."""
@@ -597,6 +634,8 @@ class Game:
             self.leaving_to = None
             if self.overlay or p.hero.life < 1:
                 return True                              # he died (or a level-up screen is up): he did not get away
+            self.renderer.hold(self, ROOM_REPAINT_MS, fast=self.fast)      # the creatures' turn is on the screen he is leaving, then the new screen is painted
+            self.pause_ems = self.status.ems             # (the second pass still counts the creatures of the screen left)
             w.leave_room(self.status.ems, self.events.shadow)
             p.X, p.Y = nx, ny
             w.enter_room(p, st)
@@ -605,6 +644,7 @@ class Game:
                 p.skill.hon = 1
             self.count_hostiles()
             self.events.on_enter_room()
+            self.arrive_on(w.sq(nx, ny), nx, ny)
         else:
             p.X, p.Y = nx, ny
         self.events.on_step(p.X, p.Y)
@@ -876,7 +916,8 @@ class Game:
     # ── magic ─────────────────────────────────────────────────────────────────
     def begin_cast(self, spell: int):
         self.messages = []
-        if self.magic.can_cast(spell):              # unknown, too little mana or INT: the key does nothing
+        if self.magic.can_cast(spell):              # unknown, too little mana or INT: the key does nothing (but it waits)
+            self.key_pause()
             return
         p = self.player
         if self.magic.fizzles(spell):                 # dcast(), then a low beep; the spell is lost

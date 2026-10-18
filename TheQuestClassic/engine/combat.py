@@ -270,7 +270,7 @@ class Combat:
     # ── the enemies attack (main2, after the hero's action) ───────────────────
     def enemy_attacks(self):
         p, h, st, items = self.p, self.p.hero, self.g.status, self.g.items
-        self.g.play('pause', 100 if st.ems > 0 else 50)      # main2() pauses before the enemies act
+        self.g.key_pause()                                   # main2() pauses before the enemies act
         i = -1
         while True:
             i += 1                                   # the original walks the list by number and asks its length every time: a creature raised during the walk is reached in the same walk

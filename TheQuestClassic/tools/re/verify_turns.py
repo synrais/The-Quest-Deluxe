@@ -7,7 +7,7 @@ the hero (life, mana, experience, reputation, square, poison), the story counter
 state, and its numbers), every square of the screen, the messages printed, and the random number state: it is only the same when
 both rolled exactly as many dice, in the same order.
 
-usage: python verify_turns.py [--cases N] [--seed S] [--m2 K] [--only 45,44] [--keys 3] [--case ...]
+usage: python verify_turns.py [--cases N] [--seed S] [--m2 K] [--only 45,44] [--keys 3] [--levels 1,2 [--edges]]   (--edges: the first key takes the hero off the screen)
 """
 from __future__ import annotations
 
@@ -288,14 +288,34 @@ def turn(emu, g, key):
     emu.ended = False
     emu.cast_calls = 0
     emu.set_word('_moved', 2)                          # main2() then starts with moved = 0: it does not run the end-of-turn upkeep (poison, timers) before the key, as a continuing game would not
+    emu.calls.clear()
     emu.call('main2', limit=30_000_000)
     if not emu.stopped:
         raise RuntimeError('main2 did not come back to wait for a key within the instruction limit (it was asking for keys in: %s)' % sorted(set(emu.waits[-20:])))
-    g.handle(pygame.event.Event(pygame.KEYDOWN, key=PYGAME[key], unicode='', mod=0))
-    from engine import ui
-    for k in (pygame.K_RETURN, pygame.K_ESCAPE):         # a spell's target cursor: Enter takes the square it is on, then Esc if that was not allowed
-        if isinstance(g.overlay, ui.Cursor):
-            g.handle(pygame.event.Event(pygame.KEYDOWN, key=k, unicode='', mod=0))
+    emu.waits_ms = [args[0] for name, args in emu.calls if name == 'delay']     # every delay() of the turn, in ms: the pauses a person sees
+    emu.waited = sum(emu.waits_ms)
+    tally = [0]
+    seen = []
+    play = g.renderer.play
+
+    def counting(game, gen, **kw):                                             # the port's animations and pauses, in the same ms
+        def each():
+            for ms in gen:
+                tally[0] += max(0, ms)
+                seen.append(ms)
+                yield ms
+        return play(game, each(), **kw)
+    g.renderer.play = counting
+    try:
+        g.handle(pygame.event.Event(pygame.KEYDOWN, key=PYGAME[key], unicode='', mod=0))
+        from engine import ui
+        for k in (pygame.K_RETURN, pygame.K_ESCAPE):     # a spell's target cursor: Enter takes the square it is on, then Esc if that was not allowed
+            if isinstance(g.overlay, ui.Cursor):
+                g.handle(pygame.event.Event(pygame.KEYDOWN, key=k, unicode='', mod=0))
+    finally:
+        g.renderer.play = play
+    g.waited = tally[0]
+    g.waits_ms = seen
     # (a message waits for Space in the original; the port's fast mode does not wait)
 
 
@@ -309,6 +329,10 @@ def compare(emu, g, level):
     for k in ('hero', 'inv', 'story', 'enemies', 'seed', 'texts'):
         if theirs[k] != mine[k]:
             diffs.append(f'{k}: original {theirs[k]} port {mine[k]}')
+    if emu.waited != g.waited and not g.overlay:
+        a_, b_ = emu.waits_ms, g.waits_ms
+        i = next((n for n in range(min(len(a_), len(b_))) if a_[n] != b_[n]), min(len(a_), len(b_)))
+        diffs.append(f'waited: original {emu.waited} ms, port {g.waited} ms (from the {i + 1}th wait: original {a_[i:i + 8]}, port {b_[i:i + 8]})')
     return diffs + squares[:4]
 
 
@@ -367,7 +391,7 @@ def main(cases, rng_seed, m2s, only, nkeys):
     return bad
 
 
-def main_levels(levels, cases, rng_seed, nkeys):
+def main_levels(levels, cases, rng_seed, nkeys, edges=False):
     """Random screens of the given levels with creatures on them, a random hero (gear, potions, numbers) on a free square, random keys."""
     pygame.init()
     win = pygame.display.set_mode((640, 480))
@@ -387,9 +411,18 @@ def main_levels(levels, cases, rng_seed, nkeys):
             sx, sy = rng.choice(screens)
             free = [(x, y) for x in range(sx * 10 + 1, sx * 10 + 11) for y in range(sy * 10 + 1, sy * 10 + 11)
                     if grid0[x][y].wall == 0 and grid0[x][y].mon == 0]
+            out_key = None
+            if edges:                                             # the hero on an edge square of the screen, and the first key takes him off it
+                ways = [((x, y), key, (x + dx, y + dy)) for x, y in free for key, dx, dy in (('Left', -1, 0), ('Right', 1, 0), ('Up', 0, -1), ('Down', 0, 1))
+                        if (x + dx - 1) // 10 != (x - 1) // 10 or (y + dy - 1) // 10 != (y - 1) // 10]
+                ways = [w for w in ways if 1 <= w[2][0] <= 100 and 1 <= w[2][1] <= 100 and grid0[w[2][0]][w[2][1]].wall < 1]
+                if not ways:
+                    continue
+                hero, out_key, _ = rng.choice(ways)
             if not free:
                 continue
-            hero = rng.choice(free)
+            if not edges:
+                hero = rng.choice(free)
             state = dict(m1=rng.randint(0, 4), m2=rng.randint(0, 7), life=rng.choice([40, 120, 300, 600]), str=rng.choice([20, 40, 80]),
                          dex=rng.choice([10, 30, 60]), acc=rng.choice([10, 30, 60]), rep=rng.randint(-5, 7),
                          gear=dict(weapon=rng.choice(weapons), offhand=rng.choice(offhands), helmet=rng.choice([0, 402, 405]),
@@ -400,6 +433,8 @@ def main_levels(levels, cases, rng_seed, nkeys):
             state.update(spells=known, fkeys={k: rng.choice(known) for k in range(1, 9)}, intl=rng.choice([20, 40, 80]), mana=rng.choice([30, 100]))
             seed = rng.randint(1, 0xFFFFFFFF)
             keys = [rng.choice([k for k in KEYS if k not in NOT_RANDOM]) for _ in range(nkeys)]
+            if out_key:
+                keys[0] = out_key
             try:
                 g = Game(win, data)                                   # a new game and a new emulator for each case: nothing is left over from the one before
                 g.overlay = None
@@ -425,5 +460,6 @@ if __name__ == '__main__':
     only = [int(v) for v in args[args.index('--only') + 1].split(',')] if '--only' in args else None
     m2s = [int(v) for v in args[args.index('--m2') + 1].split(',')] if '--m2' in args else [2, 3, 4, 5, 6]
     if '--levels' in args:
-        sys.exit(1 if main_levels([int(v) for v in args[args.index('--levels') + 1].split(',')], opt('--cases', 20), opt('--seed', 1), opt('--keys', 3)) else 0)
+        sys.exit(1 if main_levels([int(v) for v in args[args.index('--levels') + 1].split(',')], opt('--cases', 20), opt('--seed', 1), opt('--keys', 3),
+                                  edges='--edges' in args) else 0)
     sys.exit(1 if main(opt('--cases', 20), opt('--seed', 1), m2s, only, opt('--keys', 3)) else 0)

@@ -97,6 +97,7 @@ def monsmove(g: 'Game') -> None:
                     g.combat.check_dead(e)
                 else:
                     g.play_at('bhit', o.x, o.y, mw)
+                g.play('pause', 50)                       # delay(50) after a blow between creatures
                 if i < len(w.enemies):
                     w.enemies[i].moved = True             # move[i] = 1, by number: after a death below it, it is the creature that slid into its place that is marked, and passed over
                 fought = not ranok
@@ -173,6 +174,7 @@ def chase(g, e, tx, ty, x0, x1, y0, y1, free, step):
             q = w.sq(nx, ny)
             q.wall, q.deco = 0, 1
             blocked = 2
+            g.tones((400, 100))                  # (the door's click, as the hero's)
 
     while True:
         if blocked != 2 and (dx > dy or blocked == 1 or wflag == 1):

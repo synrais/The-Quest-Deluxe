@@ -189,6 +189,16 @@ tones and delays, in the same order, with the same `rand()` draws.
 - **Enemy melee:** `ahit(hero, side, 2)` (low tone) on a hit, `bhit2(hero, side)` for a parry, and
   two falling tones when the Shield spell absorbs the blow (`monhit`, `hurt`). Before the enemies act,
   `main2` waits 100 ms (50 ms with no hostiles on screen).
+- **Waits (`main2`):** after every key it handles, a turn or not (a step into a wall, Enter with nothing to take, a potion
+  there is none of, a function key with no spell, K; only C, the character sheet, leaves it out) it waits 100 ms with hostile
+  creatures on the screen (`st.ems`) and 50 ms without, before the creatures act. Elsewhere: 50 ms after a blow between two
+  creatures, and 400 Hz for 100 ms when a creature breaks a plain door.
+- **Leaving a screen** takes two passes through the loop. The first takes the hero's step back to the edge square and runs
+  the whole turn there (the wait, then `monsmove()`: the creatures of the screen left move and attack, and are drawn); the
+  second repaints the new screen square by square with `goroom()` (about a hundred `clean()` calls, which takes a moment: the
+  creatures' turn stays in view meanwhile), puts the hero on the new edge square and deals with it as with any step (a door
+  he can open opens, an NPC there talks or sells; he stays where he is), then waits and runs a second turn on the new screen.
+  That second wait still counts the creatures of the screen left (`st.ems` is only counted at the top of the loop).
 - **Missiles:** `sthit` (sling), `arhit` (bows) and `bolthit` (crossbow). The hero's miss is
   `bhit(6)` plus a 150 Hz beep; a monster's miss shows nothing.
 - **Spells (`cast`):** `dcast()` (the caster's eyes flicker) for every cast, then the spell's own

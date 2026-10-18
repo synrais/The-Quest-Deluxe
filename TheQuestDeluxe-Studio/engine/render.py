@@ -15,6 +15,7 @@ from .face import Face
 from . import missiles
 
 W, H = 640, 480
+ROOM_REPAINT_MS = 300          # how long leaving a screen shows the creatures' turn before the new screen comes (an estimate of the original's repaint)
 TILE = 40
 MAP_PX = ROOM * TILE          # 400
 MAP_BOX = (480, 276)          # the inside of the panel's Map box (hud.dmap), 100 x 100
@@ -390,6 +391,15 @@ class Renderer:
         view = out.subsurface(area)
         view.blit(big, (int(x - n / 2), int(y - size / 2 - n / 2)))
         return out
+
+    def hold(self, game, ms, fast=False):
+        """Show the screen as it is, and wait: the creatures' turn on the screen the hero is leaving stays in view while the next is being painted (the
+        original paints its hundred squares one after the other, which takes a moment; ms is about how long)."""
+        if fast:
+            return
+        self.draw(game)
+        pygame.event.pump()
+        pygame.time.wait(int(speed.real_ms(max(0, ms))))
 
     def wait(self, surface, ms, fast=False):
         """delay(ms) while an original key loop owns the screen: show its surface, then wait."""

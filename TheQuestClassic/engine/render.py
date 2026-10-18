@@ -14,6 +14,7 @@ from . import anim
 
 SPRITES_DIR = os.path.join(ROOT, 'sprites')
 W, H = 640, 480
+ROOM_REPAINT_MS = 300          # how long leaving a screen shows the creatures' turn before the new screen comes (an estimate of the original's repaint)
 TILE = 40
 MAP_PX = ROOM * TILE          # 400
 
@@ -124,6 +125,15 @@ class Renderer:
             if wait > 0:
                 pygame.time.wait(wait)
         self.present()
+
+    def hold(self, game, ms, fast=False):
+        """Show the screen as it is, and wait: the creatures' turn on the screen the hero is leaving stays in view while the next is being painted (the
+        original paints its hundred squares one after the other, which takes a moment; ms is about how long)."""
+        if fast:
+            return
+        self.draw(game)
+        pygame.event.pump()
+        pygame.time.wait(max(0, ms))
 
     def wait(self, surface, ms, fast=False):
         """delay(ms) while an original key loop owns the screen: show its surface, then wait."""
