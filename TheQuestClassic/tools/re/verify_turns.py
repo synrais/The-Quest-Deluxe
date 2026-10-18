@@ -298,14 +298,28 @@ def turn(emu, g, key):
     seen = []
     play = g.renderer.play
 
+    skipping = [0]                                                             # (the emulator does not run these animations: emu_game.SKIP, so their waits are not counted)
+    game_play = g.play
+
+    def quiet(name, *a, **k):
+        if name in ('reput2', 'ampoisoned2', 'honor'):
+            skipping[0] += 1
+            try:
+                return game_play(name, *a, **k)
+            finally:
+                skipping[0] -= 1
+        return game_play(name, *a, **k)
+
     def counting(game, gen, **kw):                                             # the port's animations and pauses, in the same ms
         def each():
             for ms in gen:
-                tally[0] += max(0, ms)
-                seen.append(ms)
+                if not skipping[0]:
+                    tally[0] += max(0, ms)
+                    seen.append(ms)
                 yield ms
         return play(game, each(), **kw)
     g.renderer.play = counting
+    g.play = quiet
     try:
         g.handle(pygame.event.Event(pygame.KEYDOWN, key=PYGAME[key], unicode='', mod=0))
         from engine import ui
@@ -314,6 +328,7 @@ def turn(emu, g, key):
                 g.handle(pygame.event.Event(pygame.KEYDOWN, key=k, unicode='', mod=0))
     finally:
         g.renderer.play = play
+        g.play = game_play
     g.waited = tally[0]
     g.waits_ms = seen
     # (a message waits for Space in the original; the port's fast mode does not wait)
