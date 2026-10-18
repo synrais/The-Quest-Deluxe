@@ -197,14 +197,8 @@ def blank_rows():
     g.pack.classes[4]['no_fault'] = ['cow', 'hon']
     assert [s['id'] for s in ui.SkillSelect(4, g.pack).skills] == ['amb', 'sch']
     assert [f['id'] for f in ui.FaultSelect(4, 1, g.pack).faults] == ['ras']
-    # the author's answer (Alex, 1 Oct): every class should have Marksmanship: with the `marksmanship` fix a Knight is offered it, and can choose it
-    g = game(['blank_rows', 'marksmanship'])
-    sel = ui.SkillSelect(1, g.pack)
-    assert [s['id'] for s in sel.skills] == ['bar', 'amb', 'mem', 'mar', 'sch'] and sel.allowed(4) and not sel.allowed(2), 'a Knight can choose Marksmanship (row 4); Ambidexterity is his own free skill (row 2)'
-    assert [s['id'] for s in ui.SkillSelect(3, g.pack).skills] == ['bar', 'amb', 'mem', 'mar', 'sch']
-    assert game(True).pack.fixed('marksmanship') and not game(['blank_rows']).pack.fixed('marksmanship') and not game(None).pack.fixed('marksmanship')
     print("creation's lists: no blank rows with the fix, for skills and faults; Marksmanship stays the Rogues' "
-          'own without the marksmanship fix and is every class\'s with it, and a class can hide more: ok')
+          'own, and a class can hide more: ok')
 
 
 def map_corrections():
@@ -226,7 +220,7 @@ def player_settings():
     open(path, 'w').write('[play]\nfixes = ON ; a comment\nsound = maybe\n')
     assert settings.load(path) == {'fixes': 'on', 'sound': None, 'items_on_top': 'off', 'floating_numbers': 'off',
                                    'fps_quality': 'normal', 'fps_dither': 'ordered', 'fps_view_distance': 'level',
-                                   'smooth_scaling': 'off', 'render_quality': 'normal', 'fps_texture_filter': 'off', 'fps_fog_start': 45, 'fps_transition': 'on', 'show_gear': 'off', 'speed': '1'}   # not a choice: default
+                                   'smooth_scaling': 'off', 'render_quality': 'normal', 'fps_texture_filter': 'off', 'fps_fog_start': 45, 'fps_transition': 'on', 'show_gear': 'off', 'speed': '1', 'fit_window': 'on'}   # not a choice: default
     shipped = settings.load()
     assert shipped['fixes'] == 'on' and shipped['items_on_top'] == 'on', shipped   # the folder's settings.ini
     # the player's choice beats the pack's, both ways; without settings the pack's own stands

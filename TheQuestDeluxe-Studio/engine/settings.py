@@ -13,6 +13,7 @@
     fps_fog_start = 45 ; FPS mode: how far the fog fade starts, in percent of the view distance (100: only at the edge)
     fps_texture_filter = off ; FPS mode: average the far ground, walls and things (on) or skip pixels (off)
     speed = 1 ; how fast the game plays: 1 (the original's pace), 2, 4 or 8 (+ and - change it in the game)
+    fit_window = on ; the picture grows to fill the window (on), or only in whole multiples of 640 x 480 (off)
     show_gear = on ; the hero shows what he wears (a weapon in his hand, a helmet ...) on the map: on or off
     fps_transition = on ; F: the map zooms in on the hero and drops into the FPS view (on), or it just switches (off)
 
@@ -30,11 +31,11 @@ CHOICES = {'fixes': ('on', 'off', 'pack'), 'sound': ('on', 'off'), 'items_on_top
            'floating_numbers': ('on', 'off'), 'fps_quality': ('low', 'normal', 'high', 'ultra', 'max'),
            'fps_dither': ('ordered', 'fine', 'smooth', 'off'), 'smooth_scaling': ('on', 'off'),
            'fps_texture_filter': ('on', 'off'), 'fps_transition': ('on', 'off'), 'show_gear': ('on', 'off'),
-           'render_quality': ('normal', 'high', 'ultra'), 'speed': ('1', '2', '4', '8')}
+           'render_quality': ('normal', 'high', 'ultra'), 'speed': ('1', '2', '4', '8'), 'fit_window': ('on', 'off')}
 DEFAULTS = {'fixes': 'pack', 'sound': None, 'items_on_top': 'off',   # sound None: as sound.txt says
             'floating_numbers': 'off', 'fps_quality': 'normal', 'fps_dither': 'ordered',
             'fps_view_distance': 'level', 'smooth_scaling': 'off', 'render_quality': 'normal',
-            'fps_texture_filter': 'off', 'fps_fog_start': 45, 'fps_transition': 'on', 'show_gear': 'off', 'speed': '1'}
+            'fps_texture_filter': 'off', 'fps_fog_start': 45, 'fps_transition': 'on', 'show_gear': 'off', 'speed': '1', 'fit_window': 'on'}
 QUALITY_ORDER = ('low', 'normal', 'high', 'ultra', 'max')
 RENDER_QUALITY = {'high': 'high', 'ultra': 'max'}                      # what each level of render_quality means
 

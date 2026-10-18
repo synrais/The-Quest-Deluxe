@@ -75,6 +75,7 @@ class Renderer:
         self.sprites = Sprites(pack)
         self.anchor = None             # the map square the running animation plays at (FPS mode)
         self.smooth = False            # scale to the window smoothly (settings.ini smooth_scaling)
+        self.fit = True                # fill the window, whatever its size (settings.ini fit_window); off: whole multiples of 640 x 480 only
 
     # ── tiles ─────────────────────────────────────────────────────────────────
     def draw_tile(self, surf, px, py, q, enemy=None, on_top=False):
@@ -241,8 +242,8 @@ class Renderer:
             if p.hero.invisible > 0:
                 painted.set_alpha(70)                            # invisible: a ghost of him
             scr.blit(painted, (hx, hy))
-            if gear and p.hero.invisible <= 0:                   # his eyes (poisoned green, killer dark red, Berserker light
-                self.bgi.s = scr                                 # red) and the Shield spells' rings, as guy2() draws them
+            if p.hero.invisible <= 0:                            # his eyes (poisoned green, killer dark red, Berserker light red) and the
+                self.bgi.s = scr                                 # Shield spells' rings, as guy2() draws them: with the gear mod off too
                 anim.draw_hero_effects(self.bgi, hx // TILE + 1, hy // TILE + 1, p.hero.invisible, p.hero.poisoned,
                                        st.killer, st.powboost, st.Shield, st.fShield)
             return
@@ -304,6 +305,7 @@ class Renderer:
         target = shown = clock()
         quick = speed.get() > 1                  # sped up: frames are shown at most every 16 ms, however short the delays
         for ms in gen:
+            game.speaker.advance(max(0, ms))     # the tones keep the original's lengths however fast the game goes (engine.speaker)
             target += speed.real_ms(max(0, ms))
             now = clock()
             if (now < target and not quick) or now - shown >= 16:
@@ -414,6 +416,7 @@ class Renderer:
                     game.running = False
                 elif ev.type == pygame.KEYDOWN and ev.key == pygame.K_SPACE:
                     return
+            game.speaker.pump()
             clock.tick(30)
 
     def wait_yesno(self, game, question, fast=False):
@@ -432,6 +435,7 @@ class Renderer:
                     game.running = False
                 elif ev.type == pygame.KEYDOWN and ev.key in (pygame.K_y, pygame.K_n):
                     return ev.key == pygame.K_y
+            game.speaker.pump()
             clock.tick(30)
         return False
 
@@ -789,18 +793,29 @@ class Renderer:
             out.append(line)
         return out
 
+    def fitted(self, surface, ww, wh):
+        """The 640 x 480 picture scaled up (or down) to fill a ww x wh window as far as its shape allows (the rest is black). A whole multiple of
+        640 x 480 is whole pixels, crisp; in between the picture is first enlarged in whole pixels and then fitted, so it stays sharp. Settings.ini:
+        smooth_scaling = on blends instead; fit_window = off keeps to whole multiples (the window can then be bigger than the picture)."""
+        if ww * H <= wh * W:                                 # the window is the wider shape: the width decides
+            tw, th = max(1, ww), max(1, ww * H // W)
+        else:
+            tw, th = max(1, wh * W // H), max(1, wh)
+        if self.smooth:
+            return pygame.transform.smoothscale(surface, (tw, th))
+        n = tw // W
+        if not self.fit:                                     # whole pixels only: the largest whole multiple that fits, or smaller than 1x smoothed
+            return pygame.transform.scale(surface, (W * n, H * n)) if n >= 1 else pygame.transform.smoothscale(surface, (tw, th))
+        if n >= 1 and tw == W * n:
+            return pygame.transform.scale(surface, (tw, th))
+        if n < 1:
+            return pygame.transform.smoothscale(surface, (tw, th))
+        return pygame.transform.smoothscale(pygame.transform.scale(surface, (W * (n + 1), H * (n + 1))), (tw, th))
+
     def present(self, surface=None):
         surface = self.screen if surface is None else surface
         ww, wh = self.window.get_size()
-        scale = max(1, min(ww // W, wh // H))
-        if self.smooth:                                    # settings.ini smooth_scaling: fill the window, blended
-            f = min(ww / W, wh / H)
-            scaled = pygame.transform.smoothscale(surface, (max(1, int(W * f)), max(1, int(H * f))))
-        elif ww / W >= 1 and wh / H >= 1 and scale * W <= ww:
-            scaled = pygame.transform.scale(surface, (W * scale, H * scale))
-        else:
-            f = min(ww / W, wh / H)
-            scaled = pygame.transform.smoothscale(surface, (int(W * f), int(H * f)))
+        scaled = self.fitted(surface, ww, wh)
         self.window.fill((0, 0, 0))
         self.window.blit(scaled, ((ww - scaled.get_width()) // 2, (wh - scaled.get_height()) // 2))
         pygame.display.flip()

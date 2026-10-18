@@ -950,6 +950,7 @@ class Page(Overlay):
         try:
             v = self.gen.send(key) if key is not None else next(self.gen)
             while v is not None:                       # a delay() inside a tone
+                g.speaker.advance(v)
                 g.renderer.wait(self.layer, v, fast=g.fast)
                 v = next(self.gen)
         except StopIteration as stop:

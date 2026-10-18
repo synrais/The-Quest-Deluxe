@@ -13,7 +13,6 @@ from __future__ import annotations
 import pygame
 
 STEPS = (1, 2, 4, 8)            # the speeds + and - go through
-MUTE_FROM = 4                   # the PC-speaker tones at 4x and more would only be clicks: they are left out
 
 _speed = 1
 _real = 0                       # pygame's clock when the speed last changed ...
@@ -56,7 +55,3 @@ def ticks() -> int:
 def real_ms(ms: float) -> float:
     """How long to really wait for `ms` of the original's time."""
     return ms / _speed
-
-
-def silent() -> bool:
-    return _speed >= MUTE_FROM

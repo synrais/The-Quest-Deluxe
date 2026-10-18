@@ -1,12 +1,23 @@
 [
  {
+  "id": "2026-10-18-fixes",
+  "date": "2026-10-18",
+  "title": "Window size, sounds at speed, the hero's eyes, Marksmanship",
+  "changes": [
+   "The game now grows with its window: make the window bigger (or maximise it) and the picture fills it, sharp, keeping its shape. settings.ini fit_window = off goes back to whole multiples only.",
+   "At 2x, 4x and 8x the sounds play at their normal pitch and length, not shortened and not left out: a quick animation's tones play out in full while the game carries on.",
+   "With the 'hero shows what he wears' mod off, the hero's eyes (Killer, poisoned, Berserker) and the Shield rings still show, so Killer on or off can always be told.",
+   "Marksmanship is the Rogues' own again, in Classic and in the Studio's game: the author said he was mistaken, and giving it to every class changed the balance of the game too much. The 'marksmanship' fix is gone."
+  ]
+ },
+ {
   "id": "2026-10-12-speed",
   "date": "2026-10-12",
   "title": "Play faster: 2x, 4x, 8x",
   "changes": [
    "In the game, press + to play faster (2x, 4x, 8x) and - to slow down again. The speed shows in the top right corner of the map.",
    "Only the waiting is quicker: the animations, the pauses and the weapon in view. The dice and the turns are the same, so it is the same game, only quicker.",
-   "To start a game already fast, put speed = 4 (or 2, or 8) in settings.ini. At 4x and 8x the PC-speaker tones are left out, they would only click."
+   "To start a game already fast, put speed = 4 (or 2, or 8) in settings.ini. The sounds keep their own pitch and length at every speed."
   ]
  },
  {

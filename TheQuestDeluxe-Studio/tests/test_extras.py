@@ -543,7 +543,27 @@ def painted_hero():
     st.fShield = 5
     assert EGA[4] in (pix(20, 2), pix(20, 3), pix(20, 4)), 'Shield of Fire: red rings'
     st.fShield = 0
-    print('a painted hero (sprites/heroes/<class>.png) takes the place of the drawn one, with its eyes and rings: ok')
+    # with the "hero shows what he wears" mod off he still has his eyes (Killer on or off can be told) and the Shield's rings
+    g.pack.mods_off = set(g.pack.mods_off) | {'hero_gear'}
+    assert not g.renderer.gear_on(g)
+    assert pix(18, 8) == EGA[15] or pix(18, 8) == (255, 0, 255)
+    st.killer = 1
+    assert pix(18, 8) == EGA[4] and pix(22, 8) == EGA[4], 'gear mod off: the Killer eyes still show on a painted hero'
+    st.killer = 0
+    st.powboost = 3
+    assert pix(19, 8) == EGA[12], 'gear mod off: Berserker eyes'
+    st.powboost = 0
+    g.player.hero.poisoned = 5
+    assert pix(21, 8) == EGA[2], 'gear mod off: poisoned eyes'
+    g.player.hero.poisoned = 0
+    st.Shield = 5
+    assert EGA[14] in (pix(20, 2), pix(20, 3), pix(20, 4)), 'gear mod off: the Shield rings'
+    st.Shield = 0
+    g.settings = {'show_gear': 'off'}                             # (and the original's own drawing, which has them from guy2())
+    st.killer = 1
+    assert pix(18, 8) == EGA[4] or pix(19, 8) == EGA[4]
+    st.killer = 0
+    print('a painted hero (sprites/heroes/<class>.png) takes the place of the drawn one, with its eyes and rings (also with the gear mod off): ok')
 
 
 def event_code_text():

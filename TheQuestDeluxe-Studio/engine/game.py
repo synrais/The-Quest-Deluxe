@@ -157,6 +157,7 @@ class Game:
         self.rewards = self.pack.rewards()
         self.renderer = Renderer(window, self.data.src, self.pack)
         self.renderer.smooth = self.settings.get('smooth_scaling') == 'on'
+        self.renderer.fit = self.settings.get('fit_window') != 'off'
         # saves/<pack>/save01.dat .. save20.dat: the original's format, kept apart from the classic port's
         # (a pack of Custom Maps keeps its own: saves/Custom Maps/<name>/)
         custom = os.path.dirname(self.pack.root) == os.path.abspath(CUSTOM_DIR)
@@ -1707,5 +1708,6 @@ class Game:
                 if len(self.talk_log) != spoken or self.overlay:
                     held.clear()                         # a held key must not start the same talk again
             self.renderer.draw(self)
+            self.speaker.pump()                          # (sounds that a sped up game has still to play, engine.speaker)
             clock.tick(30)
 

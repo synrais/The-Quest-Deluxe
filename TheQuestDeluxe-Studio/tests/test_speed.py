@@ -45,10 +45,52 @@ t3 = speed.ticks()
 assert 0 <= t3 - t2 <= 50, t3 - t2
 assert speed.real_ms(800) == 800
 speed.use(8)
-assert speed.real_ms(800) == 100 and speed.silent()
-speed.use(2)
-assert not speed.silent()
+assert speed.real_ms(800) == 100
 speed.use(1)
+
+# ── sound: the tones keep their pitch and their length at any speed ───────────
+from engine.speaker import Speaker                                          # noqa: E402
+sp = Speaker(enabled=True)
+assert sp.enabled, 'the mixer is there (SDL_AUDIODRIVER=dummy)'
+handed = []
+real_piece = sp._piece
+sp._piece = lambda f, ms: (handed.append((f, ms)), real_piece(f, ms))[1]
+
+
+def everything():
+    return handed + sp.queue
+
+
+speed.use(8)
+sp.sound(440)
+sp.advance(100)                                                              # a 100 ms tone, and the game waited 100 ms of the original's time ...
+sp.nosound()
+sp.advance(50)                                                               # ... a rest ...
+sp.sound(660)
+sp.advance(250)
+sp.nosound()
+assert everything() == [(440, 100), (0, 50), (660, 250)], everything()      # ... played in full, one after another, with the rest between
+assert 0 < (real_piece(440, 100).get_length()) and abs(real_piece(440, 100).get_length() - 0.1) < 0.01 and abs(real_piece(0, 50).get_length() - 0.05) < 0.01
+assert abs(real_piece(660, 250).get_length() - 0.25) < 0.01
+sp.channel.stop()
+handed.clear()
+sp.queue.clear()
+sp.sound(500)
+sp.advance(0)
+sp.nosound()
+assert everything() == [], 'a tone with no time in it is nothing'
+for i in range(60):                                                          # a flood of tones: a few seconds are kept, not minutes
+    sp.sound(300 + i)
+    sp.advance(400)
+    sp.nosound()
+assert sum(ms for _, ms in sp.queue) <= Speaker.BACKLOG
+sp.channel.stop()
+sp.queue.clear()
+speed.use(1)
+sp.sound(440)                                                                # at 1x as before: the tone plays until nosound()
+assert sp.channel.get_busy() and sp._note is None
+sp.nosound()
+assert not sp.channel.get_busy()
 
 # ── settings.ini ──────────────────────────────────────────────────────────────
 tmp = tempfile.mkdtemp()
@@ -100,6 +142,19 @@ for n in (1, 2, 4, 8):
     g.renderer.play(g, pause(), fast=False)
     took[n] = time.time() - start
 speed.use(1)
+from engine import anim                                                      # noqa: E402
+g.speaker = sp2 = Speaker(enabled=True)                                      # a jingle in an animation at 8x: over quickly, played at its own pace
+handed2 = []
+rp = sp2._piece
+sp2._piece = lambda f, ms: (handed2.append((f, ms)), rp(f, ms))[1]
+speed.use(8)
+start = time.time()
+g.renderer.play(g, anim.tones(g.anim_host, (523, 150), (659, 150), (784, 300)), fast=False)
+quick_jingle = time.time() - start
+speed.use(1)
+assert quick_jingle < 0.25, quick_jingle
+assert handed2 + sp2.queue == [(523, 150), (659, 150), (784, 300)], handed2 + sp2.queue
+sp2.channel.stop()
 assert 0.55 <= took[1] <= 1.6, took                                         # 6 x 100 ms
 assert took[2] < took[1] * 0.7 and took[4] < took[2] * 0.7 and took[8] < took[4] * 0.8, took
 assert took[8] < 0.3, took
